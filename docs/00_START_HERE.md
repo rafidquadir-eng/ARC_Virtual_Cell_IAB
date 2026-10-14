@@ -51,4 +51,5 @@ Paste the runbook's report block back here after each stage and I'll decide the 
 | `05_COMPUTE_AND_LAUNCH.md` | budget, LAUNCH REQUEST LR-1, warnings |
 | `06_SCHEDULE.md` | week-by-week, submission policy |
 | `07_RUNBOOK_INSTANCE.md` | step-by-step for Claude Code on the Lambda instance |
+| `08_CLAUDE_CODE_WEB.md` | how to connect: Claude Desktop SSH session (web sessions can't SSH) |
 | `EXPERIMENT_LOG.md` | running log (also mirrored as a Google Sheet) |

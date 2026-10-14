@@ -1,14 +1,14 @@
 # CLAUDE.md — Immunome AI × Virtual Cell Challenge 2026 (execution repo)
 
-You are Claude Code on the web. This repo holds the code and plan; the work runs on a Lambda GPU instance you reach over SSH. A separate planning session decides experiments; you execute them and report back.
+You are Claude Code running **on the Lambda GPU instance** (via a Claude Desktop SSH session). This repo, cloned at `~/vcc`, holds the code and plan. A separate planning session decides experiments; you execute them and report back.
 
-**Start with `docs/08_CLAUDE_CODE_WEB.md`** (how to connect, sync code, run long jobs). The step-by-step task list is `docs/07_RUNBOOK_INSTANCE.md`.
+**Start with `docs/08_CLAUDE_CODE_WEB.md`** (how this session was connected, the challenge login the user does themselves, long-job rules). The step-by-step task list is `docs/07_RUNBOOK_INSTANCE.md`.
 
 ## Instance
-- `ssh ubuntu@132.145.128.143` (Lambda `gpu_1x_a100_sxm4`, us-east-1). Code lives at `~/vcc` on the instance; data under the persistent filesystem (`/lambda/nfs/<fs>/vcc-data`, auto-detected) or `~/vcc-data`.
+- Lambda `gpu_1x_a100_sxm4`, us-east-1. Code at `~/vcc`; data under the persistent filesystem (`/lambda/nfs/<fs>/vcc-data`, auto-detected) or `~/vcc-data`. `source ~/.vcc_env` before any command.
 
 ## Hard rules
-- Secrets (`VCC_TOKEN`, `HF_TOKEN`, rclone tokens, SSH private keys) never go into files, commits, logs or chat output.
+- Secrets (challenge token, `HF_TOKEN`, rclone tokens, SSH keys) never go into files you write, commits, logs or chat output. The user logs in to `vcc` themselves; never ask them to paste a token into chat.
 - Box is read-only. Never write to `box:`.
 - Never upload iMEMORY weights or data anywhere except the private `gdrive:VCC2026/checkpoints_private`.
 - Max **2 challenge submissions per UTC day**. Leaderboard entries only where the runbook says; never tune on the leaderboard.

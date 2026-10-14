@@ -1,56 +1,50 @@
-# Running this from Claude Code on the web
+# Running the runbook on the Lambda instance
 
-## 0. Before you start (the user does this once, outside chat)
-1. In this Claude Code environment's settings, allow outbound network access to `132.145.128.143` port 22 (or "full" network access), and make the SSH private key for the `a10instance` key pair available to the session (environment secret or file). Never paste the private key into chat.
-2. Add `VCC_TOKEN` (challenge site → Credentials) as an **environment secret** of this Claude Code environment, not in chat or in files.
+**Claude Code on the web cannot do this.** Web sessions run behind an HTTP/HTTPS proxy that carries all their outbound traffic [1], so they cannot open an SSH connection to the instance, whatever the network-access level. Their environment variables are also not a secret store: anyone who uses the environment can read them [1].
 
-## 1. Connect
+**Use the Claude Desktop app's SSH session instead** [2]. Claude Code then runs *on the instance*, your private key never leaves your laptop, and nothing secret goes into any Claude setting.
+
+## 1. Connect (once)
+1. Install the Claude Desktop app (macOS, Windows, or Linux beta) and open the **Code** tab.
+2. Before starting a session, open the environment dropdown → **+ Add SSH connection**:
+   - **Name:** `lambda-vcc`
+   - **SSH Host:** `ubuntu@132.145.128.143`
+   - **SSH Port:** leave empty (22)
+   - **Identity File:** the path on your laptop to the private key of the `a10instance` key pair (for example `~/.ssh/a10instance` or wherever you saved it when you created the key in Lambda)
+3. Select `lambda-vcc` and start a session. Desktop installs Claude Code on the instance the first time [2].
+
+## 2. Get the code onto the instance (no secrets in chat)
+In that session, ask Claude to run, on the instance:
 ```bash
-IP=132.145.128.143
-SSH="ssh -o StrictHostKeyChecking=accept-new -o ServerAliveInterval=30 ubuntu@$IP"
-$SSH 'nvidia-smi --query-gpu=name,memory.total --format=csv; df -h /lambda/nfs/* ~ 2>/dev/null; uptime'
+sudo apt-get install -y gh 2>/dev/null || (type -p curl >/dev/null && curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg && echo "deb [signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list && sudo apt-get update -qq && sudo apt-get install -y gh)
+gh auth login --hostname github.com --git-protocol https --web     # prints a one-time code; YOU open github.com/login/device and enter it
+gh repo clone rafidquadir-eng/ARC_Virtual_Cell_IAB ~/vcc
 ```
-Record the instance start time from `uptime`; the planning session tracks spend from it ($1.99/h for `gpu_1x_a100_sxm4`, unverified against your invoice).
+The device-code flow is the only step that needs you: you type the code into GitHub in your browser. Nothing is pasted into chat.
 
-## 2. Sync the code to the instance
+## 3. Install, then log in to the challenge yourself
 ```bash
-rsync -az --delete --exclude .git --exclude '__pycache__' ./ ubuntu@$IP:~/vcc/
+cd ~/vcc && bash setup_lambda.sh 2>&1 | tee logs/E000_setup.log     # non-interactive, ~10 min
 ```
-Re-run after every code change (the repo is the source of truth; the instance copy is disposable).
-
-## 3. Log the instance in to the challenge (token never printed)
+Then open a terminal on the instance (Desktop's integrated terminal in the SSH session, or your own `ssh -i <key> ubuntu@132.145.128.143`) and type:
 ```bash
-printf '%s' "$VCC_TOKEN" | $SSH 'mkdir -p ~/.local/bin; cat > /tmp/.t; chmod 600 /tmp/.t'
-$SSH 'cd ~/vcc && bash setup_lambda.sh' 2>&1 | tail -60        # installs env (~10 min)
-$SSH '~/.local/bin/vcc login --token-stdin --store-plaintext < /tmp/.t && rm -f /tmp/.t && ~/.local/bin/vcc whoami'
+~/.local/bin/vcc login --store-plaintext      # prompts for the token with hidden input; stored 0600 on the instance
+~/.local/bin/vcc whoami
 ```
-If `setup_lambda.sh` takes longer than your command timeout, run it in tmux instead (next section).
+The token comes from the challenge site's Credentials page. It is typed only into that hidden prompt, never into chat or any Claude setting.
 
-## 4. Long jobs: always tmux + log file
-```bash
-run() {  # run <session-name> <command...>   (on the instance, inside ~/vcc, with ~/.vcc_env loaded)
-  local name=$1; shift
-  $SSH "cd ~/vcc && tmux new -d -s $name 'source ~/.vcc_env; $* 2>&1 | tee logs/$name.log; echo EXIT=\$? >> logs/$name.log'"
-}
-peek() { $SSH "tail -n ${2:-40} ~/vcc/logs/$1.log"; }
-done_() { $SSH "grep -q '^EXIT=' ~/vcc/logs/$1.log && grep '^EXIT=' ~/vcc/logs/$1.log"; }
-```
-Example: `run E002 bash fetch_public_data.sh`, then poll `peek E002` every few minutes until `done_ E002` prints `EXIT=0`.
+## 4. Run the runbook
+Tell the Desktop session:
+> Follow CLAUDE.md: run docs/07_RUNBOOK_INSTANCE.md stages E000–E005 here on the instance and print each REPORT block.
 
-## 5. Execute the runbook
-Follow `docs/07_RUNBOOK_INSTANCE.md` stage by stage (E000 → E005). Commands there run **on the instance** inside `~/vcc` after `source ~/.vcc_env` (wrap them with `run`, or `$SSH 'source ~/.vcc_env; cd ~/vcc; ...'`). Stop at each **CHECK**; print each **REPORT** block in chat for the user to paste back to the planning session.
+Rules for long jobs: run each stage in `tmux` with a log file (`tmux new -d -s E002 'source ~/.vcc_env; cd ~/vcc; bash fetch_public_data.sh 2>&1 | tee logs/E002.log'`) and poll the log, so a dropped connection or a sleeping laptop doesn't kill the job. Desktop can keep a task running while disconnected [2], but tmux is the safer default for multi-hour downloads.
 
-Challenge data: if `controls/` is not on the instance after setup, use the vcc CLI's data-download subcommand (see `reports/vcc_help.txt` on the instance) to fetch the validation bundle into `$DATA/challenge/controls`. Box is only a fallback and needs an rclone `box` remote the user configures themselves.
+## 5. Bring results back
+Commit small CSV/JSON score tables and reports under `results/` and push (`git push` works through the `gh` login). Never commit data, predictions, `.vcc` files or tokens. Paste the REPORT blocks to the planning session.
 
-## 6. Bring results back
-```bash
-mkdir -p results/reports results/scores
-rsync -az ubuntu@$IP:~/vcc/reports/ results/reports/
-$SSH 'source ~/.vcc_env; find "$DATA/loco" -name "scores_*.csv"' | while read -r f; do
-  rsync -az "ubuntu@$IP:$f" "results/scores/$(basename "$(dirname "$f")")_$(basename "$f")"; done
-```
-Commit only small CSV/JSON score tables and reports (no h5ad, no .vcc, no tokens) under `results/`, and update `docs/EXPERIMENT_LOG.md`.
+## 6. Cost discipline
+When a stage finishes and nothing is queued, terminate the instance in the Lambda console (the filesystem keeps the data). Storage is billed per GB-month: keep `WITH_GWPS=0` unless the planning session asks for it.
 
-## 7. Cost discipline
-- When a stage finishes and nothing is queued, tell the user: **terminate the instance in the Lambda console** (the filesystem keeps the data). You cannot terminate it yourself.
-- Storage is billed per GB-month: skip the K562 genome-wide download (`WITH_GWPS=0`, the default) unless the planning session asks for it.
+## Sources
+1. [Configure cloud environments (Claude Code docs)](https://code.claude.com/docs/en/cloud-environments)
+2. [Desktop app — SSH sessions (Claude Code docs)](https://code.claude.com/docs/en/desktop)
