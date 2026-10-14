@@ -14,18 +14,21 @@ AXIS=$(find "$DATA/challenge/controls" -name 'gene_axis.csv' 2>/dev/null | head 
 [ -n "$AXIS" ] || { echo "gene_axis.csv not found under challenge/controls -- write a header-less copy of gene_names.csv (E000)"; exit 1; }
 
 echo "== Replogle et al. 2022 (Cell) -- figshare article 20029387, CC BY 4.0"
-curl -s https://api.figshare.com/v2/articles/20029387/files | jq -r '.[] | "\(.size)\t\(.name)\t\(.download_url)"' \
+curl -s "https://api.figshare.com/v2/articles/20029387/files?page_size=100" | jq -r '.[] | "\(.size)\t\(.name)\t\(.download_url)"' \
   | tee "$RAW/replogle_files.tsv"
+# figshare redirects to a signed S3 URL that expires in seconds; aria2 multi-connection gets 403,
+# so fetch with single-stream curl (resumable: re-run picks up a .part file).
+figdl () { curl -fL --retry 10 --retry-delay 5 -C - -o "$2.part" "$1" && mv "$2.part" "$2"; }
 # Raw single-cell files for essential-scale K562 and RPE1 (genome-wide K562 is optional, ~10x larger):
 for pat in "K562_essential_raw_singlecell" "rpe1_raw_singlecell"; do
   url=$(grep -i "$pat" "$RAW/replogle_files.tsv" | grep -i h5ad | head -1 | cut -f3)
   name=$(grep -i "$pat" "$RAW/replogle_files.tsv" | grep -i h5ad | head -1 | cut -f2)
-  [ -n "$url" ] && [ ! -f "$RAW/$name" ] && aria2c -x8 -s8 -d "$RAW" -o "$name" "$url"
+  [ -n "$url" ] && [ ! -f "$RAW/$name" ] && figdl "$url" "$RAW/$name"
 done
 if [ "${WITH_GWPS:-0}" = "1" ]; then   # K562 genome-wide: covers ~9.8k expressed targets
   url=$(grep -i "K562_gwps_raw_singlecell" "$RAW/replogle_files.tsv" | grep -i h5ad | head -1 | cut -f3)
   name=$(grep -i "K562_gwps_raw_singlecell" "$RAW/replogle_files.tsv" | grep -i h5ad | head -1 | cut -f2)
-  [ -n "$url" ] && [ ! -f "$RAW/$name" ] && aria2c -x8 -s8 -d "$RAW" -o "$name" "$url"
+  [ -n "$url" ] && [ ! -f "$RAW/$name" ] && figdl "$url" "$RAW/$name"
 fi
 
 echo "== Nadig et al. 2025 HepG2 + Jurkat (+ Replogle lines) -- HF arcinstitute/Replogle-Nadig (UNVERIFIED: file list, license, raw vs HVG)"
