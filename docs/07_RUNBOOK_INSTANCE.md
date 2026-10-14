@@ -11,7 +11,7 @@ You are running Immunome AI's Virtual Cell Challenge 2026 baselines. Planning ha
 - If anything costs more than this runbook implies (new instances, big downloads > 300 GB), stop and ask.
 
 ## Paths
-`WORK=~/vcc` (code, synced from the repo with rsync — see `08_CLAUDE_CODE_WEB.md`), `DATA` = `<first /lambda/nfs/* mount>/vcc-data`, else `~/vcc-data`. `setup_lambda.sh` writes both, plus `PYTHONPATH` and the venv, to `~/.vcc_env`; **every command below assumes `source ~/.vcc_env` first**. In `loco.example.json`, replace `/lambda/nfs/vcc-data` with the real `$DATA`.
+`WORK=~/vcc` (code, cloned from the private GitHub repo — see `08_CLAUDE_CODE_WEB.md`), `DATA` = `<first /lambda/nfs/* mount>/vcc-data`, else `~/vcc-data`. `setup_lambda.sh` writes both, plus `PYTHONPATH` and the venv, to `~/.vcc_env`; **every command below assumes `source ~/.vcc_env` first**. In `loco.example.json`, replace `/lambda/nfs/vcc-data` with the real `$DATA`.
 
 ---
 

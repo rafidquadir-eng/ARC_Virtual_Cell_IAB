@@ -20,9 +20,9 @@ Updated 14 Oct 2026, 14:30 ET. Deadline: **Thu 5 Nov 2026, 23:59 UTC (18:59 ET)*
 I can't launch or log in to anything, so "execute" means:
 
 1. **Launch LR-1:** 1x A100 40 GB (SXM or PCIe) + a 600 GB persistent filesystem named `vcc-data`, same region.
-2. **Copy `vcc26_code.tar.gz`** to `~/vcc/` on the instance (scp, or drop it in Drive `VCC2026/code`).
-3. **In the instance shell only:** `read -rs VCC_TOKEN && export VCC_TOKEN` (token from the challenge site's Credentials page). Never paste it in chat.
-4. **Start Claude Code on the instance** and give it `07_RUNBOOK_INSTANCE.md`. It will prompt you once for the rclone Google Drive and Box sign-ins.
+2. **Connect Claude Desktop to the instance** (Code tab → environment dropdown → + Add SSH connection) and let it clone this repo to `~/vcc` — exact steps in `08_CLAUDE_CODE_WEB.md`. Claude Code on the web can't SSH.
+3. **In a terminal on the instance only:** `~/.local/bin/vcc login --store-plaintext` (hidden prompt; token from the challenge site's Credentials page). Never paste it in chat or any Claude setting.
+4. **Tell the Desktop session** to run `07_RUNBOOK_INSTANCE.md` E000–E005. rclone Drive/Box sign-ins are optional and only needed for the log copy and the iMEMORY files.
 
 Then the runbook produces, in order:
 - **E000** controls inventory (what's actually in `controls.zip`) — ~30 min after launch
