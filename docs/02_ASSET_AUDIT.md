@@ -34,7 +34,7 @@ All 12 `.npz` files on Box checked; none is the gene table:
 | `v3_umap_coords.npz` (×2), `v3_module_activations.npz` (×2) | 138 KB, 70 KB | per-sample UMAP / module scores |
 | `recovery_vector.npz` (×2), `recovery_vector_individual_genes.npz` (×2) | 5.7 KB, 1.8 KB | SDY997 disease/healthy centroids + 128-d direction |
 
-Searches for `embedding`, `node_embeddings`, `gene_symbol_list`, `gene_proj` found only scripts and sample-level files. The table (~40 MB) exists only at `/mnt/nvme15tb/trained_im/node_embeddings/` on the old EC2 disk.
+Searches for `embedding`, `node_embeddings`, `gene_symbol_list`, `gene_proj` found only scripts and sample-level files. Also checked (14 Oct): the private GitHub repo `rafidquadir-eng/iMEMORY_V4` (130 files) mirrors Box `OutputsV4`: the same checkpoint, `stage1/embeddings_v4.npy` (45,670 samples × 128), UMAP/t-SNE coordinates and `gene_ti_correlation_rhos.npy` (256 values). No gene table. The table (~40 MB) exists only at `/mnt/nvme15tb/trained_im/node_embeddings/` on the old EC2 disk.
 
 **It cannot be rebuilt:** the projection layer was random and unseeded, so regenerated vectors would not match what the checkpoint was trained on. Regenerating only the raw BioLinkBERT/SPECTER2 vectors is possible, but that tests public language models, not iMEMORY (it is included as one of the public gene priors in `04_APPROACHES.md`).
 

@@ -43,7 +43,7 @@ Implications: predicting "no change" scores badly on direction metrics (−1.72 
 - No open code or weights required. [2]
 - Finalists must submit a **high-level description, which Arc publishes**; need not be reproducible; must include data processing and how model inputs were constructed. The full list of required items is **unverified** (page renders in a browser only). [2]
 - If iMEMORY is in the final entry, the description would mention it → counsel signs off first, or leave it out.
-- Flag for counsel (unverified): Box README describes a public showcase repo of the iMEMORY architecture, and there is a preprint PDF; if public, they may already count as disclosure for the unfiled patent.
+- **Flag for counsel (verified 14 Oct):** the GitHub repo `rafidquadir-eng/iMEMORY-Agentic-Orchastration-Infrastructure-for-Machine-Learning-Computational-Biology` is **public** and describes the HetGAT architecture and pipeline (with synthetic weights). Whether the preprint PDF is public is unverified. Either may already count as disclosure for the unfiled patent.
 - Data licenses that matter for a company entry: State, Stack (non-commercial); X-Atlas/Orion (non-commercial). See `03_DATASETS.md`.
 
 ## Sources
