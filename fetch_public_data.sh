@@ -9,8 +9,9 @@ source "$WORK/.venv/bin/activate"; export PYTHONPATH="$WORK/src"; export PATH="$
 FS=$(ls -d /lambda/nfs/*/ 2>/dev/null | head -1 || true)
 DATA=${DATA:-${FS:+${FS%/}/vcc-data}}; DATA=${DATA:-$HOME/vcc-data}
 RAW=$DATA/raw; PB=$DATA/pb; mkdir -p "$RAW" "$PB"
-AXIS=$(find "$DATA/challenge/controls" -name 'gene_names*.csv' 2>/dev/null | head -1 || true)
-[ -n "$AXIS" ] || { echo "gene_names.csv not found under challenge/controls -- run setup first"; exit 1; }
+# gene_names.csv has a header row; pseudobulk reads the axis header-less, so prefer gene_axis.csv (E000)
+AXIS=$(find "$DATA/challenge/controls" -name 'gene_axis.csv' 2>/dev/null | head -1 || true)
+[ -n "$AXIS" ] || { echo "gene_axis.csv not found under challenge/controls -- write a header-less copy of gene_names.csv (E000)"; exit 1; }
 
 echo "== Replogle et al. 2022 (Cell) -- figshare article 20029387, CC BY 4.0"
 curl -s https://api.figshare.com/v2/articles/20029387/files | jq -r '.[] | "\(.size)\t\(.name)\t\(.download_url)"' \
