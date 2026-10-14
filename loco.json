@@ -7,7 +7,8 @@
    "pert_col": "gene",
    "control": "non-targeting",
    "symbol_col": "gene_name",
-   "summary": "/lambda/nfs/LambdaFilesystem/vcc-data/pb/K562.npz"
+   "summary": "/lambda/nfs/LambdaFilesystem/vcc-data/pb/K562.npz",
+   "line": "K562"
   },
   {
    "name": "RPE1",
@@ -40,6 +41,15 @@
    "control": "non-targeting",
    "symbol_col": null,
    "summary": "/lambda/nfs/LambdaFilesystem/vcc-data/pb/H1.npz"
+  },
+  {
+   "name": "K562_GWPS",
+   "line": "K562",
+   "h5ad": "/lambda/nfs/LambdaFilesystem/vcc-data/raw/K562_gwps_raw_singlecell_01.h5ad",
+   "pert_col": "gene",
+   "control": "non-targeting",
+   "symbol_col": "gene_name",
+   "summary": "/lambda/nfs/LambdaFilesystem/vcc-data/pb/K562_GWPS.npz"
   }
  ]
 }
