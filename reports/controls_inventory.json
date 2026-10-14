@@ -1,0 +1,193 @@
+{
+  "files": [
+    {
+      "path": "context_A.h5ad",
+      "bytes": 224973316,
+      "file": "context_A.h5ad",
+      "n_cells": 18400,
+      "n_genes": 18533,
+      "obs_columns": [
+        "target_gene",
+        "context",
+        "ntc_id"
+      ],
+      "var_columns": [],
+      "var_names_head": [
+        "TSPAN6",
+        "TNMD",
+        "DPM1",
+        "SCYL3",
+        "C1orf112"
+      ],
+      "median_umis_per_cell(sample)": 20150.0,
+      "integer_counts": true,
+      "uns_keys": [],
+      "obs[target_gene]": {
+        "n_unique": 1,
+        "top": {
+          "non-targeting": 18400
+        }
+      },
+      "obs[context]": {
+        "n_unique": 1,
+        "top": {
+          "A": 18400
+        }
+      },
+      "obs[ntc_id]": {
+        "n_unique": 46,
+        "top": {
+          "non-targeting-11": 400,
+          "non-targeting-12": 400,
+          "non-targeting-13": 400,
+          "non-targeting-15": 400,
+          "non-targeting-17": 400
+        }
+      }
+    },
+    {
+      "path": "context_B.h5ad",
+      "bytes": 210966111,
+      "file": "context_B.h5ad",
+      "n_cells": 18400,
+      "n_genes": 18533,
+      "obs_columns": [
+        "target_gene",
+        "context",
+        "ntc_id"
+      ],
+      "var_columns": [],
+      "var_names_head": [
+        "TSPAN6",
+        "TNMD",
+        "DPM1",
+        "SCYL3",
+        "C1orf112"
+      ],
+      "median_umis_per_cell(sample)": 19935.0,
+      "integer_counts": true,
+      "uns_keys": [],
+      "obs[target_gene]": {
+        "n_unique": 1,
+        "top": {
+          "non-targeting": 18400
+        }
+      },
+      "obs[context]": {
+        "n_unique": 1,
+        "top": {
+          "B": 18400
+        }
+      },
+      "obs[ntc_id]": {
+        "n_unique": 46,
+        "top": {
+          "non-targeting-11": 400,
+          "non-targeting-12": 400,
+          "non-targeting-13": 400,
+          "non-targeting-15": 400,
+          "non-targeting-17": 400
+        }
+      }
+    },
+    {
+      "path": "context_C.h5ad",
+      "bytes": 226056691,
+      "file": "context_C.h5ad",
+      "n_cells": 18400,
+      "n_genes": 18533,
+      "obs_columns": [
+        "target_gene",
+        "context",
+        "ntc_id"
+      ],
+      "var_columns": [],
+      "var_names_head": [
+        "TSPAN6",
+        "TNMD",
+        "DPM1",
+        "SCYL3",
+        "C1orf112"
+      ],
+      "median_umis_per_cell(sample)": 20016.5,
+      "integer_counts": true,
+      "uns_keys": [],
+      "obs[target_gene]": {
+        "n_unique": 1,
+        "top": {
+          "non-targeting": 18400
+        }
+      },
+      "obs[context]": {
+        "n_unique": 1,
+        "top": {
+          "C": 18400
+        }
+      },
+      "obs[ntc_id]": {
+        "n_unique": 46,
+        "top": {
+          "non-targeting-11": 400,
+          "non-targeting-12": 400,
+          "non-targeting-13": 400,
+          "non-targeting-15": 400,
+          "non-targeting-17": 400
+        }
+      }
+    },
+    {
+      "path": "gene_names.csv",
+      "bytes": 119295,
+      "head": [
+        {
+          "gene_name": "TSPAN6"
+        },
+        {
+          "gene_name": "TNMD"
+        },
+        {
+          "gene_name": "DPM1"
+        },
+        {
+          "gene_name": "SCYL3"
+        },
+        {
+          "gene_name": "C1orf112"
+        }
+      ],
+      "columns": [
+        "gene_name"
+      ],
+      "n_rows": 18533
+    },
+    {
+      "path": "manifest.json",
+      "bytes": 715
+    },
+    {
+      "path": "pert_counts.csv",
+      "bytes": 1906,
+      "head": [
+        {
+          "target_gene": "ABCD1"
+        },
+        {
+          "target_gene": "ACLY"
+        },
+        {
+          "target_gene": "ADNP"
+        },
+        {
+          "target_gene": "AGO1"
+        },
+        {
+          "target_gene": "AKAP1"
+        }
+      ],
+      "columns": [
+        "target_gene"
+      ],
+      "n_rows": 300
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+Usage: vcc [OPTIONS] COMMAND [ARGS]...
+
+  vcc — submit predictions to the Virtual Cell Challenge.
+
+  Run `vcc version` for version details, or `vcc COMMAND --help` for a
+  command.
+
+Options:
+  --json           Emit machine-readable JSON instead of human-readable text.
+  --profile TEXT   Named credential profile [env: VCC_PROFILE].
+  --endpoint TEXT  Base URL of the VCC site to talk to [env: VCC_ENDPOINT].
+  --version        Show the vcc version and exit.
+  -h, --help       Show this message and exit.
+
+Commands:
+  cancel    Abandon an in-progress submission, freeing your team's slot.
+  datasets  List and download Virtual Cell Challenge reference data.
+  login     Authenticate with a VCC API token.
+  logout    Remove the stored credential for the active profile.
+  prep      Validate, slim, normalize, and package an .h5ad into a .vcc.
+  sample    Generate a random, valid dummy prediction for testing `vcc...
+  skill     Install the VCC agent skill into your coding agent (Claude...
+  status    Show the status (and scores, once published) of one submission.
+  submit    Upload a prediction and start scoring.
+  version   Print the vcc version.
+  whoami    Show the authenticated account, team, and whether you can...
