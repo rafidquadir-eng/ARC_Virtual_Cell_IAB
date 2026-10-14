@@ -77,5 +77,19 @@ done
 **CHECK:** B0 < B1 on mean context score in every context (if not, report it; something is wrong with emission or anchors).
 **REPORT E004/E005:** one table per mode: rows = model, columns = held-out context, cell = context score; plus per-metric means across contexts. Then append rows to `EXPERIMENT_LOG.md` and `rclone copy` the CSVs to `gdrive:VCC2026/logs/`.
 
+## E007 / E008 — A1 calibrated transfer sweeps (after E004/E005 are reported)
+Same loop as E004, with the sweep spec files (both modes, every held-out context):
+```bash
+for E in E007 E008; do for ctx in <all contexts>; do for mode in seen unseen; do
+  python -m vcc26.loco --config loco.json --holdout $ctx --mode $mode --out $DATA/loco/$E \
+    --specs specs_$E.json 2>&1 | tee -a logs/${E}_${ctx}_${mode}.log
+done; done; done
+```
+- E007 tests source weighting (tau) and the target-expression gate; E008 tests per-target shrinkage, effect scale beta and the linear fallback for unmeasured targets.
+- Reuse the E003 anchors instead of recomputing them: before the loop, `mkdir -p $DATA/loco/$E && cp -r $DATA/loco/E003/holdout_* $DATA/loco/$E/` (loco.py skips anchor building when `anchors.json` exists).
+- Rows for A1 include `source_r` / `source_w` (similarity of each source line to the held-out line), `mean_gate`, `n_multi_source`, `n_unmeasured`.
+
+**REPORT E007/E008:** for each spec, mean context score per mode across held-out contexts, the per-metric means, and the best spec per mode. Flag any held-out context where A1 loses to B2.
+
 ## Then stop
 Print all REPORT blocks together, the hours the instance has run, and a reminder to **terminate the instance if nothing is queued** (the filesystem stays).

@@ -34,7 +34,7 @@ import pandas as pd
 import scipy.sparse as sp
 
 from . import local_eval, models
-from .emit import emit_context
+from .emit import control_cpm, emit_context
 from .pseudobulk import load as load_summary
 
 CTRL = "non-targeting"
@@ -108,6 +108,7 @@ def run(cfg_path: str, holdout: str, mode: str, out: str, n_panel: int, n_cells:
     sources = [subset_summary(load_summary(c["summary"]), axis, drop)
                for n, c in ctxs.items() if n != holdout]
     ctrl = ad.read_h5ad(ctrl_p)
+    tgt_cpm = control_cpm(ctrl)            # target context's control profile (all a model may see)
     rows = []
     for spec in model_specs:
         t0 = time.time()
@@ -118,12 +119,24 @@ def run(cfg_path: str, holdout: str, mode: str, out: str, n_panel: int, n_cells:
         elif fb and fb.startswith("knn:"):
             emb = (extra_emb or {})[fb[4:]]
             kw["fallback"] = models.knn_fallback(sources, emb, **spec.get("fb_kw", {}))
-        lfc = models.MODELS[spec["model"]](panel, sources, **kw)
+        kw["target_ctrl_cpm"] = tgt_cpm
+        extra = {}
+        if spec["model"] == "A1_transfer":
+            lfc, info = models.MODELS["A1_transfer"](panel, sources, return_info=True, **kw)
+            pt = info["per_target"]
+            extra = {"source_r": [round(float(x), 3) for x in info["source_r"]],
+                     "source_w": [round(float(x), 3) for x in info["source_w"]],
+                     "mean_gate": round(float(np.mean([x[4] for x in pt])), 3),
+                     "n_multi_source": int(sum(x[1] > 1 for x in pt)),
+                     "n_unmeasured": int(sum(x[1] == 0 for x in pt))}
+        else:
+            lfc = models.MODELS[spec["model"]](panel, sources, **kw)
         pred = emit_context(ctrl, panel, lfc, n_cells=n_cells, context=holdout, seed=seed,
                             include_control=n_cells)   # scorer requires the control label
         res = local_eval.score(pred, real_p, anchors, ecfg)
         row = {"model": name, "holdout": holdout, "mode": mode, **{k: v for k, v in res.items() if k != "raw"},
-               **{f"raw_{k}": v for k, v in res["raw"].items()}, "secs": round(time.time() - t0, 1)}
+               **{f"raw_{k}": v for k, v in res["raw"].items()}, **{k: json.dumps(v) if isinstance(v, list) else v for k, v in extra.items()},
+               "secs": round(time.time() - t0, 1)}
         rows.append(row); print(json.dumps(row))
     df = pd.DataFrame(rows)
     df.to_csv(f"{out}/scores_{holdout}_{mode}.csv", index=False)

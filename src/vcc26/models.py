@@ -142,5 +142,99 @@ def knn_fallback(sources, emb: dict[str, np.ndarray], k: int = 20, tau: float = 
     return f
 
 
+# ---------------------------------------------------------------------------------------------
+# A1: calibrated transfer (uses the target context's control profile)
+# ---------------------------------------------------------------------------------------------
+
+def control_similarity_weights(sources, target_ctrl_cpm, tau: float = 0.2, min_cpm: float = 1.0):
+    """Weight each source by how much its control transcriptome resembles the target's.
+    Pearson r of log1p CPM over genes expressed in either; w = softmax(r / tau), mean 1."""
+    t = np.log1p(np.asarray(target_ctrl_cpm, np.float64))
+    rs = []
+    for s in sources:
+        c = np.asarray(s["ctrl_cpm"], np.float64)
+        m = s["present"] & ((c > min_cpm) | (np.expm1(t) > min_cpm))
+        rs.append(np.corrcoef(t[m], np.log1p(c[m]))[0, 1] if m.sum() > 10 else 0.0)
+    rs = np.nan_to_num(np.array(rs))
+    w = np.exp((rs - rs.max()) / tau)
+    return w / w.mean(), rs
+
+
+def per_source_specific(sources, weights=None):
+    """{target: [(weight, effect (G,), valid (G,)), ...]} across sources."""
+    out = {}
+    for k, s in enumerate(sources):
+        _, D, v = _source_effects(s)
+        w = 1.0 if weights is None else float(weights[k])
+        for i, p in enumerate(s["perts"]):
+            out.setdefault(p, []).append((w, D[i], v))
+    return out
+
+
+def _agreement(entries, top: int = 200) -> float:
+    """Mean pairwise cosine of specific effects over each pair's strongest shared genes."""
+    sims = []
+    for a in range(len(entries)):
+        for b in range(a + 1, len(entries)):
+            _, da, va = entries[a]; _, db, vb = entries[b]
+            m = va & vb
+            if m.sum() < 20:
+                continue
+            x, y = da[m], db[m]
+            sel = np.argsort(-(np.abs(x) + np.abs(y)))[:top]
+            x, y = x[sel], y[sel]
+            sims.append(float(x @ y / (np.linalg.norm(x) * np.linalg.norm(y) + 1e-12)))
+    return float(np.mean(sims)) if sims else float("nan")
+
+
+def predict_transfer_a1(targets, sources, target_ctrl_cpm=None, alpha_single: float = 0.8,
+                        alpha_min: float = 0.6, alpha_max: float = 1.0, beta: float = 1.0,
+                        tau: float = 0.2, gate_cpm: float = 5.0, use_weights: bool = True,
+                        use_gate: bool = True, use_agreement: bool = True, fallback=None,
+                        alpha_fallback: float = 0.5, return_info: bool = False, **_):
+    """A1 = generic + per-target specific effect, with
+      * sources weighted by control similarity to the target context (use_weights),
+      * per-target alpha: alpha_single if measured in one source, else
+        alpha_min + (alpha_max - alpha_min) * clip(cross-source agreement, 0, 1) (use_agreement),
+      * target-expression gate: specific effect scaled by clip(target CPM / gate_cpm, 0, 1) in the
+        target context, since CRISPRi cannot knock down a gene that is not expressed (use_gate),
+      * global effect scale beta."""
+    G = len(sources[0]["genes"])
+    genes = sources[0]["genes"]; gpos = {g: i for i, g in enumerate(genes)}
+    if target_ctrl_cpm is not None and use_weights and len(sources) > 1:
+        w, rs = control_similarity_weights(sources, target_ctrl_cpm, tau)
+    else:
+        w, rs = np.ones(len(sources)), np.full(len(sources), np.nan)
+    g = generic(sources, w)
+    per = per_source_specific(sources, w)
+    miss = [t for t in targets if t not in per]
+    fb = dict(zip(miss, fallback(miss))) if (fallback is not None and miss) else {}
+    out = np.tile(g, (len(targets), 1))
+    info = []
+    for r, t in enumerate(targets):
+        gate = 1.0
+        if use_gate and target_ctrl_cpm is not None and t in gpos:
+            gate = float(np.clip(target_ctrl_cpm[gpos[t]] / gate_cpm, 0.0, 1.0))
+        if t in per:
+            ent = per[t]
+            num = sum(wk * dk * vk for wk, dk, vk in ent)
+            den = sum(wk * vk for wk, dk, vk in ent)
+            eff = np.where(den > 0, num / np.maximum(den, 1e-12), 0.0)
+            if len(ent) == 1 or not use_agreement:
+                a, agr = alpha_single if len(ent) == 1 else alpha_max, float("nan")
+            else:
+                agr = _agreement(ent)
+                a = alpha_min + (alpha_max - alpha_min) * float(np.clip(np.nan_to_num(agr), 0, 1))
+            out[r] += a * gate * eff
+            info.append((t, len(ent), agr, a, gate))
+        elif t in fb:
+            out[r] += alpha_fallback * gate * fb[t]
+            info.append((t, 0, float("nan"), alpha_fallback, gate))
+        else:
+            info.append((t, 0, float("nan"), 0.0, gate))
+    out = (beta * out).astype(np.float32)
+    return (out, {"source_r": rs, "source_w": w, "per_target": info}) if return_info else out
+
+
 MODELS = {"B0_control": predict_control, "B1_generic": predict_generic,
-          "B2_transfer": predict_transfer}
+          "B2_transfer": predict_transfer, "A1_transfer": predict_transfer_a1}

@@ -21,8 +21,10 @@ import anndata as ad
 import numpy as np
 import pandas as pd
 
+import json
+
 from . import models
-from .emit import emit_context
+from .emit import control_cpm, emit_context
 from .loco import CTRL, subset_summary
 from .pseudobulk import load as load_summary
 
@@ -45,20 +47,22 @@ def main():
     ap.add_argument("--fallback", default="linear", choices=["none", "linear"])
     ap.add_argument("--cells", type=int, default=400); ap.add_argument("--n-control", type=int, default=400)
     ap.add_argument("--pert-col", default="target_gene")
+    ap.add_argument("--kw", default="{}", help='extra model kwargs as JSON, e.g. {"alpha_single": 0.7}')
     ap.add_argument("--seed", type=int, default=0); ap.add_argument("--out", required=True)
     a = ap.parse_args()
     axis = pd.read_csv(a.gene_names, header=None).iloc[:, 0].astype(str).values
     pl = pd.read_csv(a.perts).iloc[:, 0].astype(str)
     targets = sorted(t for t in pl.unique() if t != CTRL)
     sources = [subset_summary(load_summary(p), axis) for p in a.summaries]
-    kw = {"alpha": a.alpha, "beta": a.beta}
-    if a.model == "B2_transfer" and a.fallback == "linear":
+    kw = {"alpha": a.alpha, "beta": a.beta, **json.loads(a.kw)}
+    if a.model in ("B2_transfer", "A1_transfer") and a.fallback == "linear":
         kw["fallback"] = models.linear_fallback(sources)
-    lfc = models.MODELS[a.model](targets, sources, **kw)
     parts = []
     for i, c in enumerate(a.contexts.split(",")):
         ctrl = ad.read_h5ad(find_ctx(a.controls_dir, c))
         ctrl = ctrl[:, axis].copy()                     # enforce the official gene order
+        # context-specific prediction: A1 uses this context's own control profile
+        lfc = models.MODELS[a.model](targets, sources, target_ctrl_cpm=control_cpm(ctrl), **kw)
         parts.append(emit_context(ctrl, targets, lfc, n_cells=a.cells, pert_col=a.pert_col,
                                   context=c, include_control=a.n_control, seed=a.seed + i))
     out = ad.concat(parts, merge="same")

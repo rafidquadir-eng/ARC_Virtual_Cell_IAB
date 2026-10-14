@@ -17,3 +17,10 @@ Scores are scaled vcc2026 metrics (0 = context mean-response baseline, 1 = repli
 
 ## Synthetic harness check (14 Oct, planning session, not challenge data)
 3 synthetic contexts, held-out C1, seen mode: control −3.05, generic −0.37, per-target transfer +0.26. Confirms the pipeline (summaries → models → emission → official metrics → anchors → scaled score) runs end to end.
+
+## A1 synthetic check (14 Oct, planning session, not challenge data)
+4 synthetic lines (two similar pairs; 25% of targets unexpressed per line), held-out C1, seen mode:
+B1 −0.04, B2 +0.38, A1 +0.41 (sharp source weights), A1 equal weights +0.46, A1 without agreement-shrinkage +0.51.
+Expression gate: +0.41 with, +0.36 without. Effect scale beta trades fidelity against Jaccard
+(beta 1.0 → 1.2 → 1.5: fid 0.32 → 0.64 → 0.77, jac 0.49 → 0.31 → 0.00). Defaults softened to tau 0.2,
+alpha_min 0.6. Real tuning happens in E007/E008 on held-out public lines.

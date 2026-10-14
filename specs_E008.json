@@ -1,0 +1,9 @@
+[{"name":"A1_default","model":"A1_transfer"},
+ {"name":"A1_noagree","model":"A1_transfer","kw":{"use_agreement":false}},
+ {"name":"A1_amin0.3","model":"A1_transfer","kw":{"alpha_min":0.3}},
+ {"name":"A1_asingle0.5","model":"A1_transfer","kw":{"alpha_single":0.5}},
+ {"name":"A1_asingle1.0","model":"A1_transfer","kw":{"alpha_single":1.0}},
+ {"name":"A1_beta0.8","model":"A1_transfer","kw":{"beta":0.8}},
+ {"name":"A1_beta1.2","model":"A1_transfer","kw":{"beta":1.2}},
+ {"name":"A1_beta1.5","model":"A1_transfer","kw":{"beta":1.5}},
+ {"name":"A1_linearfb","model":"A1_transfer","fallback":"linear","fb_kw":{"k":10}}]

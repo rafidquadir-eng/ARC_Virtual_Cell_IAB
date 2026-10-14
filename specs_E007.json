@@ -1,0 +1,8 @@
+[{"name":"B2_transfer","model":"B2_transfer","kw":{"alpha":1.0}},
+ {"name":"A1_default","model":"A1_transfer"},
+ {"name":"A1_eqweights","model":"A1_transfer","kw":{"use_weights":false}},
+ {"name":"A1_tau0.05","model":"A1_transfer","kw":{"tau":0.05}},
+ {"name":"A1_tau1","model":"A1_transfer","kw":{"tau":1.0}},
+ {"name":"A1_nogate","model":"A1_transfer","kw":{"use_gate":false}},
+ {"name":"A1_gate1cpm","model":"A1_transfer","kw":{"gate_cpm":1.0}},
+ {"name":"A1_gate20cpm","model":"A1_transfer","kw":{"gate_cpm":20.0}}]

@@ -19,6 +19,13 @@ import scipy.sparse as sp
 PC = 1.0
 
 
+def control_cpm(ctrl: ad.AnnData) -> np.ndarray:
+    """Pseudobulk CPM of a context's control cells, in its own gene order."""
+    X = ctrl.X
+    tot = np.asarray(X.sum(0)).ravel().astype(np.float64)
+    return tot / max(tot.sum(), 1.0) * 1e6
+
+
 def emit_context(ctrl: ad.AnnData, targets, lfc: np.ndarray, *, n_cells: int = 400,
                  pert_col: str = "target", context: str = "X", control_label: str = "non-targeting",
                  include_control: int = 0, seed: int = 0, up_tol: float = 0.02) -> ad.AnnData:
