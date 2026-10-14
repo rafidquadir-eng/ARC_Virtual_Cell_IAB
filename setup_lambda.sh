@@ -34,7 +34,8 @@ export PATH="$HOME/.local/bin:$PATH"
 cd "$WORK"
 [ -d .venv ] || uv venv --python 3.12 .venv
 source .venv/bin/activate
-uv pip install -q --torch-backend=auto "cell-eval2[gpu,gpudge]==0.18.0" \
+# cu128, not auto: cell-eval2[gpu] pins cupy-cuda12x, which needs CUDA 12 libs (auto picked cu132 on driver 595)
+uv pip install -q --torch-backend=cu128 "cell-eval2[gpu,gpudge]==0.18.0" \
     anndata scanpy polars pandas scipy numpy pyarrow huggingface_hub "torch>=2.2"
 uv tool install -q vcc-cli 2>/dev/null || uv tool upgrade -q vcc-cli
 # Env file sourced explicitly by every job (Ubuntu's .bashrc returns early in non-interactive shells)
