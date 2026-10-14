@@ -54,6 +54,24 @@ Then open a terminal on the instance (Desktop's integrated terminal in the SSH s
 ```
 The token comes from the challenge site's Credentials page. It is typed only into that hidden prompt, never into chat or any Claude setting.
 
+## 3b. Google Drive remote (needed for data downloads; you do this once)
+All downloaded datasets are archived on Google Drive (`gdrive:VCC2026/data`, 5 TB limit). rclone signs in through a browser, and the instance has none, so you forward rclone's login port to your Mac [5]:
+```bash
+# Mac: a new Terminal window, logs in with a tunnel for rclone's port
+ssh -L localhost:53682:localhost:53682 -i ~/.ssh/A10.pem ubuntu@150.136.70.112
+# instance, in that window
+rclone config
+```
+In `rclone config`, answer:
+1. `n` (new remote). **name:** `gdrive`. **Storage:** `drive` (Google Drive).
+2. **client_id** and **client_secret:** leave both empty (press Enter).
+3. **scope:** `1` (full access, so rclone can see the existing VCC2026 folder).
+4. **service_account_file:** leave empty. **Edit advanced config:** `n`.
+5. **Use web browser to automatically authenticate:** `y`. rclone prints an `http://127.0.0.1:53682/auth?...` link. Open it in your Mac's browser and sign in with the Google account that has the 5 TB.
+6. **Configure this as a Shared Drive:** `n`. Then `y` to keep the remote, and `q` to quit.
+
+Check it with `rclone about gdrive:` and `rclone lsd gdrive:VCC2026`. The token stays in `~/.config/rclone/rclone.conf` on the instance; never commit or paste that file.
+
 ## 4. Run the runbook
 Tell the Desktop session:
 > Follow CLAUDE.md: run docs/07_RUNBOOK_INSTANCE.md stages E000–E005 here on the instance and print each REPORT block.
@@ -71,3 +89,4 @@ When a stage finishes and nothing is queued, terminate the instance in the Lambd
 2. [Desktop app — SSH sessions (Claude Code docs)](https://code.claude.com/docs/en/desktop)
 3. [Advanced setup — system requirements and install (Claude Code docs)](https://code.claude.com/docs/en/setup)
 4. [Authentication — login over SSH (Claude Code docs)](https://code.claude.com/docs/en/authentication)
+5. [rclone remote setup — SSH tunnel](https://rclone.org/remote_setup/)
