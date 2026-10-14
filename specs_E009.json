@@ -1,0 +1,3 @@
+[{"name":"A1_default","model":"A1_transfer"},
+ {"name":"A2_nb_unmeasured","model":"A1_transfer","kw":{"tss":"__DATA__/tss.csv","nb_scope":"unmeasured"}},
+ {"name":"A2_nb_all","model":"A1_transfer","kw":{"tss":"__DATA__/tss.csv","nb_scope":"all"}}]

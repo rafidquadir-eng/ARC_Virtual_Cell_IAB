@@ -54,4 +54,11 @@ summ () {  # name file pert_col control [symbol_col]
 summ K562 "$(find "$RAW" -maxdepth 1 -iname 'K562_essential_raw_singlecell*.h5ad' | head -1)" gene non-targeting gene_name
 summ RPE1 "$(find "$RAW" -maxdepth 1 -iname 'rpe1_raw_singlecell*.h5ad' | head -1)" gene non-targeting gene_name
 rclone listremotes 2>/dev/null | grep -q "^gdrive:" && rclone copy "$PB" gdrive:VCC2026/summaries/ --include "*.npz" || true
+echo "== GENCODE TSS table for A2 neighbour silencing (GENCODE v46 basic; release number unverified on this mirror)"
+if [ ! -f "$DATA/tss.csv" ]; then
+  aria2c -x4 -d "$RAW" -o gencode.basic.gtf.gz \
+    https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_46/gencode.v46.basic.annotation.gtf.gz \
+    && python -m vcc26.neighbors build-tss --gtf "$RAW/gencode.basic.gtf.gz" --out "$DATA/tss.csv" \
+    || echo "!! GENCODE download failed: check the release folder at https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/"
+fi
 echo "== done"; du -sh "$RAW" "$PB"

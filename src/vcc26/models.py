@@ -191,14 +191,17 @@ def predict_transfer_a1(targets, sources, target_ctrl_cpm=None, alpha_single: fl
                         alpha_min: float = 0.6, alpha_max: float = 1.0, beta: float = 1.0,
                         tau: float = 0.2, gate_cpm: float = 5.0, use_weights: bool = True,
                         use_gate: bool = True, use_agreement: bool = True, fallback=None,
-                        alpha_fallback: float = 0.5, return_info: bool = False, **_):
+                        alpha_fallback: float = 0.5, tss: str | None = None,
+                        nb_scope: str = "unmeasured", return_info: bool = False, **_):
     """A1 = generic + per-target specific effect, with
       * sources weighted by control similarity to the target context (use_weights),
       * per-target alpha: alpha_single if measured in one source, else
         alpha_min + (alpha_max - alpha_min) * clip(cross-source agreement, 0, 1) (use_agreement),
       * target-expression gate: specific effect scaled by clip(target CPM / gate_cpm, 0, 1) in the
         target context, since CRISPRi cannot knock down a gene that is not expressed (use_gate),
-      * global effect scale beta."""
+      * global effect scale beta,
+      * A2 (tss=<path to TSS csv>): CRISPRi neighbour silencing learned from the sources, applied to
+        targets in nb_scope ('unmeasured' or 'all'), gated by neighbour expression in the target."""
     G = len(sources[0]["genes"])
     genes = sources[0]["genes"]; gpos = {g: i for i, g in enumerate(genes)}
     if target_ctrl_cpm is not None and use_weights and len(sources) > 1:
@@ -232,8 +235,20 @@ def predict_transfer_a1(targets, sources, target_ctrl_cpm=None, alpha_single: fl
             info.append((t, 0, float("nan"), alpha_fallback, gate))
         else:
             info.append((t, 0, float("nan"), 0.0, gate))
-    out = (beta * out).astype(np.float32)
-    return (out, {"source_r": rs, "source_w": w, "per_target": info}) if return_info else out
+    out = beta * out
+    n_nb = 0
+    if tss is not None:
+        from .neighbors import NeighborPrior, apply_neighbors, load_pairs
+        pairs = load_pairs(tss, genes)
+        prior = NeighborPrior.learn(sources, pairs)
+        rows = [r for r, t in enumerate(targets) if nb_scope == "all" or t not in per]
+        eff = prior.predict([targets[r] for r in rows], genes, pairs, target_ctrl_cpm)
+        eff = {rows[k]: v for k, v in eff.items()}
+        out = apply_neighbors(out, eff)
+        n_nb = len(eff)
+    out = out.astype(np.float32)
+    meta = {"source_r": rs, "source_w": w, "per_target": info, "n_neighbor_targets": n_nb}
+    return (out, meta) if return_info else out
 
 
 MODELS = {"B0_control": predict_control, "B1_generic": predict_generic,

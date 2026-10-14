@@ -91,5 +91,19 @@ done; done; done
 
 **REPORT E007/E008:** for each spec, mean context score per mode across held-out contexts, the per-metric means, and the best spec per mode. Flag any held-out context where A1 loses to B2.
 
+## E009 — A2 neighbour silencing (after E007/E008)
+`fetch_public_data.sh` writes `$DATA/tss.csv`. Fill in the path and run both modes for every held-out context:
+```bash
+sed "s#__DATA__#$DATA#g" specs_E009.json > specs_E009.local.json
+python -m vcc26.neighbors learn --tss $DATA/tss.csv --summaries $DATA/pb/*.npz --out reports/neighbor_prior.json
+mkdir -p $DATA/loco/E009 && cp -r $DATA/loco/E003/holdout_* $DATA/loco/E009/
+for ctx in <all contexts>; do for mode in seen unseen; do
+  python -m vcc26.loco --config loco.json --holdout $ctx --mode $mode --out $DATA/loco/E009 \
+    --specs specs_E009.local.json 2>&1 | tee -a logs/E009_${ctx}_${mode}.log
+done; done
+```
+Before E009, update `specs_E009.json` so its `A1_default` row uses the best E007/E008 settings (the planning session will say which).
+**REPORT E009:** `reports/neighbor_prior.json` (median neighbour log2FC by distance bin and counts), then the per-mode table as in E007/E008, plus `n_neighbor_targets`.
+
 ## Then stop
 Print all REPORT blocks together, the hours the instance has run, and a reminder to **terminate the instance if nothing is queued** (the filesystem stays).

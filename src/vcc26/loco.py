@@ -128,7 +128,8 @@ def run(cfg_path: str, holdout: str, mode: str, out: str, n_panel: int, n_cells:
                      "source_w": [round(float(x), 3) for x in info["source_w"]],
                      "mean_gate": round(float(np.mean([x[4] for x in pt])), 3),
                      "n_multi_source": int(sum(x[1] > 1 for x in pt)),
-                     "n_unmeasured": int(sum(x[1] == 0 for x in pt))}
+                     "n_unmeasured": int(sum(x[1] == 0 for x in pt)),
+                     "n_neighbor_targets": info.get("n_neighbor_targets", 0)}
         else:
             lfc = models.MODELS[spec["model"]](panel, sources, **kw)
         pred = emit_context(ctrl, panel, lfc, n_cells=n_cells, context=holdout, seed=seed,
