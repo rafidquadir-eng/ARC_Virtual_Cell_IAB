@@ -20,6 +20,13 @@ echo "WORK=$WORK  DATA=$DATA"
 echo "== 1. system packages"
 sudo DEBIAN_FRONTEND=noninteractive apt-get update -qq
 sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq rclone unzip pigz tmux htop jq aria2 >/dev/null
+# Some images ship without the NVIDIA driver: torch then installs as CPU-only and cell-eval2 falls back
+# to the slow scanpy DE backend. Install the driver and stop: a reboot is needed before step 2.
+if lspci | grep -qi nvidia && ! command -v nvidia-smi >/dev/null; then
+  sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq "linux-headers-$(uname -r)" \
+      nvidia-driver-595-server nvidia-utils-595-server >/dev/null
+  echo "!! NVIDIA driver installed: run 'sudo reboot', then re-run setup_lambda.sh"; exit 1
+fi
 
 echo "== 2. python env (uv, Python 3.12)"
 command -v uv >/dev/null || curl -LsSf https://astral.sh/uv/install.sh | sh
