@@ -2,9 +2,30 @@
 
 **Claude Code on the web cannot do this.** Web sessions run behind an HTTP/HTTPS proxy that carries all their outbound traffic [1], so they cannot open an SSH connection to the instance, whatever the network-access level. Their environment variables are also not a secret store: anyone who uses the environment can read them [1].
 
-**Use the Claude Desktop app's SSH session instead** [2]. Claude Code then runs *on the instance*, your private key never leaves your laptop, and nothing secret goes into any Claude setting.
+**Run Claude Code on the instance instead**, either from your Mac Terminal over SSH (1a) or from the Claude Desktop app's SSH session (1b) [2]. Claude Code then runs *on the instance*, your private key never leaves your laptop, and nothing secret goes into any Claude setting.
 
-## 1. Connect (once)
+## 1a. Connect from the Mac Terminal (works on any macOS; use this if Desktop won't install)
+Claude Code itself needs macOS 13+ [3], but nothing has to be installed on the Mac: Claude Code runs on the instance (Ubuntu), and the Mac only needs its built-in Terminal and `ssh`.
+```bash
+# on the Mac (Terminal.app). Use the path of the a10instance private key you downloaded from Lambda.
+chmod 600 ~/.ssh/a10instance            # ssh refuses keys other users can read
+ssh -i ~/.ssh/a10instance ubuntu@132.145.128.143
+
+# now on the instance
+sudo apt-get install -y tmux
+curl -fsSL https://claude.ai/install.sh | bash      # native installer [3]
+echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc && source ~/.bashrc
+claude --version
+tmux new -s cc                                      # keeps Claude running if the SSH connection drops
+claude                                              # first run: login (below)
+```
+**Login over SSH:** Claude prints a login URL (press `c` to copy it). Open it in the Mac's browser, sign in, and if the browser shows a code, paste it into the terminal at `Paste code here if prompted` [4]. That code goes only into the terminal, never into chat.
+
+**Reconnecting later:** `ssh -i ~/.ssh/a10instance ubuntu@132.145.128.143` then `tmux attach -t cc`. Detach without stopping Claude with `Ctrl-b` then `d`.
+
+Then continue with steps 2–4 below inside that Claude session (start it from `~` before the repo exists; after the clone, quit with `/exit` and restart it from `~/vcc` with `cd ~/vcc && claude` so it reads `CLAUDE.md`).
+
+## 1b. Connect from Claude Desktop (macOS 13+ only)
 1. Install the Claude Desktop app (macOS, Windows, or Linux beta) and open the **Code** tab.
 2. Before starting a session, open the environment dropdown → **+ Add SSH connection**:
    - **Name:** `lambda-vcc`
@@ -48,3 +69,5 @@ When a stage finishes and nothing is queued, terminate the instance in the Lambd
 ## Sources
 1. [Configure cloud environments (Claude Code docs)](https://code.claude.com/docs/en/cloud-environments)
 2. [Desktop app — SSH sessions (Claude Code docs)](https://code.claude.com/docs/en/desktop)
+3. [Advanced setup — system requirements and install (Claude Code docs)](https://code.claude.com/docs/en/setup)
+4. [Authentication — login over SSH (Claude Code docs)](https://code.claude.com/docs/en/authentication)

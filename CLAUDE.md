@@ -1,6 +1,6 @@
 # CLAUDE.md — Immunome AI × Virtual Cell Challenge 2026 (execution repo)
 
-You are Claude Code running **on the Lambda GPU instance** (via a Claude Desktop SSH session). This repo, cloned at `~/vcc`, holds the code and plan. A separate planning session decides experiments; you execute them and report back.
+You are Claude Code running **on the Lambda GPU instance** (started over SSH from the Mac Terminal, or from a Claude Desktop SSH session). This repo, cloned at `~/vcc`, holds the code and plan. A separate planning session decides experiments; you execute them and report back.
 
 **Start with `docs/08_CLAUDE_CODE_WEB.md`** (how this session was connected, the challenge login the user does themselves, long-job rules). The step-by-step task list is `docs/07_RUNBOOK_INSTANCE.md`.
 
