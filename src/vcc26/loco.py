@@ -53,8 +53,19 @@ def subset_summary(s: dict, axis: np.ndarray, drop: set[str] | None = None) -> d
                 ctrl_cpm=take(s["ctrl_cpm"]), present=pres, ncells=s["ncells"][keep], kd=s["kd"][keep])
 
 
+def read_panel(path: str | None) -> set[str] | None:
+    """Target list (CSV with a 'target_gene' column, or one header-less column)."""
+    if not path:
+        return None
+    df = pd.read_csv(path)
+    col = "target_gene" if "target_gene" in df.columns else None
+    vals = df[col] if col else pd.read_csv(path, header=None).iloc[:, 0]
+    return set(vals.astype(str)) - {CTRL}
+
+
 def prepare_holdout(ctx: dict, axis_all: np.ndarray, outdir: str, n_panel: int, n_cells: int,
-                    seed: int, max_kd: float = 0.7):
+                    seed: int, max_kd: float = 0.7, panel_set: set[str] | None = None,
+                    max_ctrl: int = 18400):
     os.makedirs(outdir, exist_ok=True)
     real_p, ctrl_p = f"{outdir}/real.h5ad", f"{outdir}/ctrl.h5ad"
     if os.path.exists(real_p) and os.path.exists(ctrl_p):
@@ -71,13 +82,15 @@ def prepare_holdout(ctx: dict, axis_all: np.ndarray, outdir: str, n_panel: int, 
     lab = a.obs[ctx["pert_col"]].astype(str).values
     summ = load_summary(ctx["summary"])
     ok = set(summ["perts"][(summ["ncells"] >= min(n_cells, 50)) & ~(summ["kd"] > max_kd)])
-    cand = sorted(p for p in ok if p in set(axis))
+    cand = sorted(p for p in ok if p in set(axis) and (panel_set is None or p in panel_set))
     panel = sorted(rng.choice(cand, min(n_panel, len(cand)), replace=False))
     rows = []
     for p in panel:
         idx = np.where(lab == p)[0]
         rows.append(rng.choice(idx, min(n_cells, len(idx)), replace=False))
     cidx = np.where(lab == ctx["control"])[0]
+    if len(cidx) > max_ctrl:                      # challenge contexts have 18,400 controls
+        cidx = rng.choice(cidx, max_ctrl, replace=False)
     rows.append(cidx)
     rows = np.sort(np.concatenate(rows))
     X = a.X[rows]
@@ -92,21 +105,31 @@ def prepare_holdout(ctx: dict, axis_all: np.ndarray, outdir: str, n_panel: int, 
 
 def run(cfg_path: str, holdout: str, mode: str, out: str, n_panel: int, n_cells: int, seed: int,
         model_specs: list[dict], de_backend: str = "auto", device: str = "auto",
-        extra_emb: dict | None = None, tag: str = "default"):
+        extra_emb: dict | None = None, tag: str = "default", panel_file: str | None = None,
+        only_sources: list[str] | None = None):
     cfg = json.load(open(cfg_path))
     axis_all = pd.read_csv(cfg["gene_axis"], header=None).iloc[:, 0].astype(str).values
     ctxs = {c["name"]: c for c in cfg["contexts"]}
     hold = ctxs[holdout]
     hdir = f"{out}/holdout_{holdout}"
-    real_p, ctrl_p, axis, panel = prepare_holdout(hold, axis_all, hdir, n_panel, n_cells, seed)
+    real_p, ctrl_p, axis, panel = prepare_holdout(hold, axis_all, hdir, n_panel, n_cells, seed,
+                                                  panel_set=read_panel(panel_file))
     ecfg = local_eval.make_config("target", CTRL, device, de_backend)
     anc_p = f"{hdir}/anchors.json"
     if not os.path.exists(anc_p):
         json.dump(local_eval.build_anchors(real_p, ecfg), open(anc_p, "w"), indent=2)
     anchors = json.load(open(anc_p))
     drop = set(panel) if mode == "unseen" else None
-    sources = [subset_summary(load_summary(c["summary"]), axis, drop)
-               for n, c in ctxs.items() if n != holdout]
+    # never use a source from the same cell line as the held-out context (e.g. K562 essential vs K562 GWPS)
+    line = hold.get("line", holdout)
+    src_names = [n for n, c in ctxs.items() if n != holdout and c.get("line", n) != line
+                 and (not only_sources or n in only_sources)]
+    if not src_names:
+        raise ValueError("no source contexts left after line/--sources filtering")
+    sources = [dict(subset_summary(load_summary(ctxs[n]["summary"]), axis, drop), name=n) for n in src_names]
+    cover = sum(any(p in set(s_["perts"]) for s_ in sources) for p in panel)
+    print(f"holdout {holdout} (line {line}): {len(panel)} panel targets, sources {src_names}, "
+          f"{cover} panel targets measured in >=1 source")
     ctrl = ad.read_h5ad(ctrl_p)
     tgt_cpm = control_cpm(ctrl)            # target context's control profile (all a model may see)
     rows = []
@@ -135,7 +158,8 @@ def run(cfg_path: str, holdout: str, mode: str, out: str, n_panel: int, n_cells:
         pred = emit_context(ctrl, panel, lfc, n_cells=n_cells, context=holdout, seed=seed,
                             include_control=n_cells)   # scorer requires the control label
         res = local_eval.score(pred, real_p, anchors, ecfg)
-        row = {"model": name, "holdout": holdout, "mode": mode, **{k: v for k, v in res.items() if k != "raw"},
+        row = {"model": name, "holdout": holdout, "mode": mode, "sources": "+".join(src_names),
+               "n_panel": len(panel), "n_covered": cover, **{k: v for k, v in res.items() if k != "raw"},
                **{f"raw_{k}": v for k, v in res["raw"].items()}, **{k: json.dumps(v) if isinstance(v, list) else v for k, v in extra.items()},
                "secs": round(time.time() - t0, 1)}
         rows.append(row); print(json.dumps(row))
@@ -167,13 +191,18 @@ def main():
     ap.add_argument("--emb", action="append", default=[],
                     help="name=path.npz gene embedding {symbol: vector}, usable as fallback 'knn:name'")
     ap.add_argument("--de-backend", default="auto"); ap.add_argument("--device", default="auto")
+    ap.add_argument("--panel-file", default=None,
+                    help="restrict the held-out panel to these targets (e.g. the challenge pert_counts.csv)")
+    ap.add_argument("--sources", default=None, help="comma-separated source context names to use (default: all)")
+    ap.add_argument("--tag", default=None, help="suffix for the scores file (default: specs file name)")
     a = ap.parse_args()
     specs = json.load(open(a.specs)) if a.specs else DEFAULT_SPECS
     embs = {}
     for e in a.emb:
         n, p = e.split("=", 1); z = np.load(p, allow_pickle=True); embs[n] = {k: z[k] for k in z.files}
-    tag = os.path.splitext(os.path.basename(a.specs))[0] if a.specs else "default"
-    run(a.config, a.holdout, a.mode, a.out, a.panel, a.cells, a.seed, specs, a.de_backend, a.device, embs, tag)
+    tag = a.tag or (os.path.splitext(os.path.basename(a.specs))[0] if a.specs else "default")
+    run(a.config, a.holdout, a.mode, a.out, a.panel, a.cells, a.seed, specs, a.de_backend, a.device, embs, tag,
+        a.panel_file, a.sources.split(",") if a.sources else None)
 
 
 if __name__ == "__main__":

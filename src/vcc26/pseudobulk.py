@@ -36,7 +36,7 @@ def load_gene_axis(path: str | None, adata: ad.AnnData, symbol_col: str | None) 
 
 def summarize(adata: ad.AnnData, pert_col: str, control: str, genes_axis: np.ndarray,
               symbol_col: str | None = None, min_cells: int = 25, max_kd: float | None = None,
-              chunk: int = 20000) -> dict:
+              chunk: int = 100000) -> dict:
     sym = np.asarray(adata.var[symbol_col] if symbol_col else adata.var_names, dtype=str)
     # map source genes onto the target axis (first occurrence wins for duplicated symbols)
     pos = {g: i for i, g in enumerate(genes_axis)}
@@ -48,30 +48,33 @@ def summarize(adata: ad.AnnData, pert_col: str, control: str, genes_axis: np.nda
     G = len(genes_axis)
 
     labels = adata.obs[pert_col].astype(str).values
-    groups = pd.Series(np.arange(len(labels))).groupby(labels).apply(lambda s: s.values).to_dict()
+    cat = pd.Categorical(labels)
+    names, codes = np.asarray(cat.categories, str), cat.codes.astype(np.int64)
+    K, N = len(names), len(labels)
+    if control not in set(names):
+        raise ValueError(f"control label {control!r} not in {pert_col}")
+    # one sequential pass over contiguous row blocks (fast on backed files, bounded memory):
+    # per-group gene totals = indicator(groups x cells) @ X, restricted to genes on the axis
+    tot = np.zeros((K, len(src_idx))); lib = np.zeros(K)
+    for s0 in range(0, N, chunk):
+        s1 = min(N, s0 + chunk)
+        X = adata.X[s0:s1]
+        X = sp.csr_matrix(X) if not sp.issparse(X) else X.tocsr()
+        S = sp.csr_matrix((np.ones(s1 - s0), (codes[s0:s1], np.arange(s1 - s0))), shape=(K, s1 - s0))
+        lib += np.asarray(S @ np.asarray(X.sum(1)).ravel()).ravel()
+        tot += (S @ X[:, src_idx]).toarray()
+    counts = np.bincount(codes, minlength=K)
 
-    def group_sum(idx):
-        tot = np.zeros(len(sym)); lib = 0.0
-        for k in range(0, len(idx), chunk):
-            X = adata.X[np.sort(idx[k:k + chunk])]
-            X = X.toarray() if sp.issparse(X) else np.asarray(X)
-            tot += X.sum(0); lib += X.sum()
-        return tot, lib
-
-    def to_axis(tot, lib):
-        v = np.full(G, 0.0); v[dst_idx] = tot[src_idx] / max(lib, 1.0) * 1e6
+    def to_axis(k):
+        v = np.full(G, 0.0); v[dst_idx] = tot[k] / max(lib[k], 1.0) * 1e6
         return v
 
-    if control not in groups:
-        raise ValueError(f"control label {control!r} not in {pert_col}")
-    ctot, clib = group_sum(groups[control])
-    ctrl = to_axis(ctot, clib)
+    ctrl = to_axis(int(np.where(names == control)[0][0]))
     perts, cpm, n = [], [], []
-    for p, idx in groups.items():
-        if p == control or len(idx) < min_cells:
+    for k, p in enumerate(names):
+        if p == control or counts[k] < min_cells:
             continue
-        t, l = group_sum(idx)
-        perts.append(p); cpm.append(to_axis(t, l)); n.append(len(idx))
+        perts.append(p); cpm.append(to_axis(k)); n.append(int(counts[k]))
     cpm = np.vstack(cpm).astype(np.float32)
     perts = np.array(perts)
     kd = np.array([cpm[i, pos[p]] / ctrl[pos[p]] if p in pos and ctrl[pos[p]] > 0 else np.nan

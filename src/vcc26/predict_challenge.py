@@ -53,7 +53,9 @@ def main():
     axis = pd.read_csv(a.gene_names, header=None).iloc[:, 0].astype(str).values
     pl = pd.read_csv(a.perts).iloc[:, 0].astype(str)
     targets = sorted(t for t in pl.unique() if t != CTRL)
-    sources = [subset_summary(load_summary(p), axis) for p in a.summaries]
+    # name = file stem (e.g. pb/K562_GWPS.npz -> "K562_GWPS"), used by --kw '{"generic_from": [...]}'
+    sources = [dict(subset_summary(load_summary(p), axis), name=os.path.splitext(os.path.basename(p))[0])
+               for p in a.summaries]
     kw = {"alpha": a.alpha, "beta": a.beta, **json.loads(a.kw)}
     if a.model in ("B2_transfer", "A1_transfer") and a.fallback == "linear":
         kw["fallback"] = models.linear_fallback(sources)

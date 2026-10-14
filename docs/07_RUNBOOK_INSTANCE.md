@@ -77,7 +77,62 @@ done
 **CHECK:** B0 < B1 on mean context score in every context (if not, report it; something is wrong with emission or anchors).
 **REPORT E004/E005:** one table per mode: rows = model, columns = held-out context, cell = context score; plus per-metric means across contexts. Then append rows to `EXPERIMENT_LOG.md` and `rclone copy` the CSVs to `gdrive:VCC2026/logs/`.
 
-## E007 / E008 — A1 calibrated transfer sweeps (after E004/E005 are reported)
+## E010–E012 — add K562 GWPS, test-like validation, second leaderboard entry (do these before E007–E009)
+Why: E002 showed the panel has no essential genes, and only K562 GWPS measures it (272/300). E004's "seen" setting transferred essential-gene targets between essential-gene screens, which is not what the test looks like. A unit test also showed that B2 adds the *source library's* average response (the essential-gene stress signature) to every prediction. New options fix this: `raw` (use the measured log2FC itself) and `generic_from` (take the generic shift only from panel-like sources, GWPS and H1). `loco.py` now skips source datasets from the same cell line as the held-out one (`line` field), and adds `--panel-file`, `--sources` and `--tag`. `pseudobulk.py` now makes one sequential pass, about 20× faster.
+
+```bash
+source ~/.vcc_env; cd ~/vcc; git pull
+AXIS=$DATA/challenge/controls/gene_axis.csv
+PANEL=$(find $DATA/challenge -name pert_counts.csv | head -1); echo $PANEL
+```
+
+**E010: summarise GWPS** (check the obs column and control label with a backed read first; expected `gene` / `non-targeting`, symbols in var `gene_name`):
+```bash
+tmux new -d -s E010 "source ~/.vcc_env; cd ~/vcc; python -m vcc26.pseudobulk --h5ad $DATA/raw/K562_gwps_raw_singlecell_01.h5ad \
+  --pert-col gene --control non-targeting --symbol-col gene_name --gene-axis $AXIS --max-kd 0.7 \
+  --out $DATA/pb/K562_GWPS.npz 2>&1 | tee logs/E010.log"
+```
+Then edit `loco.json`:
+- add `"line": "K562"` to the existing K562 entry;
+- add a new entry `{"name": "K562_GWPS", "line": "K562", "h5ad": <gwps h5ad>, "pert_col": "gene", "control": "non-targeting", "symbol_col": "gene_name", "summary": "$DATA/pb/K562_GWPS.npz"}` (the real path, not the variable);
+- commit.
+
+**CHECK:** report perts kept, genes on the axis, median knockdown, and how many of the 300 panel targets survive the `--max-kd 0.7` filter. If fewer than 200 survive, rerun without `--max-kd` to `K562_GWPS_nokd.npz` and report both.
+
+**E011: test-like local validation** (at most 2 GPU jobs at once; RPE1 ran out of memory with 4–5):
+```bash
+# (a) panel-aligned holdout: K562 GWPS restricted to the challenge's 300 targets. Sources = the other lines;
+#     K562 essential is excluded automatically (same line). Mimics the panel targets nobody else measured.
+for mode in seen unseen; do
+  python -m vcc26.loco --config loco.json --holdout K562_GWPS --mode $mode --out $DATA/loco/E011 \
+    --panel-file $PANEL --specs specs_E011.json 2>&1 | tee -a logs/E011_K562_GWPS_$mode.log
+done
+# (b) other lines with GWPS as a source; E003 anchors reused. "testlike" = only GWPS (+H1) as sources,
+#     which mimics the test (the panel is measured in K562 only).
+mkdir -p $DATA/loco/E011; for c in RPE1 HepG2 Jurkat H1; do cp -rn $DATA/loco/E003/holdout_$c $DATA/loco/E011/; done
+for c in RPE1 HepG2 Jurkat H1; do
+  python -m vcc26.loco --config loco.json --holdout $c --mode seen --out $DATA/loco/E011 \
+    --specs specs_E011.json --sources K562_GWPS,H1 --tag testlike 2>&1 | tee -a logs/E011_${c}_testlike.log
+  python -m vcc26.loco --config loco.json --holdout $c --mode seen --out $DATA/loco/E011 \
+    --specs specs_E011.json --tag all 2>&1 | tee -a logs/E011_${c}_all.log
+done
+```
+The `linear` fallback specs run an SVD over GWPS's ~10k perturbations, which takes a few minutes each.
+**REPORT E011:** (a) a table per mode: model × context score and per-metric scaled means, plus `n_panel` / `n_covered`. (b) a table model × held-out line for `testlike` and for `all`. Then compute the **selection score** = 0.9 × (b-testlike mean over the 4 lines) + 0.1 × (a-unseen context score), and name the top spec. Commit the CSVs to `results/E011/`.
+
+**E012: leaderboard entry** (first entry of a new UTC day; state the count before submitting). Use the top E011 spec, written here as `<model>`, `<kw JSON>` and `<fallback>` (`linear` or `none`):
+```bash
+python -m vcc26.predict_challenge --controls-dir $DATA/challenge/controls --contexts A,B,C --perts $PANEL \
+  --gene-names $AXIS --summaries $DATA/pb/K562.npz $DATA/pb/K562_GWPS.npz $DATA/pb/RPE1.npz $DATA/pb/HepG2.npz \
+  $DATA/pb/Jurkat.npz $DATA/pb/H1.npz --model <model> --kw '<kw JSON>' --fallback <fallback> --n-control 0 \
+  --out $DATA/preds/E012.h5ad
+vcc prep $DATA/preds/E012.h5ad -g $AXIS --perts $PANEL --contexts A,B,C -o $DATA/preds/E012.vcc
+vcc submit $DATA/preds/E012.vcc -m "E012 <spec name> with K562 GWPS" --wait
+```
+(The summary file names must stay `K562_GWPS.npz` and `H1.npz`, because `generic_from` matches file names.)
+**REPORT E012:** overall and six per-metric scores, and the rank. Compare with E001 (−0.081).
+
+## E007 / E008 — A1 calibrated transfer sweeps (after E011/E012; rerun them in the E011 "testlike" setting)
 Same loop as E004, with the sweep spec files (both modes, every held-out context):
 ```bash
 for E in E007 E008; do for ctx in <all contexts>; do for mode in seen unseen; do

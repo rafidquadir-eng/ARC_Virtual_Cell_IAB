@@ -1,0 +1,10 @@
+[
+ {"name": "B1_generic",          "model": "B1_generic"},
+ {"name": "B1_gPL",              "model": "B1_generic",  "kw": {"generic_from": ["K562_GWPS", "H1"]}},
+ {"name": "B2_transfer",         "model": "B2_transfer", "kw": {"alpha": 1.0}},
+ {"name": "B2_raw_gPL",          "model": "B2_transfer", "kw": {"alpha": 1.0, "raw": true, "generic_from": ["K562_GWPS", "H1"]}},
+ {"name": "B2_raw_gPL_a0.8",     "model": "B2_transfer", "kw": {"alpha": 0.8, "raw": true, "generic_from": ["K562_GWPS", "H1"]}},
+ {"name": "B3_raw_gPL_linear",   "model": "B2_transfer", "kw": {"alpha": 1.0, "raw": true, "generic_from": ["K562_GWPS", "H1"]}, "fallback": "linear"},
+ {"name": "A1_gPL",              "model": "A1_transfer", "kw": {"generic_from": ["K562_GWPS", "H1"]}},
+ {"name": "A1_gPL_linear",       "model": "A1_transfer", "kw": {"generic_from": ["K562_GWPS", "H1"]}, "fallback": "linear"}
+]

@@ -40,6 +40,34 @@ def generic(sources: list[dict], weights=None) -> np.ndarray:
     return np.where(den > 0, num / np.maximum(den, 1e-12), 0.0)
 
 
+def generic_pool(sources: list[dict], generic_from=None, weights=None) -> np.ndarray:
+    """Generic response from a named subset of sources (e.g. only genome-wide screens, whose
+    average knockdown is mostly non-essential genes like the challenge panel). Falls back to all."""
+    if generic_from:
+        keep = [k for k, s in enumerate(sources) if s.get("name") in set(generic_from)]
+        if keep:
+            return generic([sources[k] for k in keep], None if weights is None else [weights[k] for k in keep])
+    return generic(sources, weights)
+
+
+def pooled_raw(sources: list[dict]):
+    """Average measured log2FC per target across sources (no generic recomposition).
+    Genes no measuring source covers are nan."""
+    G = len(sources[0]["genes"])
+    acc, cnt = {}, {}
+    for s in sources:
+        lfc = s["lfc"].astype(np.float64)
+        v = s["present"] & (s["ctrl_cpm"] > EPS_CPM)
+        for i, p in enumerate(s["perts"]):
+            acc.setdefault(p, np.zeros(G)); cnt.setdefault(p, np.zeros(G))
+            acc[p] += np.where(v, lfc[i], 0.0); cnt[p] += v
+    targets = np.array(sorted(acc))
+    if not len(targets):
+        return targets, np.zeros((0, G))
+    R = np.vstack([np.where(cnt[p] > 0, acc[p] / np.maximum(cnt[p], 1e-12), np.nan) for p in targets])
+    return targets, R
+
+
 def pooled_specific(sources: list[dict], weights=None):
     """Average specific effect per measured target across sources -> (targets, D (T,G))."""
     G = len(sources[0]["genes"])
@@ -61,15 +89,23 @@ def predict_control(targets, sources, **_):
     return np.zeros((len(targets), len(sources[0]["genes"])), np.float32)
 
 
-def predict_generic(targets, sources, beta=1.0, **_):
-    g = generic(sources)
+def predict_generic(targets, sources, beta=1.0, generic_from=None, **_):
+    g = generic_pool(sources, generic_from)
     return np.tile(beta * g, (len(targets), 1)).astype(np.float32)
 
 
-def predict_transfer(targets, sources, alpha=1.0, beta=1.0, fallback=None, **_):
-    """fallback: callable(unmeasured_targets) -> specific effects (n, G), e.g. kNN or linear."""
-    g = generic(sources)
-    seen, Dm = pooled_specific(sources)
+def predict_transfer(targets, sources, alpha=1.0, beta=1.0, fallback=None, generic_from=None,
+                     raw=False, **_):
+    """fallback: callable(unmeasured_targets) -> specific effects (n, G), e.g. kNN or linear.
+    generic_from: source names whose average response is the generic shift (default: all sources).
+    raw: measured targets get their measured log2FC averaged over sources (shrunk to g by alpha)
+         instead of g + specific effect, so another library's average response is not added in."""
+    g = generic_pool(sources, generic_from)
+    if raw:
+        seen, R = pooled_raw(sources)
+        Dm = np.where(np.isnan(R), 0.0, R - g) if len(seen) else R
+    else:
+        seen, Dm = pooled_specific(sources)
     idx = {p: i for i, p in enumerate(seen)}
     out = np.tile(g, (len(targets), 1))
     miss = [t for t in targets if t not in idx]
@@ -192,7 +228,8 @@ def predict_transfer_a1(targets, sources, target_ctrl_cpm=None, alpha_single: fl
                         tau: float = 0.2, gate_cpm: float = 5.0, use_weights: bool = True,
                         use_gate: bool = True, use_agreement: bool = True, fallback=None,
                         alpha_fallback: float = 0.5, tss: str | None = None,
-                        nb_scope: str = "unmeasured", return_info: bool = False, **_):
+                        nb_scope: str = "unmeasured", return_info: bool = False,
+                        generic_from=None, **_):
     """A1 = generic + per-target specific effect, with
       * sources weighted by control similarity to the target context (use_weights),
       * per-target alpha: alpha_single if measured in one source, else
@@ -208,7 +245,7 @@ def predict_transfer_a1(targets, sources, target_ctrl_cpm=None, alpha_single: fl
         w, rs = control_similarity_weights(sources, target_ctrl_cpm, tau)
     else:
         w, rs = np.ones(len(sources)), np.full(len(sources), np.nan)
-    g = generic(sources, w)
+    g = generic_pool(sources, generic_from, w)
     per = per_source_specific(sources, w)
     miss = [t for t in targets if t not in per]
     fb = dict(zip(miss, fallback(miss))) if (fallback is not None and miss) else {}

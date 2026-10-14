@@ -14,24 +14,32 @@ Paste everything below the line into a dedicated Claude Code session on the Lamb
 3. **Round trip:** upload one file we already have on the instance (the Replogle K562 essential h5ad from E002) to `gdrive:VCC2026/data/raw/test/` with `rclone copy -P --drive-chunk-size 256M`. Download it back to scratch and compare `md5sum`. Then delete the test copy on Drive.
 4. **Report Phase 0:** upload and download speed (MB/s), local scratch free space (`df -h` on `$DATA` and `/`), and `rclone about gdrive:` (used/free).
 
-**Why this matters.** Our current model scores too low. Its strongest component transfers the measured response of the *same target gene* from other cell lines into the unseen test context. So a dataset is worth fetching if it does any of these:
-- measures panel targets in a cell context we don't have yet (most valuable);
-- adds more cells or contexts for panel targets we have in only one or two lines;
-- adds new cell contexts at all, even without panel targets. These help us learn how responses change between cell types, and they can serve as extra held-out contexts for local validation.
+**What we learned on 14 Oct (E000–E005, `reports/REPORTS_E000_E005.md`). This decides what data is worth having.**
+- **Panel coverage today:** of the 300 panel targets, the Replogle/Nadig essential-gene screens (K562 essential, RPE1, HepG2, Jurkat) cover **0**. VCC 2025 H1 covers **13**. Only the Replogle **K562 genome-wide** screen (GWPS) covers many: **272**. So nearly every panel target is measured in exactly one cell line (K562), and about 28 in none. The panel avoids essential genes.
+- **What transfer is worth:** in local validation, transferring a target's measured response from other lines beats the generic shift by about **+0.31** context score, and that is with several source lines per target. For targets nobody measured, the best fallback adds only about +0.03. Targets measured in a second or third line are therefore what moves the score.
+- **Consequence:** a dataset is valuable in proportion to the **panel targets it measures in a cell line other than K562**. That almost always means a genome-scale or large non-essential library. Essential-gene-only screens add almost nothing for the panel, and most published Perturb-seq libraries are essential-only. Check overlap before anything else; don't spend download time on a library with no panel targets.
+- **Second priority:** data that looks like the test, meaning 10x 3′ chemistry, about 20k UMI per cell and the **full gene set**. The Replogle/Nadig matrices are author-filtered to 8–9k genes; the challenge axis has 18,533.
+- **Third priority:** new cell types without panel targets. These are useful only as extra validation contexts or for learning cell-type shifts.
 
 **The task we predict.**
-- **Targets:** 300 target genes, listed in the `target_gene` column of `pert_counts.csv` under `$DATA/challenge/`.
-- **Output:** single-cell raw counts after CRISPRi knockdown, in three unseen cell contexts, on a fixed 18,533-gene axis (`gene_axis.csv`).
+- **Targets:** 300 target genes, listed in the `target_gene` column of `pert_counts.csv`; find it under `$DATA/challenge/`.
+- **Output:** single-cell raw counts after CRISPRi knockdown, in three unseen cell contexts, on a fixed 18,533-gene axis (`$DATA/challenge/controls/gene_axis.csv`).
 - **Scoring:** six metrics, each scaled between a mean-response baseline and a replicate ceiling: perturbation discrimination (cosine), expression MSE, DE log-fold-change error, DE direction fidelity, DE direction reach, DE significance overlap (Jaccard).
-- **Format of the test data:** the challenge contexts are roughly 10x 3′ data at about 20k UMI per cell. Data that looks like that is the best match.
+- **Format of the test data:** about 20k UMI per cell, 18,400 control cells per context, full gene set.
 
 **Already have (don't re-fetch):**
-- Replogle 2022: K562 essential, K562 genome-wide, RPE1
-- Nadig 2025: HepG2 and Jurkat
-- VCC 2025 H1 training split
+- Replogle 2022: K562 essential, **K562 genome-wide (GWPS)**, RPE1 (figshare 20029387)
+- Nadig 2025: HepG2 and Jurkat (GEO GSE264667)
+- VCC 2025 H1 **training split only** (151 perturbations)
 - The challenge's A/B/C control cells
 
 Flag any new dataset in one of these cell lines; it is still useful if it adds panel targets or more depth.
+
+**Leads to check first.** All are unverified; confirm each one and compute its overlap.
+1. **Remaining VCC 2025 H1 data.** Check whether Arc released the validation/test ground truth after the 2025 challenge (about 150 more H1 perturbations, same chemistry, full gene set). Look at Arc, Hugging Face `arcinstitute` and the 2025 challenge pages.
+2. **Xaira X-Atlas/Orion.** Reported as genome-wide Perturb-seq in two cancer lines with about 8M cells, under a non-commercial license (blocked; see Rules). Compute its panel overlap from public metadata anyway, so Rafid can decide whether to ask Xaira for permission.
+3. **Other genome-scale or large non-essential Perturb-seq (2023–2026) in non-K562 cells:** primary T cells, iPSC-derived cells, other cancer lines, and Arc's own releases (including any `PIE_*` repos).
+4. **Medium screens of immune, signalling or druggable genes** (CRISPRi or CRISPRko) in primary or immune cells. Only take those that hit at least 20 panel targets.
 
 ## Phase 1: catalog (no bulk downloads; metadata and perturbation lists only)
 
@@ -53,11 +61,12 @@ Flag any new dataset in one of these cell lines; it is still useful if it adds p
    - size in GB of the smallest file that still has raw counts;
    - the obs column naming the perturbation, the control label(s), and whether genes are symbols or Ensembl IDs (and the var column with symbols);
    - **overlap with the 300 panel targets, computed from the published perturbation list** (supplementary table, obs metadata, or a header-only/backed read of the file). Never estimate it. Write `unverified` if you can't compute it.
-4. **Rank** by marginal value. For each dataset, count new (panel target, cell context) pairs it adds beyond what we already hold. Weight each pair by:
-   - **quality:** median on-target knockdown for CRISPRi (lower residual expression is better), cells per perturbation, UMI depth;
-   - **novelty:** a target we have in only one context gains more than one we have in four.
+4. **Rank** by marginal value:
+   `score = 3 * (panel targets measured in a line where we don't have them, weighted by quality) + 1 * (test-like data: full gene set, ~20k UMI, 10x 3′) + 0.3 * (new cell context, no panel targets)`.
+   - **Quality** for a target: on-target knockdown (CRISPRi residual ≤ 0.5 is full weight), ≥ 50 cells per perturbation is full weight, fewer is linear down to 0 at 10 cells.
+   - **Novelty:** a panel target we have in only K562 counts double, and one we have in no line counts triple.
 
-   Add a smaller term for new cell contexts that have no panel overlap. Show the formula you used in the report.
+   Show the per-dataset numbers in the table.
 5. **Report Phase 1:**
    - the ranked table;
    - the total download volume;
@@ -69,12 +78,13 @@ Flag any new dataset in one of these cell lines; it is still useful if it adds p
 
 ## Phase 2: ingest the first batch (stream and summarize, one dataset at a time)
 
-**First batch:** the top-ranked unblocked datasets, totalling no more than **700 GB** of raw downloads. That fits within one day of Drive's upload quota (750 GB per user per 24 h). After the batch, stop and report (see "Finish with"). The planning session reruns local validation with the new sources, and Rafid decides whether to fetch more.
+**First batch:** the top-ranked unblocked datasets that each add **≥ 20 panel targets in a non-K562 line** (plus any remaining VCC 2025 H1 data), totalling no more than **700 GB** of raw downloads. That fits within one day of Drive's upload quota (750 GB per user per 24 h). After the batch, stop and report (see "Finish with"). The planning session reruns local validation with the new sources, and Rafid decides whether to fetch more.
 
 For each dataset, in rank order:
 1. **Download** to local scratch (`$DATA/scratch/<name>/`) in a tmux window with a log (`logs/data_<name>.log`). Use resumable tools (`aria2c -c -x8`, `wget -c`, `huggingface-cli download`, `prefetch` for SRA). Then archive the raw files to Drive with `rclone copy -P --drive-chunk-size 256M $DATA/scratch/<name> gdrive:VCC2026/data/raw/<name>`, and check that the sizes match (`rclone check`). Run at most two datasets at once, and never let scratch exceed 80% of local free space.
 2. **Validate:**
-   - `X` holds integers; there are more than 15,000 genes;
+   - `X` holds integers;
+   - the gene count (prefer the full set; author expression-filtered sets of ≥ 5,000 genes are acceptable if they're not HVG-only; record the count);
    - the control label is present;
    - the number of perturbations matches the paper;
    - for CRISPRi, median on-target knockdown is reported.
@@ -91,7 +101,7 @@ For each dataset, in rank order:
    - up to 400 cells per perturbation for panel targets;
    - up to 100 cells per perturbation for other targets;
    - up to 20,000 control cells.
-6. **Register** the dataset by adding a context entry to `loco.json` (`name`, `h5ad` = the subset, `pert_col` = `target`, `control`, `summary`).
+6. **Register** the dataset by adding a context entry to `loco.json`: `name`, `line`, `h5ad` (the subset), `pert_col` = `target`, `control`, `summary`. `line` is the cell line: use the **same value for every dataset from one line** (e.g. `"K562"`), because LOCO never transfers between datasets of the same line. Only add entries; don't edit or reorder existing ones, since the experiment session uses the same file. Commit each change on its own.
 7. **Delete the local raw copy** once steps 4–6 succeed and the Drive copy has passed `rclone check`. The archive on Drive is the only place raw data is kept; we can re-pull it from there later instead of from the original source.
 8. **Append a row to `reports/data_ingest.csv`:**
    - name, cells, perturbations kept, genes on the axis;
