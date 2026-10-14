@@ -13,3 +13,4 @@ plan.html
 experiment_log.csv
 .env
 docs/CLAUDE_CODE_BOOTSTRAP.md
+.venv.bak*/
