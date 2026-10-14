@@ -17,7 +17,7 @@ You are running Immunome AI's Virtual Cell Challenge 2026 baselines. Planning ha
 
 ## E000 — environment + controls inventory
 ```bash
-cd ~/vcc && bash setup_lambda.sh 2>&1 | tee logs/E000_setup.log     # non-interactive; ~10 min
+cd ~/vcc && mkdir -p logs && bash setup_lambda.sh 2>&1 | tee logs/E000_setup.log     # non-interactive; ~10 min
 source ~/.vcc_env
 ```
 **CHECK:**

@@ -7,9 +7,9 @@
 ## 1a. Connect from the Mac Terminal (works on any macOS; use this if Desktop won't install)
 Claude Code itself needs macOS 13+ [3], but nothing has to be installed on the Mac: Claude Code runs on the instance (Ubuntu), and the Mac only needs its built-in Terminal and `ssh`.
 ```bash
-# on the Mac (Terminal.app). Use the path of the a10instance private key you downloaded from Lambda.
-chmod 600 ~/.ssh/a10instance            # ssh refuses keys other users can read
-ssh -i ~/.ssh/a10instance ubuntu@132.145.128.143
+# on the Mac (Terminal.app). Use the path of the A10 private key (A10.pem) you downloaded from Lambda.
+chmod 600 ~/.ssh/A10.pem            # ssh refuses keys other users can read
+ssh -i ~/.ssh/A10.pem ubuntu@150.136.70.112
 
 # now on the instance
 sudo apt-get install -y tmux
@@ -21,7 +21,7 @@ claude                                              # first run: login (below)
 ```
 **Login over SSH:** Claude prints a login URL (press `c` to copy it). Open it in the Mac's browser, sign in, and if the browser shows a code, paste it into the terminal at `Paste code here if prompted` [4]. That code goes only into the terminal, never into chat.
 
-**Reconnecting later:** `ssh -i ~/.ssh/a10instance ubuntu@132.145.128.143` then `tmux attach -t cc`. Detach without stopping Claude with `Ctrl-b` then `d`.
+**Reconnecting later:** `ssh -i ~/.ssh/A10.pem ubuntu@150.136.70.112` then `tmux attach -t cc`. Detach without stopping Claude with `Ctrl-b` then `d`.
 
 Then continue with steps 2–4 below inside that Claude session (start it from `~` before the repo exists; after the clone, quit with `/exit` and restart it from `~/vcc` with `cd ~/vcc && claude` so it reads `CLAUDE.md`).
 
@@ -29,9 +29,9 @@ Then continue with steps 2–4 below inside that Claude session (start it from `
 1. Install the Claude Desktop app (macOS, Windows, or Linux beta) and open the **Code** tab.
 2. Before starting a session, open the environment dropdown → **+ Add SSH connection**:
    - **Name:** `lambda-vcc`
-   - **SSH Host:** `ubuntu@132.145.128.143`
+   - **SSH Host:** `ubuntu@150.136.70.112`
    - **SSH Port:** leave empty (22)
-   - **Identity File:** the path on your laptop to the private key of the `a10instance` key pair (for example `~/.ssh/a10instance` or wherever you saved it when you created the key in Lambda)
+   - **Identity File:** the path on your laptop to the private key of the `A10` key pair (`~/.ssh/A10.pem`)
 3. Select `lambda-vcc` and start a session. Desktop installs Claude Code on the instance the first time [2].
 
 ## 2. Get the code onto the instance (no secrets in chat)
@@ -45,9 +45,9 @@ The device-code flow is the only step that needs you: you type the code into Git
 
 ## 3. Install, then log in to the challenge yourself
 ```bash
-cd ~/vcc && bash setup_lambda.sh 2>&1 | tee logs/E000_setup.log     # non-interactive, ~10 min
+cd ~/vcc && mkdir -p logs && bash setup_lambda.sh 2>&1 | tee logs/E000_setup.log     # non-interactive, ~10 min
 ```
-Then open a terminal on the instance (Desktop's integrated terminal in the SSH session, or your own `ssh -i <key> ubuntu@132.145.128.143`) and type:
+Then open a terminal on the instance (Desktop's integrated terminal in the SSH session, or your own `ssh -i <key> ubuntu@150.136.70.112`) and type:
 ```bash
 ~/.local/bin/vcc login --store-plaintext      # prompts for the token with hidden input; stored 0600 on the instance
 ~/.local/bin/vcc whoami

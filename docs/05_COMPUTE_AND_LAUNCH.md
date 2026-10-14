@@ -1,6 +1,6 @@
 # Compute, budget and launch requests
 
-Budget $7,000 Lambda credits. **LR-1 launched 14 Oct (~18:40 UTC, start time unverified): `gpu_1x_a100_sxm4`, us-east-1.** Spend accrues at ~$1.99/h from launch, plus filesystem storage per GB-month. Warnings at $3,500 (50%), $5,250 (75%), $6,300 (90%).
+Budget $7,000 Lambda credits. **LR-1: first instance launched 14 Oct ~18:40 UTC (132.145.128.143, unverified, replaced); second instance 150.136.70.112 (key A10) up by ~20:20 UTC, both `gpu_1x_a100_sxm4`, us-east-1.** Spend accrues at ~$1.99/h per running instance, plus filesystem storage per GB-month. Warnings at $3,500 (50%), $5,250 (75%), $6,300 (90%).
 
 | Request | Instance | Hours | Cost |
 |---|---|---|---|
