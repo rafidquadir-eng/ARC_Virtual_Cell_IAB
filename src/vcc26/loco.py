@@ -92,7 +92,7 @@ def prepare_holdout(ctx: dict, axis_all: np.ndarray, outdir: str, n_panel: int, 
 
 def run(cfg_path: str, holdout: str, mode: str, out: str, n_panel: int, n_cells: int, seed: int,
         model_specs: list[dict], de_backend: str = "auto", device: str = "auto",
-        extra_emb: dict | None = None):
+        extra_emb: dict | None = None, tag: str = "default"):
     cfg = json.load(open(cfg_path))
     axis_all = pd.read_csv(cfg["gene_axis"], header=None).iloc[:, 0].astype(str).values
     ctxs = {c["name"]: c for c in cfg["contexts"]}
@@ -140,7 +140,11 @@ def run(cfg_path: str, holdout: str, mode: str, out: str, n_panel: int, n_cells:
                "secs": round(time.time() - t0, 1)}
         rows.append(row); print(json.dumps(row))
     df = pd.DataFrame(rows)
-    df.to_csv(f"{out}/scores_{holdout}_{mode}.csv", index=False)
+    path = f"{out}/scores_{holdout}_{mode}_{tag}.csv"
+    if os.path.exists(path):                       # never overwrite an earlier sweep
+        path = path.replace(".csv", f"_{time.strftime('%Y%m%d-%H%M%S')}.csv")
+    df.to_csv(path, index=False)
+    print(f"wrote {path}")
     return df
 
 
@@ -168,7 +172,8 @@ def main():
     embs = {}
     for e in a.emb:
         n, p = e.split("=", 1); z = np.load(p, allow_pickle=True); embs[n] = {k: z[k] for k in z.files}
-    run(a.config, a.holdout, a.mode, a.out, a.panel, a.cells, a.seed, specs, a.de_backend, a.device, embs)
+    tag = os.path.splitext(os.path.basename(a.specs))[0] if a.specs else "default"
+    run(a.config, a.holdout, a.mode, a.out, a.panel, a.cells, a.seed, specs, a.de_backend, a.device, embs, tag)
 
 
 if __name__ == "__main__":
