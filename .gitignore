@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+.venv/
+dist/
+scratch/
+*.h5ad
+*.vcc
+*.npz
+*.pt
+*.zip
+logs/
+plan.html
+experiment_log.csv
+.env

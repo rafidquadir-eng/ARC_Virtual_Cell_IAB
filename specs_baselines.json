@@ -1,0 +1,5 @@
+[{"name":"B0_control","model":"B0_control"},
+ {"name":"B1_generic","model":"B1_generic"},
+ {"name":"B2_transfer","model":"B2_transfer","kw":{"alpha":1.0}},
+ {"name":"B2_transfer_a0.6","model":"B2_transfer","kw":{"alpha":0.6}},
+ {"name":"B3_linear","model":"B2_transfer","kw":{"alpha":1.0},"fallback":"linear","fb_kw":{"k":10}}]

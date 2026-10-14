@@ -1,0 +1,10 @@
+{
+  "gene_axis": "/lambda/nfs/vcc-data/challenge/controls/gene_names.csv",
+  "contexts": [
+    {"name": "K562",  "h5ad": "/lambda/nfs/vcc-data/raw/K562_essential_raw_singlecell_01.h5ad", "pert_col": "gene", "control": "non-targeting", "symbol_col": "gene_name", "summary": "/lambda/nfs/vcc-data/pb/K562.npz"},
+    {"name": "RPE1",  "h5ad": "/lambda/nfs/vcc-data/raw/rpe1_raw_singlecell_01.h5ad",          "pert_col": "gene", "control": "non-targeting", "symbol_col": "gene_name", "summary": "/lambda/nfs/vcc-data/pb/RPE1.npz"},
+    {"name": "HepG2", "h5ad": "/lambda/nfs/vcc-data/raw/nadig/hepg2.h5ad",  "pert_col": "TODO", "control": "TODO", "symbol_col": null, "summary": "/lambda/nfs/vcc-data/pb/HepG2.npz"},
+    {"name": "Jurkat","h5ad": "/lambda/nfs/vcc-data/raw/nadig/jurkat.h5ad", "pert_col": "TODO", "control": "TODO", "symbol_col": null, "summary": "/lambda/nfs/vcc-data/pb/Jurkat.npz"},
+    {"name": "H1",    "h5ad": "/lambda/nfs/vcc-data/raw/h1_2025/h1_all.h5ad","pert_col": "target_gene", "control": "non-targeting", "symbol_col": null, "summary": "/lambda/nfs/vcc-data/pb/H1.npz"}
+  ]
+}

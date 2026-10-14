@@ -1,0 +1,161 @@
+"""Leave-one-context-out (LOCO) validation that mimics the 2026 zero-shot test.
+
+For each held-out context c:
+  1. Build a challenge-shaped reference: up to --panel targets, 400 cells each (or what exists),
+     plus c's non-targeting cells, raw counts, on the shared gene axis.
+  2. Hand the predictors ONLY c's control cells + the OTHER contexts' summaries.
+     --mode seen   : sources keep their measurements of the panel targets (target was screened
+                     elsewhere; true for most targets that are in Replogle K562 genome-wide)
+     --mode unseen : panel targets are removed from every source (target never screened)
+  3. Emit cells, score with the official vcc2026 metric profile, scale with locally built
+     baseline/replicate anchors (local_eval.py).
+
+Config (JSON):
+{
+  "contexts": [
+     {"name": "K562", "h5ad": "data/k562_essential.h5ad", "pert_col": "gene",
+      "control": "non-targeting", "summary": "pb/K562.npz", "symbol_col": null}, ...
+  ],
+  "gene_axis": "challenge/gene_names.csv"
+}
+
+  python -m vcc26.loco --config loco.json --holdout RPE1 --mode seen --out runs/E001
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import time
+
+import anndata as ad
+import numpy as np
+import pandas as pd
+import scipy.sparse as sp
+
+from . import local_eval, models
+from .emit import emit_context
+from .pseudobulk import load as load_summary
+
+CTRL = "non-targeting"
+
+
+def subset_summary(s: dict, axis: np.ndarray, drop: set[str] | None = None) -> dict:
+    pos = {g: i for i, g in enumerate(s["genes"])}
+    cols = np.array([pos.get(g, -1) for g in axis])
+    def take(M):
+        out = np.zeros(M.shape[:-1] + (len(axis),), M.dtype)
+        out[..., cols >= 0] = M[..., cols[cols >= 0]]
+        return out
+    keep = np.ones(len(s["perts"]), bool) if not drop else ~np.isin(s["perts"], list(drop))
+    pres = np.zeros(len(axis), bool); pres[cols >= 0] = s["present"][cols[cols >= 0]]
+    return dict(genes=axis, perts=s["perts"][keep], lfc=take(s["lfc"][keep]), cpm=take(s["cpm"][keep]),
+                ctrl_cpm=take(s["ctrl_cpm"]), present=pres, ncells=s["ncells"][keep], kd=s["kd"][keep])
+
+
+def prepare_holdout(ctx: dict, axis_all: np.ndarray, outdir: str, n_panel: int, n_cells: int,
+                    seed: int, max_kd: float = 0.7):
+    os.makedirs(outdir, exist_ok=True)
+    real_p, ctrl_p = f"{outdir}/real.h5ad", f"{outdir}/ctrl.h5ad"
+    if os.path.exists(real_p) and os.path.exists(ctrl_p):
+        r = ad.read_h5ad(real_p, backed="r")
+        return real_p, ctrl_p, np.array(r.var_names), \
+            sorted(set(r.obs["target"].astype(str)) - {CTRL})
+    rng = np.random.default_rng(seed)
+    a = ad.read_h5ad(ctx["h5ad"], backed="r")
+    sym = np.asarray(a.var[ctx["symbol_col"]] if ctx.get("symbol_col") else a.var_names, str)
+    _, first = np.unique(sym, return_index=True)
+    in_axis = set(axis_all)
+    gcols = np.array(sorted(j for j in first if sym[j] in in_axis))
+    axis = sym[gcols]
+    lab = a.obs[ctx["pert_col"]].astype(str).values
+    summ = load_summary(ctx["summary"])
+    ok = set(summ["perts"][(summ["ncells"] >= min(n_cells, 50)) & ~(summ["kd"] > max_kd)])
+    cand = sorted(p for p in ok if p in set(axis))
+    panel = sorted(rng.choice(cand, min(n_panel, len(cand)), replace=False))
+    rows = []
+    for p in panel:
+        idx = np.where(lab == p)[0]
+        rows.append(rng.choice(idx, min(n_cells, len(idx)), replace=False))
+    cidx = np.where(lab == ctx["control"])[0]
+    rows.append(cidx)
+    rows = np.sort(np.concatenate(rows))
+    X = a.X[rows]
+    X = (X if sp.issparse(X) else sp.csr_matrix(X))[:, gcols].astype(np.float32)
+    t = np.where(lab[rows] == ctx["control"], CTRL, lab[rows])
+    real = ad.AnnData(sp.csr_matrix(X), obs=pd.DataFrame({"target": t}, index=[f"c{i}" for i in range(len(rows))]),
+                      var=pd.DataFrame(index=axis))
+    real.write_h5ad(real_p)
+    real[real.obs["target"] == CTRL].copy().write_h5ad(ctrl_p)
+    return real_p, ctrl_p, axis, panel
+
+
+def run(cfg_path: str, holdout: str, mode: str, out: str, n_panel: int, n_cells: int, seed: int,
+        model_specs: list[dict], de_backend: str = "auto", device: str = "auto",
+        extra_emb: dict | None = None):
+    cfg = json.load(open(cfg_path))
+    axis_all = pd.read_csv(cfg["gene_axis"], header=None).iloc[:, 0].astype(str).values
+    ctxs = {c["name"]: c for c in cfg["contexts"]}
+    hold = ctxs[holdout]
+    hdir = f"{out}/holdout_{holdout}"
+    real_p, ctrl_p, axis, panel = prepare_holdout(hold, axis_all, hdir, n_panel, n_cells, seed)
+    ecfg = local_eval.make_config("target", CTRL, device, de_backend)
+    anc_p = f"{hdir}/anchors.json"
+    if not os.path.exists(anc_p):
+        json.dump(local_eval.build_anchors(real_p, ecfg), open(anc_p, "w"), indent=2)
+    anchors = json.load(open(anc_p))
+    drop = set(panel) if mode == "unseen" else None
+    sources = [subset_summary(load_summary(c["summary"]), axis, drop)
+               for n, c in ctxs.items() if n != holdout]
+    ctrl = ad.read_h5ad(ctrl_p)
+    rows = []
+    for spec in model_specs:
+        t0 = time.time()
+        name, kw = spec["name"], dict(spec.get("kw", {}))
+        fb = spec.get("fallback")
+        if fb == "linear":
+            kw["fallback"] = models.linear_fallback(sources, **spec.get("fb_kw", {}))
+        elif fb and fb.startswith("knn:"):
+            emb = (extra_emb or {})[fb[4:]]
+            kw["fallback"] = models.knn_fallback(sources, emb, **spec.get("fb_kw", {}))
+        lfc = models.MODELS[spec["model"]](panel, sources, **kw)
+        pred = emit_context(ctrl, panel, lfc, n_cells=n_cells, context=holdout, seed=seed,
+                            include_control=n_cells)   # scorer requires the control label
+        res = local_eval.score(pred, real_p, anchors, ecfg)
+        row = {"model": name, "holdout": holdout, "mode": mode, **{k: v for k, v in res.items() if k != "raw"},
+               **{f"raw_{k}": v for k, v in res["raw"].items()}, "secs": round(time.time() - t0, 1)}
+        rows.append(row); print(json.dumps(row))
+    df = pd.DataFrame(rows)
+    df.to_csv(f"{out}/scores_{holdout}_{mode}.csv", index=False)
+    return df
+
+
+DEFAULT_SPECS = [
+    {"name": "B0_control", "model": "B0_control"},
+    {"name": "B1_generic", "model": "B1_generic"},
+    {"name": "B2_transfer_a1", "model": "B2_transfer", "kw": {"alpha": 1.0}},
+    {"name": "B2_transfer_a0.6", "model": "B2_transfer", "kw": {"alpha": 0.6}},
+    {"name": "B3_linear", "model": "B2_transfer", "kw": {"alpha": 1.0}, "fallback": "linear"},
+]
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--config", required=True); ap.add_argument("--holdout", required=True)
+    ap.add_argument("--mode", choices=["seen", "unseen"], default="seen")
+    ap.add_argument("--out", required=True); ap.add_argument("--panel", type=int, default=300)
+    ap.add_argument("--cells", type=int, default=400); ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--specs", default=None, help="JSON file with model specs (default: baselines)")
+    ap.add_argument("--emb", action="append", default=[],
+                    help="name=path.npz gene embedding {symbol: vector}, usable as fallback 'knn:name'")
+    ap.add_argument("--de-backend", default="auto"); ap.add_argument("--device", default="auto")
+    a = ap.parse_args()
+    specs = json.load(open(a.specs)) if a.specs else DEFAULT_SPECS
+    embs = {}
+    for e in a.emb:
+        n, p = e.split("=", 1); z = np.load(p, allow_pickle=True); embs[n] = {k: z[k] for k in z.files}
+    run(a.config, a.holdout, a.mode, a.out, a.panel, a.cells, a.seed, specs, a.de_backend, a.device, embs)
+
+
+if __name__ == "__main__":
+    main()
