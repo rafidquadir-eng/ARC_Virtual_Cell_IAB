@@ -50,7 +50,8 @@ def main():
     cpm = {}
     for c in ctxs:
         x = ad.read_h5ad(find_ctx(a.controls_dir, c))
-        x = x[:, [g for g in axis if g in set(x.var_names)]]
+        have = set(x.var_names)
+        x = x[:, [g for g in axis if g in have]]
         v = pd.Series(control_cpm(x), index=x.var_names)
         cpm[c] = v.reindex(axis).fillna(0.0).values
     srcs = {}
