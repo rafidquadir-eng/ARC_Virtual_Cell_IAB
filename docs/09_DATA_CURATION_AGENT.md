@@ -163,7 +163,13 @@ The experiment session is **paused until you write `reports/DATA_DONE.md`**, so 
 
    Ingest anything with ≥ 20 panel targets, using `line` and `library` as before.
 3. **D9: LINCS L1000 (CMap)** CRISPR/shRNA consensus signatures. Check the licence and which cell lines and panel targets are covered, and report. Don't ingest yet; it's bulk data on 978 landmark genes and needs a separate adapter.
-4. **D10: X-Atlas/Orion.** Stays blocked until Rafid confirms permission.
+4. **D10: X-Atlas/Orion and X-Atlas/Pisces. APPROVED by Rafid on 15 Oct** (licence CC BY-NC-SA 4.0). Follow `docs/13_EXECUTION_PLAN.md` §2 B1:
+   - **Orion** HCT116 + HEK293T: prefer the processed h5ad on figshare+ (doi 10.25452/figshare.plus.29190726); otherwise the HF parquet `Xaira-Therapeutics/X-Atlas-Orion` (126 GB).
+   - **Pisces** (`Xaira-Therapeutics/X-Atlas-Pisces`): take whatever is uploaded (Jurkat resting/activated, HepG2, iPSC…); some parts are "Coming Soon".
+   - Keep cells with `pass_guide_filter`, use `gene_target` as the label (controls "Non-Targeting"), and map genes via `metadata/gene_metadata.parquet`.
+   - Summaries with `--strata-col sample --max-kd 0.7`; subsets as before.
+   - `loco.json` entries with `line`, `library: genome_wide`, `lineage` (`epithelial` / `T_lymphoid` / `pluripotent`) and `"licence": "CC BY-NC-SA 4.0"`. Pisces Jurkat and HepG2 use `line` `Jurkat` / `HepG2`.
+   - **Do this before D8/D9.**
 5. **D11: CCLE/DepMap context data** to `$DATA/priors/`:
    - DepMap 24Q4 `OmicsExpressionProteinCodingGenesTPMLogp1.csv` and `Model.csv` (CC BY 4.0; check);
    - we already have `CRISPRGeneEffect`.

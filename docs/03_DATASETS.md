@@ -29,3 +29,6 @@
 4. [GEN — Xaira's X-Cell](https://www.genengnews.com/gen-edge/xairas-first-virtual-cell-model-is-largest-to-date-toward-complex-biology/)
 5. [ArcInstitute/state](https://github.com/ArcInstitute/state), [ArcInstitute/stack](https://github.com/ArcInstitute/stack)
 6. [State commercial trial](https://arcinstitute.org/tools/state/commercial)
+
+## Licence decision, 15 Oct 2026
+Rafid approved using **X-Atlas/Orion and X-Atlas/Pisces (CC BY-NC-SA 4.0)**. Planning flag (recorded, accepted by Rafid): NC = non-commercial and SA = share-alike, and Immunome AI is a company in a cash-prize competition. Every NC dataset is tagged `"licence"` in `loco.json`, and the final pipeline is scored with and without NC data, so the decision stays reversible.
