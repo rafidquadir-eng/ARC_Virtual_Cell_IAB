@@ -75,7 +75,9 @@ def generic_pool(sources: list[dict], generic_from=None, weights=None) -> np.nda
     """Generic response from a named subset of sources (e.g. only genome-wide screens, whose
     average knockdown is mostly non-essential genes like the challenge panel). Falls back to all."""
     if generic_from:
-        keep = [k for k, s in enumerate(sources) if s.get("name") in set(generic_from)]
+        names = {x for x in generic_from if not x.startswith("@")}
+        libs = {x[1:] for x in generic_from if x.startswith("@")}      # e.g. "@genome_wide"
+        keep = [k for k, s in enumerate(sources) if s.get("name") in names or s.get("library") in libs]
         if keep:
             return generic([sources[k] for k in keep], None if weights is None else [weights[k] for k in keep])
     return generic(sources, weights)

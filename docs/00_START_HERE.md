@@ -51,5 +51,8 @@ Paste the runbook's report block back here after each stage and I'll decide the 
 | `05_COMPUTE_AND_LAUNCH.md` | budget, LAUNCH REQUEST LR-1, warnings |
 | `06_SCHEDULE.md` | week-by-week, submission policy |
 | `07_RUNBOOK_INSTANCE.md` | step-by-step for Claude Code on the Lambda instance |
-| `08_CLAUDE_CODE_WEB.md` | how to connect: Claude Desktop SSH session (web sessions can't SSH) |
+| `08_CLAUDE_CODE_WEB.md` | how to connect (Mac Terminal over SSH, or Claude Desktop) |
+| `09_DATA_CURATION_AGENT.md` | prompt for the data-curation agent |
+| `10_PLAN_TO_TOP.md` | strategy: gap analysis, work packages, which outside ideas we use |
+| `11_BUILD_PLAN.md` | **the detailed build plan**: phases D/E/B/M/C/T, owners, acceptance rules, calendar |
 | `EXPERIMENT_LOG.md` | running log (also mirrored as a Google Sheet) |

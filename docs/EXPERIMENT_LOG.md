@@ -18,6 +18,8 @@ Scores are scaled vcc2026 metrics (0 = context mean-response baseline, 1 = repli
 | E015 | 15 Oct | Emission noise, not prediction, is capping MSE/PDS/DE | ORACLE and B2 variants × emit random/balanced on V1–V4 (specs_E015) | seen | | | | | | | | | | planned | E017 |
 | E016 | 15 Oct | Identify A/B/C cell types | control similarity to public lines + markers | – | | | | | | | | | | planned | |
 | E017 | 15 Oct | Balanced emission lifts the leaderboard | top E015 spec, --emit balanced | LB | | | | | | | | | 1 submission | planned | |
+| E020 | after data done | V* (leave-one-line-out on panel targets): emitter, multi-line transfer, new baseline | specs_E020 via vcc26.vstar, seen + unseen | both | | | | | | | | | | planned (paused for data) | E021 |
+| E021 | after E020 | E020 winner on the leaderboard | --emit balanced, all summaries | LB | | | | | | | | | 1 submission | planned | |
 | E006 | 17–19 Oct | iMEMORY gene vectors add signal | kNN on iMEMORY vs shuffle vs public prior | unseen | | | | | | | | | | blocked (EC2 files) | |
 | E007 | 17 Oct | A1: source weighting + target-expression gating | | both | | | | | | | | | | planned | |
 | E008 | 18 Oct | A1: per-target shrinkage + β and DE-count calibration | | both | | | | | | | | | | planned | |
@@ -56,3 +58,6 @@ Leaderboard top 5 (screenshot from Rafid, 14 Oct evening ET), scaled scores:
 | 827 | us (E012) | 0.069 | 0.313 | 0.000 | −0.013 | 0.042 | −0.014 | 0.088 |
 
 The gap to #1 is 0.39, and MSE (0.79) plus PDS (0.56) make up 1.35 of the 2.36 summed gap. Our MSE is 0 in every run, local and leaderboard, even at local PDS 0.74, which points at the emitter rather than the predictions. Diagnosis and fix: E015. Plan to the top: `docs/10_PLAN_TO_TOP.md`.
+
+## Planning note, 15 Oct ~03:30 UTC
+Full build plan written (`docs/11_BUILD_PLAN.md`). The runbook is paused until the curation agent signals data done (`reports/DATA_DONE.md`). E013/E015 are folded into E020 (V*), and E014/E017 are replaced by E021. New code: `vcc26/vstar.py` (V* runner) and source `library` tags (`generic_from: ["@genome_wide", "@targeted"]`).

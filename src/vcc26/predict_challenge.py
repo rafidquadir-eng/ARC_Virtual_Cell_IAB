@@ -49,6 +49,7 @@ def main():
     ap.add_argument("--pert-col", default="target_gene")
     ap.add_argument("--kw", default="{}", help='extra model kwargs as JSON, e.g. {"alpha_single": 0.7}')
     ap.add_argument("--seed", type=int, default=0); ap.add_argument("--out", required=True)
+    ap.add_argument("--registry", default=None, help="loco.json, to tag sources with name/library/line")
     ap.add_argument("--emit", default="random", choices=["random", "balanced"],
                     help="balanced = shared herded base cells + exact per-gene totals (no sampling noise)")
     a = ap.parse_args()
@@ -56,8 +57,16 @@ def main():
     pl = pd.read_csv(a.perts).iloc[:, 0].astype(str)
     targets = sorted(t for t in pl.unique() if t != CTRL)
     # name = file stem (e.g. pb/K562_GWPS.npz -> "K562_GWPS"), used by --kw '{"generic_from": [...]}'
-    sources = [dict(subset_summary(load_summary(p), axis), name=os.path.splitext(os.path.basename(p))[0])
-               for p in a.summaries]
+    reg = {}
+    if a.registry:                                   # loco.json: summary path -> name / library / line
+        for c in json.load(open(a.registry))["contexts"]:
+            reg[os.path.abspath(c["summary"])] = c
+    sources = []
+    for p in a.summaries:
+        c = reg.get(os.path.abspath(p), {})
+        sources.append(dict(subset_summary(load_summary(p), axis),
+                            name=c.get("name", os.path.splitext(os.path.basename(p))[0]),
+                            library=c.get("library"), line=c.get("line")))
     kw = {"alpha": a.alpha, "beta": a.beta, **json.loads(a.kw)}
     if a.model in ("B2_transfer", "A1_transfer") and a.fallback == "linear":
         kw["fallback"] = models.linear_fallback(sources)

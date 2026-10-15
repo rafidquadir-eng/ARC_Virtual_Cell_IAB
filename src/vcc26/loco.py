@@ -126,7 +126,8 @@ def run(cfg_path: str, holdout: str, mode: str, out: str, n_panel: int, n_cells:
                  and (not only_sources or n in only_sources)]
     if not src_names:
         raise ValueError("no source contexts left after line/--sources filtering")
-    sources = [dict(subset_summary(load_summary(ctxs[n]["summary"]), axis, drop), name=n) for n in src_names]
+    sources = [dict(subset_summary(load_summary(ctxs[n]["summary"]), axis, drop), name=n,
+                    library=ctxs[n].get("library"), line=ctxs[n].get("line", n)) for n in src_names]
     cover = sum(any(p in set(s_["perts"]) for s_ in sources) for p in panel)
     print(f"holdout {holdout} (line {line}): {len(panel)} panel targets, sources {src_names}, "
           f"{cover} panel targets measured in >=1 source")

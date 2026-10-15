@@ -132,6 +132,47 @@ vcc submit $DATA/preds/E012.vcc -m "E012 <spec name> with K562 GWPS" --wait
 (The summary file names must stay `K562_GWPS.npz` and `H1.npz`, because `generic_from` matches file names.)
 **REPORT E012:** overall and six per-metric scores, and the rank. Compare with E001 (−0.081).
 
+## ⏸ PAUSED (15 Oct ~03:30 UTC): don't start E013–E017
+Wait until the curation agent has pushed `reports/DATA_DONE.md`. If E013 is already running, let it finish and push its report, then stop. E013/E015 are folded into **E020** below; E014/E017 are replaced by **E021**. The earlier stages stay here for the record.
+
+## E016 + E020 + E021 — first stages after the data is in (`docs/11_BUILD_PLAN.md` §3)
+```bash
+source ~/.vcc_env; cd ~/vcc; git pull
+AXIS=$DATA/challenge/controls/gene_axis.csv
+PANEL=$(find $DATA/challenge -name pert_counts.csv | head -1)
+# E016: what are A/B/C? (CPU, a minute)
+python -m vcc26.context_id --controls-dir $DATA/challenge/controls --contexts A,B,C --gene-axis $AXIS \
+  --summaries $(python -c "import json;print(' '.join(c['summary'] for c in json.load(open('loco.json'))['contexts']))") \
+  --out reports/context_id.json
+# E020: V* = leave-one-line-out on the challenge panel, every line with >= 100 panel targets measured
+python -m vcc26.vstar --config loco.json --panel-file $PANEL --specs specs_E020.json --out $DATA/loco/E020 --tag E020 --dry-run
+tmux new -d -s E020 "source ~/.vcc_env; cd ~/vcc; \
+  python -m vcc26.vstar --config loco.json --panel-file $PANEL --specs specs_E020.json --out $DATA/loco/E020 --tag E020 --mode seen 2>&1 | tee logs/E020_seen.log; \
+  python -m vcc26.vstar --config loco.json --panel-file $PANEL --specs specs_E020.json --out $DATA/loco/E020 --tag E020 --mode unseen 2>&1 | tee logs/E020_unseen.log"
+```
+- **CHECK first:** the `--dry-run` must list at least 3 held-out lines (expected K562_GWPS, H1, CD4 T, KOLF iPSC). If it lists fewer, stop and report. Every entry in `loco.json` must have `line` and `library` (ask the curation agent if not).
+- Run one V\* job at a time; it already runs the held-out lines one after another.
+
+**REPORT E016:** similarity table, markers, most-specific genes per context, best guess per context (marked as an inference).
+
+**REPORT E020:**
+- `vstar_summary_E020_seen.csv` and `_unseen.csv` as markdown tables: (model, emit) × {selection, worst line, six metrics, per-line};
+- the ORACLE rows, random vs balanced;
+- the top (model, emit) in *seen* mode.
+
+Copy both CSVs to `results/E020/` and push.
+
+**E021: leaderboard confirmation** (state the day's count first). Submit E020's top seen-mode spec on A/B/C with all summaries:
+```bash
+python -m vcc26.predict_challenge --controls-dir $DATA/challenge/controls --contexts A,B,C --perts $PANEL \
+  --gene-names $AXIS --registry loco.json \
+  --summaries $(python -c "import json;print(' '.join(c['summary'] for c in json.load(open('loco.json'))['contexts']))") \
+  --model <model> --kw '<kw JSON>' --fallback <none|linear> --emit <emit> --n-control 0 --out $DATA/preds/E021.h5ad
+vcc prep $DATA/preds/E021.h5ad -g $AXIS --perts $PANEL --contexts A,B,C -o $DATA/preds/E021.vcc
+vcc submit $DATA/preds/E021.vcc -m "E021 <spec> emit=<emit>" --wait
+```
+**REPORT E021:** overall and the six metrics, rank, and the comparison with E012 (0.069).
+
 ## E013–E014 — validation on non-essential targets, denoising, effect scale, leaderboard entry
 Why: E012 scored 0.069 on the leaderboard, while E011(b)'s local estimate was 0.23. Those (b) holdouts score *essential* targets, which have strong effects that transfer easily; the panel's non-essential targets have weak ones. The closest pairs we have are **H1 (VCC 2025 targets) and K562 GWPS, scored in both directions**. New option `denoise`: empirical-Bayes shrinkage of each source's log2FC by its sampling noise, so K562 noise stops producing spurious DE calls (on synthetic data jac rose by about 0.3).
 

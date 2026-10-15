@@ -130,6 +130,24 @@ For each dataset, in rank order:
 - **Citations:** cite a source for every fact about a dataset, and mark anything you couldn't verify as **unverified**.
 - **Commits:** commit `reports/data_catalog.csv`, `reports/data_ingest.csv` and the `loco.json` changes. Never commit data.
 
+
+## Phase 3: finish, register, priors, signal done (added 15 Oct ~03:30 UTC; see `docs/11_BUILD_PLAN.md` §2)
+The experiment session is **paused until you write `reports/DATA_DONE.md`**, so finish the first batch before starting anything new.
+1. **D3 registry:**
+   - every `loco.json` entry gets `line` and `library` (`essential`, `genome_wide` or `targeted`);
+   - set the existing ones: K562/RPE1/HepG2/Jurkat = `essential`, K562_GWPS = `genome_wide`, H1 = `targeted`;
+   - **fold the H1 val+test data into the existing `H1` entry**: rebuild `$DATA/pb/H1.npz` from all H1 cells (train+val+test) and point `h5ad` at a subset containing all of them; don't add a second H1 name;
+   - check with `python -m vcc26.vstar --config loco.json --panel-file <pert_counts.csv> --specs specs_E020.json --out /tmp/x --dry-run`, which should list every line with ≥ 100 panel targets.
+2. **D4 QC:** write `reports/data_qc.md` with one row per dataset (cells, perts, panel targets measured with ≥ 50 cells, genes on axis, median UMI, median knockdown, control cells, licence). Add a panel coverage table: for each of the 300 targets, which lines measured it. Also give counts of targets measured in 0, 1, 2 and ≥ 3 lines.
+3. **D5 priors** to `$DATA/priors/`, licence checked first: STRING v12 human (links with detailed scores), GO human GAF + ontology, the UniProt human reference proteome FASTA, DepMap public CRISPR gene effect, and Reactome human pathways. Also a TF→target network (e.g. CollecTRI) **only if its licence allows commercial use**. Record each resource with version, URL, licence and size in `reports/priors.md`. ESM-2 embeddings are computed later by the experiment session, so you don't need to download the weights.
+4. **D6:** write `reports/DATA_DONE.md` covering:
+   - what's in (with panel coverage before/after);
+   - what's blocked and why;
+   - Drive usage;
+   - anything still downloading that isn't needed for the first batch.
+
+   Commit and push, then stop and wait.
+
 **Finish with:**
 - the ranked catalog;
 - what was ingested;
