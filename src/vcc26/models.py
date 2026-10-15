@@ -40,6 +40,37 @@ def generic(sources: list[dict], weights=None) -> np.ndarray:
     return np.where(den > 0, num / np.maximum(den, 1e-12), 0.0)
 
 
+def denoise_source(src: dict, floor: float = 1e-4) -> dict:
+    """Empirical-Bayes shrinkage of a source's per-target log2FC toward 0, gene by gene.
+
+    Sampling noise of a pseudobulk log2FC scales like c / (n_cells * (ctrl CPM + 1)). c is fitted per
+    source from the median squared lfc (most target x gene pairs are null, median chi2_1 = 0.455).
+    Signal variance per gene tau2_g = max(mean_t lfc^2 - mean_t noise, floor). Each lfc is multiplied
+    by tau2 / (tau2 + noise): weak, noisy targets and genes shrink most, so emitted cells stop
+    producing spurious DE calls from another line's sampling noise."""
+    lfc = src["lfc"].astype(np.float64)
+    n = np.maximum(src["ncells"].astype(np.float64), 1.0)[:, None]
+    base = 1.0 / (n * (src["ctrl_cpm"].astype(np.float64)[None, :] + 1.0))
+    v = src["present"] & (src["ctrl_cpm"] > EPS_CPM)
+    if lfc.shape[0] < 5 or not v.any():
+        return src
+    c = np.median((lfc[:, v] ** 2) / base[:, v]) / 0.455
+    noise = c * base
+    tau2 = np.maximum((lfc ** 2).mean(0) - noise.mean(0), floor)
+    shr = lfc * tau2 / (tau2 + noise)
+    gpos = {g: i for i, g in enumerate(src["genes"])}
+    for i, p in enumerate(src["perts"]):          # keep each target's own knockdown unshrunk
+        j = gpos.get(p)
+        if j is not None:
+            shr[i, j] = lfc[i, j]
+    out = dict(src); out["lfc"] = shr.astype(np.float32)
+    return out
+
+
+def _prep(sources, denoise):
+    return [denoise_source(s) for s in sources] if denoise else sources
+
+
 def generic_pool(sources: list[dict], generic_from=None, weights=None) -> np.ndarray:
     """Generic response from a named subset of sources (e.g. only genome-wide screens, whose
     average knockdown is mostly non-essential genes like the challenge panel). Falls back to all."""
@@ -89,17 +120,20 @@ def predict_control(targets, sources, **_):
     return np.zeros((len(targets), len(sources[0]["genes"])), np.float32)
 
 
-def predict_generic(targets, sources, beta=1.0, generic_from=None, **_):
+def predict_generic(targets, sources, beta=1.0, generic_from=None, denoise=False, **_):
+    sources = _prep(sources, denoise)
     g = generic_pool(sources, generic_from)
     return np.tile(beta * g, (len(targets), 1)).astype(np.float32)
 
 
 def predict_transfer(targets, sources, alpha=1.0, beta=1.0, fallback=None, generic_from=None,
-                     raw=False, **_):
+                     raw=False, denoise=False, **_):
     """fallback: callable(unmeasured_targets) -> specific effects (n, G), e.g. kNN or linear.
     generic_from: source names whose average response is the generic shift (default: all sources).
     raw: measured targets get their measured log2FC averaged over sources (shrunk to g by alpha)
-         instead of g + specific effect, so another library's average response is not added in."""
+         instead of g + specific effect, so another library's average response is not added in.
+    denoise: empirical-Bayes shrinkage of every source lfc before use (denoise_source)."""
+    sources = _prep(sources, denoise)
     g = generic_pool(sources, generic_from)
     if raw:
         seen, R = pooled_raw(sources)
@@ -229,7 +263,7 @@ def predict_transfer_a1(targets, sources, target_ctrl_cpm=None, alpha_single: fl
                         use_gate: bool = True, use_agreement: bool = True, fallback=None,
                         alpha_fallback: float = 0.5, tss: str | None = None,
                         nb_scope: str = "unmeasured", return_info: bool = False,
-                        generic_from=None, **_):
+                        generic_from=None, denoise=False, **_):
     """A1 = generic + per-target specific effect, with
       * sources weighted by control similarity to the target context (use_weights),
       * per-target alpha: alpha_single if measured in one source, else
@@ -239,6 +273,7 @@ def predict_transfer_a1(targets, sources, target_ctrl_cpm=None, alpha_single: fl
       * global effect scale beta,
       * A2 (tss=<path to TSS csv>): CRISPRi neighbour silencing learned from the sources, applied to
         targets in nb_scope ('unmeasured' or 'all'), gated by neighbour expression in the target."""
+    sources = _prep(sources, denoise)
     G = len(sources[0]["genes"])
     genes = sources[0]["genes"]; gpos = {g: i for i, g in enumerate(genes)}
     if target_ctrl_cpm is not None and use_weights and len(sources) > 1:

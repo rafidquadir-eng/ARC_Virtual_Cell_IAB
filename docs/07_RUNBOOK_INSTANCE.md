@@ -132,6 +132,40 @@ vcc submit $DATA/preds/E012.vcc -m "E012 <spec name> with K562 GWPS" --wait
 (The summary file names must stay `K562_GWPS.npz` and `H1.npz`, because `generic_from` matches file names.)
 **REPORT E012:** overall and six per-metric scores, and the rank. Compare with E001 (−0.081).
 
+## E013–E014 — validation on non-essential targets, denoising, effect scale, leaderboard entry
+Why: E012 scored 0.069 on the leaderboard, while E011(b)'s local estimate was 0.23. Those (b) holdouts score *essential* targets, which have strong effects that transfer easily; the panel's non-essential targets have weak ones. The closest pairs we have are **H1 (VCC 2025 targets) and K562 GWPS, scored in both directions**. New option `denoise`: empirical-Bayes shrinkage of each source's log2FC by its sampling noise, so K562 noise stops producing spurious DE calls (on synthetic data jac rose by about 0.3).
+
+```bash
+source ~/.vcc_env; cd ~/vcc; git pull
+python -c "import numpy as np, pandas as pd; z=np.load('$DATA/pb/H1.npz', allow_pickle=True); pd.DataFrame({'target_gene': z['perts']}).to_csv('$DATA/h1_targets.csv', index=False); print(len(z['perts']))"
+mkdir -p $DATA/loco/E013; cp -rn $DATA/loco/E003/holdout_{H1,RPE1,HepG2,Jurkat} $DATA/loco/E013/
+mkdir -p $DATA/loco/E013u; cp -rn $DATA/loco/E011/holdout_K562_GWPS $DATA/loco/E013u/
+```
+Runs (at most 2 GPU jobs at once):
+```bash
+# V1: H1 held out, K562 GWPS the only source (most test-like: non-essential targets measured in K562 only)
+python -m vcc26.loco --config loco.json --holdout H1 --mode seen --out $DATA/loco/E013 --specs specs_E013.json --sources K562_GWPS --tag V1
+# V2: K562 GWPS held out on H1's targets, H1 the only source (reverse direction; new anchors)
+python -m vcc26.loco --config loco.json --holdout K562_GWPS --mode seen --out $DATA/loco/E013 --specs specs_E013.json \
+  --panel-file $DATA/h1_targets.csv --sources H1 --tag V2
+# V3: essential-target lines, sources K562 GWPS + H1 (secondary)
+for c in RPE1 HepG2 Jurkat; do
+  python -m vcc26.loco --config loco.json --holdout $c --mode seen --out $DATA/loco/E013 --specs specs_E013.json --sources K562_GWPS,H1 --tag V3
+done
+# V4: challenge-panel targets in K562 GWPS, nothing measured (generic only; reuses E011 anchors)
+python -m vcc26.loco --config loco.json --holdout K562_GWPS --mode unseen --out $DATA/loco/E013u --specs specs_E013.json \
+  --panel-file $PANEL --tag V4
+```
+**REPORT E013:**
+- a table spec × {V1, V2, V3 mean, V4}, with per-metric scaled scores for V1 and V2;
+- `n_panel` / `n_covered` for V1 and V2;
+- the **selection score** = 0.35·V1 + 0.35·V2 + 0.2·V3 + 0.1·V4 (pre-registered; don't change the weights after seeing results), and the top spec.
+
+Commit the CSVs to `results/E013/`.
+
+**E014: leaderboard entry** (state the day's count first). Submit the top E013 spec **only if its selection score beats `B2_transfer` by ≥ 0.01**; otherwise skip and report. Use the E012 command with that spec's `--model`, `--kw` (the spec's kw JSON) and `--fallback none`, output `preds/E014.*`, message `"E014 <spec name>"`.
+**REPORT E014:** overall and six per-metric scores, rank, and the comparison with E012 (0.069).
+
 ## E007 / E008 — A1 calibrated transfer sweeps (after E011/E012; rerun them in the E011 "testlike" setting)
 Same loop as E004, with the sweep spec files (both modes, every held-out context):
 ```bash

@@ -13,6 +13,8 @@ Scores are scaled vcc2026 metrics (0 = context mean-response baseline, 1 = repli
 | E010 | 14–15 Oct | GWPS gives panel coverage | summarise K562 GWPS (272/300 panel targets), add to loco.json with line K562 | – |  |  |  |  |  |  |  |  | 17 min CPU | done: 9,315 perts, 7,681 genes on axis, median kd 0.15, 263/300 panel targets kept (≥ 200, no nokd rerun) | E011 |
 | E011 | 15 Oct | Validation that looks like the test; fix B2's essential-signature leak | GWPS holdout restricted to the 300 panel targets; other lines with GWPS-only sources; raw transfer + panel-like generic (specs_E011) | both |  |  |  |  |  |  | sel: B2_transfer 0.211 (b-testlike 0.230, a-unseen 0.032); B2_raw_gPL / B3_raw_gPL_linear 0.205 |  | ~90 GPU-min | done: top spec B2_transfer; raw/gPL tie on b-testlike; (a) K562_GWPS holdout ≈ baseline for all specs | E012 |
 | E012 | 15 Oct | Transfer from GWPS lifts the leaderboard score | top E011 spec on A/B/C, all 6 summaries | LB | 0.313 | 0.000 | −0.014 | 0.088 | −0.013 | 0.042 |  | 0.069 (rank 827) | 1 submission (15 Oct) | done: +0.150 over E001 (pds 0.01 → 0.31, fid −0.45 → −0.01) | E007/E008 testlike |
+| E013 | 15 Oct | Denoising K562 lfc (EB shrinkage) and effect scale help on non-essential targets | specs_E013 on V1 (H1 ← GWPS), V2 (GWPS@H1 targets ← H1), V3 (essential lines ← GWPS+H1), V4 (panel, generic only) | seen | | | | | | | | | | planned | E014 |
+| E014 | 15 Oct | E013 winner lifts the leaderboard | submit only if selection beats B2_transfer by ≥ 0.01 | LB | | | | | | | | | ≤ 1 submission | planned | |
 | E006 | 17–19 Oct | iMEMORY gene vectors add signal | kNN on iMEMORY vs shuffle vs public prior | unseen | | | | | | | | | | blocked (EC2 files) | |
 | E007 | 17 Oct | A1: source weighting + target-expression gating | | both | | | | | | | | | | planned | |
 | E008 | 18 Oct | A1: per-target shrinkage + β and DE-count calibration | | both | | | | | | | | | | planned | |
@@ -32,3 +34,9 @@ alpha_min 0.6. Real tuning happens in E007/E008 on held-out public lines.
 - The panel has no essential genes. Essential-library lines cover 0/300 targets, H1 covers 13/300 and K562 GWPS 272/300. So LOCO "seen" (E004) measured essential-to-essential transfer, which flatters the test. E011 adds test-like validation.
 - B2 builds each prediction as pooled generic + (source lfc − source generic). When the generic comes from essential-library sources but a target is measured only in GWPS, the essential stress signature is added to every panel prediction. This matches E001's strongly negative fid (−0.45). A unit test confirmed it; the fix is `raw=True` plus `generic_from=["K562_GWPS","H1"]`.
 - Data curation must target panel genes measured outside K562 (`docs/09_DATA_CURATION_AGENT.md`, revised).
+
+## Planning note, 15 Oct ~02:00 UTC (after E010–E012)
+- Leaderboard 0.069 (rank 827), +0.15 from GWPS transfer, almost all of it from pds (0.31) and from fid recovering to about 0. The DE metrics (fid, jac) sit at the baseline, and mse is 0 by construction.
+- E011(b) (0.23) overstates the test because those holdouts score essential targets with strong effects. E011(a) (≈ 0) is the panel with nothing measured, about 37 targets in A/B/C. The realistic proxies are H1 ↔ K562 GWPS: V1/V2 in E013.
+- jac ≈ −0.6 in E011(a), with every spec below the mean-response baseline on significant-gene overlap. Hypothesis: transferred K562 sampling noise plus emission produce spurious DE calls. Test: `denoise` (E013). On synthetic data jac rose by about 0.3 and context score by 0.06.
+- No leaderboard command in vcc-cli; the top-10 scores have to be read from the website.

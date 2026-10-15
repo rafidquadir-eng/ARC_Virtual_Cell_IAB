@@ -1,0 +1,10 @@
+[
+ {"name": "B2_transfer",            "model": "B2_transfer", "kw": {"alpha": 1.0}},
+ {"name": "B2_raw_gPL",             "model": "B2_transfer", "kw": {"alpha": 1.0, "raw": true, "generic_from": ["K562_GWPS", "H1"]}},
+ {"name": "B2_dn",                  "model": "B2_transfer", "kw": {"alpha": 1.0, "denoise": true}},
+ {"name": "B2_raw_gPL_dn",          "model": "B2_transfer", "kw": {"alpha": 1.0, "raw": true, "generic_from": ["K562_GWPS", "H1"], "denoise": true}},
+ {"name": "B2_dn_b1.3",             "model": "B2_transfer", "kw": {"alpha": 1.0, "denoise": true, "beta": 1.3}},
+ {"name": "B2_dn_b0.8",             "model": "B2_transfer", "kw": {"alpha": 1.0, "denoise": true, "beta": 0.8}},
+ {"name": "B2_raw_gPL_dn_b1.3",     "model": "B2_transfer", "kw": {"alpha": 1.0, "raw": true, "generic_from": ["K562_GWPS", "H1"], "denoise": true, "beta": 1.3}},
+ {"name": "A1_dn",                  "model": "A1_transfer", "kw": {"denoise": true}}
+]
