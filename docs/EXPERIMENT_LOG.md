@@ -56,8 +56,16 @@ Leaderboard top 5 (screenshot from Rafid, 14 Oct evening ET), scaled scores:
 | 4 | X-team | 0.3271 | 0.776 | 0.458 | 0.084 | 0.284 | −0.000 | 0.362 |
 | 5 | JJJ | 0.3197 | 0.818 | 0.472 | 0.018 | 0.257 | 0.068 | 0.285 |
 | 827 | us (E012) | 0.069 | 0.313 | 0.000 | −0.013 | 0.042 | −0.014 | 0.088 |
+| 684 | us (E021) | 0.106 | 0.501 | 0.000 | 0.008 | 0.086 | −0.067 | 0.108 |
 
 The gap to #1 is 0.39, and MSE (0.79) plus PDS (0.56) make up 1.35 of the 2.36 summed gap. Our MSE is 0 in every run, local and leaderboard, even at local PDS 0.74, which points at the emitter rather than the predictions. Diagnosis and fix: E015. Plan to the top: `docs/10_PLAN_TO_TOP.md`.
 
 ## Planning note, 15 Oct ~03:30 UTC
 Full build plan written (`docs/11_BUILD_PLAN.md`). The runbook is paused until the curation agent signals data done (`reports/DATA_DONE.md`). E013/E015 are folded into E020 (V*), and E014/E017 are replaced by E021. New code: `vcc26/vstar.py` (V* runner) and source `library` tags (`generic_from: ["@genome_wide", "@targeted"]`).
+
+## Instance note, 15 Oct ~17:30 UTC (runbook session)
+- Done: E016, E020 seen, E021 (0.106, rank 684). Reports: `reports/REPORTS_E016_E021.md`; CSVs: `results/E020/`.
+- **E020 unseen is not run.** The A100 is held by another session's job (`~/proj2/scripts/50_pretrain.py`, 32 of 40 GB, `--max-hours 8` from ~16:30 UTC), and unseen hit cupy OOM. Resume when the GPU is free (anchors cached in `$DATA/loco/E020/holdout_*`, ~2.5–3 h):
+  `tmux new -d -s E020 "source ~/.vcc_env; cd ~/vcc; python -m vcc26.vstar --config loco.json --panel-file $DATA/challenge/controls/pert_counts.csv --specs specs_E020.json --out $DATA/loco/E020 --tag E020 --mode unseen 2>&1 | tee logs/E020_unseen.log"`
+- **Shared-venv hazard:** at 15:44 UTC the `~/proj2` session installed into `~/vcc/.venv` (timm, scikit-image, pydeseq2, …) and pulled torch 2.14.1+cu130, which breaks cupy-cuda12x (`libcublas.so.12`). Restored torch 2.11.0+cu128 / torchvision 0.26.0+cu128 and reinstalled the `nvidia-*-cu12` libs (uninstalling the cu13 packages deletes files shared under `nvidia/*/lib`, so reinstall cu12 after). Other projects should use their own venv.
+- Submissions: 15 Oct UTC 2/2 used (E012, E021). Next possible 16 Oct 00:00 UTC.
