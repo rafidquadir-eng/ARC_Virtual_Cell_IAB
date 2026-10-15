@@ -50,6 +50,39 @@ The score is an equal mean of six metrics. Illumina's lead comes mostly from PDS
 | 22 Oct | D/E/F released: rerun E016 on them, run the final pipeline, first final entry |
 | 23 Oct – 4 Nov | improve only on local wins; 2 final entries per day max; freeze 4 Nov |
 
+
+## Update 15 Oct ~03:00 UTC: the model we build (v2), the new validation, and which outside ideas we use
+
+**New data changes the picture.** The curation agent has ingested the full 2025 H1 set (about 300 targets) and is bringing in a CD4⁺ T-cell and a KOLF iPSC Perturb-seq set that cover panel targets outside K562. So for the first time we have **several lines where the panel's non-essential targets were measured**, both as training sources and as honest held-out tests.
+
+**New primary validation, V\*:** leave-one-line-out over every line with ≥ 100 measured panel targets (K562 GWPS, H1, CD4 T, KOLF iPSC, and more as they land). Each held-out line is scored on the challenge panel targets it measured (`--panel-file pert_counts.csv`), with all *other* lines as sources (same-line datasets excluded automatically). This is the closest local copy of the test, and it replaces the V1–V4 mix for selection once two new lines are in.
+
+**Model v2: a context-conditioned response model** (X-Cell's structure, our scale; iMEMORY's graph encoder where it earns its place):
+
+| Part | What it does | Built from |
+|---|---|---|
+| Context encoder | Summarises the target line from its own control cells: pseudobulk, PCs (WP9), and the set of 256 sampled control cells via attention | the 18,400 controls per context, plus every source line's controls |
+| Evidence tokens (in-context) | The target gene's **measured** responses in every other line where it was screened, each tagged with that line's context embedding and noise level | GWPS, H1, CD4 T, KOLF, essential lines, new data |
+| Prior encoder for the knocked-down gene | Graph neural network over a gene graph (STRING, GO, regulatory edges), plus ESM-2 protein and DepMap dependency features. **This is where an iMEMORY-style heterogeneous GAT fits**, as one candidate encoder tested against simpler ones. It carries most of the weight for unmeasured targets. | STRING, GO, ESM-2, DepMap (licences to be checked before use) |
+| Decoder | Predicts the mean log-fold-change vector in the target line, plus per-gene noise; the balanced emitter (WP1) and the expected-score optimiser (WP8) turn it into cells | — |
+| Training | Every (target, line) pair, held out line by line; split-half augmentation; losses = denoised MSE + contrastive (PDS) + sign/rank on significant genes | ~30–50k pairs once the new lines are in |
+
+The model is deliberately small (millions of parameters, not billions): the limit is examples and noise, not capacity. It trains on the current A100; one larger GPU only if the set-attention version needs it (LAUNCH REQUEST then).
+
+**Outside ideas: what we use, and what we don't (for this challenge)**
+| Idea | Verdict | Why |
+|---|---|---|
+| Mechanistic priors / knowledge graph | **use** (prior encoder) | essential for unmeasured targets; X-Cell does the same |
+| In-context conditioning on the target's cells | **use** (context encoder + evidence tokens) | that's exactly the zero-shot setting. Arc's own in-context models (State, Stack) have non-commercial licences, so we build our own small version |
+| Harmonisation | **use, narrowly** | one gene axis, depth-aware denoising, knockdown filters, the same pseudobulk for every source. Re-aligning raw reads isn't worth 3 weeks |
+| Perturbational (causal) training | **use** | that's all our training data |
+| Self-supervised pretraining on unperturbed cells | **maybe, later** | only via the context encoder on control cells, or permissively licensed pretrained embeddings |
+| Test-time compute (expected-score search) | **use** (WP8) | the only verifier we have that is exact: the metric code plus the real controls |
+| Synthetic cells (latent diffusion), cross-species transfer, federated learning, multi-modal stitching, billion-parameter architectures | **skip** | no verifier, no time, or no data for the unknown test lines; capacity isn't our bottleneck |
+| Active learning with a robotic wet lab | **skip for this challenge** | can't produce data before 5 Nov. It's the right idea for Immunome's own platform next year |
+
+**IP flag (stop-and-flag rule):** if any iMEMORY-derived component ends up in the winning model, the finalist write-up Arc publishes could count as a disclosure before the patent is filed. Get counsel's view before 5 Nov, or keep that component out of the final entry.
+
 ## Sources
 1. [Arc Institute — The 2026 Virtual Cell Challenge](https://arcinstitute.org/news/virtual-cell-challenge-2026)
 2. [Illumina press release, 13 Jan 2026 — Billion Cell Atlas](https://www.illumina.com/company/news-center/press-releases/2026/fda84c92-b4b3-4691-a402-35555abe8605.html)
