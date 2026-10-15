@@ -62,14 +62,17 @@ def summarize(adata: ad.AnnData, pert_col: str, control: str, genes_axis: np.nda
         D, scode = len(scat.categories), scat.codes.astype(np.int64)
     else:
         D, scode = 1, np.zeros(N, np.int64)
-    codes = codes0 * D + scode                     # group = (label, stratum)
-    K = K0 * D
+    kc = int(np.where(names == control)[0][0])
     # one sequential pass over contiguous row blocks (fast on backed files, bounded memory):
-    # per-group gene totals = indicator(groups x cells) @ X, restricted to genes on the axis
-    tot = np.zeros((K, len(src_idx))); lib = np.zeros(K)
+    # per-label gene totals = indicator(labels x cells) @ X, plus per-stratum control totals. Only these
+    # and the (label, stratum) cell counts are needed, so memory is (labels + strata) x genes, not their product.
+    w = None if weight_col is None else adata.obs[weight_col].to_numpy(float)
+    gidx = np.where(codes0 == kc, K0 + scode, codes0)       # rows K0.. hold control per stratum
+    R = K0 + D
+    tot = np.zeros((R, len(src_idx))); lib = np.zeros(R)
     if adata.isbacked and getattr(adata.X, "format", None) == "csc":
         # column-major file: pass over contiguous gene blocks instead (all cells at once)
-        S = sp.csr_matrix((np.ones(N), (codes, np.arange(N))), shape=(K, N))
+        S = sp.csr_matrix((np.ones(N), (gidx, np.arange(N))), shape=(R, N))
         col_of = np.full(adata.n_vars, -1); col_of[src_idx] = np.arange(len(src_idx))
         gchunk = max(1, int(chunk * 2e4 // max(N, 1)))
         for g0 in range(0, adata.n_vars, gchunk):
@@ -84,27 +87,27 @@ def summarize(adata: ad.AnnData, pert_col: str, control: str, genes_axis: np.nda
             s1 = min(N, s0 + chunk)
             X = adata.X[s0:s1]
             X = sp.csr_matrix(X) if not sp.issparse(X) else X.tocsr()
-            S = sp.csr_matrix((np.ones(s1 - s0), (codes[s0:s1], np.arange(s1 - s0))), shape=(K, s1 - s0))
+            S = sp.csr_matrix((np.ones(s1 - s0), (gidx[s0:s1], np.arange(s1 - s0))), shape=(R, s1 - s0))
             lib += np.asarray(S @ np.asarray(X.sum(1)).ravel()).ravel()
             tot += (S @ X[:, src_idx]).toarray()
-    w = None if weight_col is None else adata.obs[weight_col].to_numpy(float)
-    cnt_kd = np.bincount(codes, weights=w, minlength=K).reshape(K0, D)        # cells per (label, stratum)
-    tot = tot.reshape(K0, D, -1); lib = lib.reshape(K0, D)
+    cnt_kd = np.bincount(codes0 * D + scode, weights=w, minlength=K0 * D).reshape(K0, D)  # cells per (label, stratum)
+    ctot, clib = tot[K0:], lib[K0:]
+    tot[kc], lib[kc] = ctot.sum(0), clib.sum()
+    tot, lib = tot[:K0], lib[:K0]
     counts = cnt_kd.sum(1).round().astype(np.int64)
 
     def cpm_of(t, l):
         v = np.full(G, 0.0); v[dst_idx] = t / max(l, 1.0) * 1e6
         return v
 
-    kc = int(np.where(names == control)[0][0])
-    ctrl = cpm_of(tot[kc].sum(0), lib[kc].sum())                              # pooled control (reported)
-    ctrl_d = np.vstack([cpm_of(tot[kc, d], lib[kc, d]) for d in range(D)])    # per-stratum control
+    ctrl = cpm_of(tot[kc], lib[kc])                                           # pooled control (reported)
+    ctrl_d = np.vstack([cpm_of(ctot[d], clib[d]) for d in range(D)])          # per-stratum control
     perts, cpm, n, cref, plib = [], [], [], [], []
     for k, p in enumerate(names):
         if p == control or counts[k] < min_cells:
             continue
-        perts.append(p); cpm.append(cpm_of(tot[k].sum(0), lib[k].sum())); n.append(int(counts[k]))
-        plib.append(float(lib[k].sum()))
+        perts.append(p); cpm.append(cpm_of(tot[k], lib[k])); n.append(int(counts[k]))
+        plib.append(float(lib[k]))
         if D > 1:
             f = cnt_kd[k] / max(cnt_kd[k].sum(), 1e-9)
             f = np.where(cnt_kd[kc] > 0, f, 0.0); f = f / max(f.sum(), 1e-9)   # only strata with controls
@@ -121,7 +124,7 @@ def summarize(adata: ad.AnnData, pert_col: str, control: str, genes_axis: np.nda
     present = np.zeros(G, bool); present[dst_idx] = True
     return dict(genes=genes_axis, perts=perts[keep], ncells=np.array(n)[keep], cpm=cpm[keep],
                 ctrl_cpm=ctrl.astype(np.float32), lfc=lfc[keep], kd=kd[keep], present=present,
-                lib=np.array(plib)[keep], ctrl_lib=np.array(float(lib[kc].sum())),
+                lib=np.array(plib)[keep], ctrl_lib=np.array(float(lib[kc])),
                 ctrl_ncells=np.array(int(counts[kc])))
 
 
