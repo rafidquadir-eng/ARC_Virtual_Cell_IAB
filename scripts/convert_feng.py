@@ -42,7 +42,18 @@ def one(d, screen, procs=24):
     X = G.T.tocsr()  # cells x genes
     g = pd.Series(genes).str.split(":", expand=True)
     var = pd.DataFrame({"gene_ids": g[0].values, "gene_name": g[1].values}, index=g[0].values)
-    obs = meta.reindex(cols)
+    # matrix columns and metadata use different ID prefixes (e.g. "ST-P3-D3_I1_BC" vs "MP-ST-P3-D3_I1_BC",
+    # "P1_I1_BC" vs "PC-P1-D3_I1_BC"): match on (pool, inlet, barcode)
+    def key(ids):
+        e = pd.Index(ids).str.extract(r"P(\d+)\D.*?_I(\d+)_([ACGT]+-\d+)$")
+        f = pd.Index(ids).str.extract(r"^P(\d+)_I(\d+)_([ACGT]+-\d+)$")
+        e = e.fillna(f)
+        return (e[0] + "_" + e[1] + "_" + e[2]).values
+    mk = key(meta.index)
+    assert pd.Index(mk).is_unique, f"{screen}: metadata keys not unique"
+    meta.index = mk
+    obs = meta.reindex(key(cols))
+    print(screen, "cells", len(cols), "matched metadata", int(obs["Guide_Call"].notna().sum()), flush=True)
     call = obs["Guide_Call"].astype(str)
     tgt = call.str.rsplit("_", n=1).str[0]
     tgt[(call == "unassigned") | tgt.str.startswith("NonTarget")] = "non-targeting"
