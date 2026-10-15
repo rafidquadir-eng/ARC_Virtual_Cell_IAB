@@ -10,6 +10,7 @@ control cells (random, seed 0). Works on backed CSR (row blocks) and backed CSC 
 import argparse
 
 import anndata as ad
+import h5py
 import numpy as np
 import pandas as pd
 import scipy.sparse as sp
@@ -65,33 +66,50 @@ def main():
     M = A.layers[a.layer] if a.layer else A.X
     fmt = getattr(M, "format", "csr")
     keepj = np.where(col_of >= 0)[0]
-    if fmt == "csc":
-        parts = []
-        gb = a.gene_block
-        for g0 in range(0, A.n_vars, gb):
-            g1 = min(A.n_vars, g0 + gb)
-            jj = keepj[(keepj >= g0) & (keepj < g1)]
-            if len(jj) == 0:
-                continue
-            B = sp.csc_matrix(M[:, g0:g1])[:, jj - g0]
-            parts.append((sp.csr_matrix(B)[rows], col_of[jj]))
-        Xs = sp.hstack([p for p, _ in parts]).tocsr()
-        cols = np.concatenate([c for _, c in parts])
-    else:
-        Xs = sp.vstack([sp.csr_matrix(M[rows[s0:s0 + a.block]])[:, keepj]
-                        for s0 in range(0, len(rows), a.block)]).tocsr()
-        cols = col_of[keepj]
-    # place the kept source columns on the axis (missing axis genes stay zero)
-    P = sp.csr_matrix((np.ones(len(cols)), (np.arange(len(cols)), cols)), shape=(len(cols), len(axis)))
-    X = (Xs @ P).tocsr()
-    X = X.astype(np.float32)
+    # kept source columns (in source order) -> axis columns
+    P = sp.csr_matrix((np.ones(len(keepj), np.float32), (np.arange(len(keepj)), col_of[keepj])), shape=(len(keepj), len(axis)))
+
+    def row_blocks():
+        """Yield consecutive (in `rows` order) CSR blocks already on the axis."""
+        if fmt == "csc":
+            # stage 1: one pass over gene blocks, keep only the selected rows (CSR pieces, int32)
+            pieces = []
+            for g0 in range(0, A.n_vars, a.gene_block):
+                g1 = min(A.n_vars, g0 + a.gene_block)
+                jj = keepj[(keepj >= g0) & (keepj < g1)]
+                if len(jj):
+                    pieces.append(sp.csr_matrix(sp.csc_matrix(M[:, g0:g1])[:, jj - g0][rows]))
+            # stage 2: row chunks across all pieces
+            for s0 in range(0, len(rows), a.block):
+                yield sp.hstack([q[s0:s0 + a.block] for q in pieces], format="csr") @ P
+        else:
+            for s0 in range(0, len(rows), a.block):
+                yield sp.csr_matrix(M[rows[s0:s0 + a.block]])[:, keepj] @ P
+
     extra = [c for c in a.keep_obs.split(",") if c]
     o = pd.DataFrame({"target": labels[rows]}, index=np.asarray(obs.index[rows], str))
     for c in extra:
         o[c] = obs[c].values[rows]
-    out = ad.AnnData(X=X, obs=o, var=pd.DataFrame(index=axis))
-    out.uns["source"] = a.h5ad
-    out.write_h5ad(a.out, compression="gzip")
+    # stream blocks onto disk: write the first block with obs/var, append the rest to X
+    first = True
+    for B in row_blocks():
+        B = sp.csr_matrix(B, dtype=np.float32)
+        B.indices = B.indices.astype(np.int64); B.indptr = B.indptr.astype(np.int64)
+        if first:
+            n0 = B.shape[0]
+            head = ad.AnnData(X=B, obs=o.iloc[:n0], var=pd.DataFrame(index=axis))
+            head.uns["source"] = a.h5ad
+            head.write_h5ad(a.out)
+            first = False
+            continue
+        with h5py.File(a.out, "a") as f:
+            ad.io.sparse_dataset(f["X"]).append(B)
+    # rewrite obs for all rows (the head file only carries the first block's obs)
+    with h5py.File(a.out, "a") as f:
+        del f["obs"]
+        ad.io.write_elem(f, "obs", o)
+    out = ad.read_h5ad(a.out, backed="r")
+    assert out.shape == (len(rows), len(axis)), out.shape
     vc = o.target.value_counts()
     print(f"{a.out}: {out.n_obs} cells, {len(vc) - 1} perts ({len(set(vc.index) & panel)} panel), "
           f"{(o.target == a.control).sum()} controls, {len(seen)}/{len(axis)} axis genes")
