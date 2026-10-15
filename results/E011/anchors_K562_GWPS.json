@@ -1,0 +1,28 @@
+{
+  "baseline": {
+    "pds_cosine": 0.4943086190096555,
+    "expr_mse_unbiased_capped_norm": 1.088499459980552,
+    "de_wilcoxon_direction_fidelity_yield_raw": 0.025240847784200382,
+    "de_wilcoxon_direction_reach_raw": 0.2480530406142285,
+    "de_wilcoxon_sig_jaccard": 0.18779342723004694,
+    "de_wilcoxon_lfc_nmae": 0.9793198816226526
+  },
+  "replicate": {
+    "pds_cosine": 0.8849012312870936,
+    "expr_mse_unbiased_capped_norm": -0.03386685290651894,
+    "de_wilcoxon_direction_fidelity_yield_raw": 0.6739103616376749,
+    "de_wilcoxon_direction_reach_raw": 0.878029796267624,
+    "de_wilcoxon_sig_jaccard": 0.4769781778648293,
+    "de_wilcoxon_lfc_nmae": 0.4667114468685525
+  },
+  "replicate_sd": {
+    "pds_cosine": 0.007371469997454832,
+    "expr_mse_unbiased_capped_norm": 0.029326726416367233,
+    "de_wilcoxon_direction_fidelity_yield_raw": 0.020234805713293686,
+    "de_wilcoxon_direction_reach_raw": 0.0038616461302105358,
+    "de_wilcoxon_sig_jaccard": 0.017742847160281076,
+    "de_wilcoxon_lfc_nmae": 0.048445828090060435
+  },
+  "n_splits": 5,
+  "n_perts": 213
+}
