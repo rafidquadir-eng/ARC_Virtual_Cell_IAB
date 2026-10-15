@@ -94,9 +94,10 @@ def prepare_holdout(ctx: dict, axis_all: np.ndarray, outdir: str, n_panel: int, 
     rows.append(cidx)
     rows = np.sort(np.concatenate(rows))
     X = a.X[rows]
-    X = (X if sp.issparse(X) else sp.csr_matrix(X))[:, gcols].astype(np.float32)
+    X = sp.csr_matrix((X if sp.issparse(X) else sp.csr_matrix(X))[:, gcols].astype(np.float32))
+    X.sum_duplicates()                            # canonical CSR (sorted indices); cell-eval2 requires it
     t = np.where(lab[rows] == ctx["control"], CTRL, lab[rows])
-    real = ad.AnnData(sp.csr_matrix(X), obs=pd.DataFrame({"target": t}, index=[f"c{i}" for i in range(len(rows))]),
+    real = ad.AnnData(X, obs=pd.DataFrame({"target": t}, index=[f"c{i}" for i in range(len(rows))]),
                       var=pd.DataFrame(index=axis))
     real.write_h5ad(real_p)
     real[real.obs["target"] == CTRL].copy().write_h5ad(ctrl_p)
