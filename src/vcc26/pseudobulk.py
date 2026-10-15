@@ -36,7 +36,8 @@ def load_gene_axis(path: str | None, adata: ad.AnnData, symbol_col: str | None) 
 
 def summarize(adata: ad.AnnData, pert_col: str, control: str, genes_axis: np.ndarray,
               symbol_col: str | None = None, min_cells: int = 25, max_kd: float | None = None,
-              chunk: int = 100000) -> dict:
+              chunk: int = 100000, weight_col: str | None = None) -> dict:
+    """weight_col: obs column giving cells per row, for inputs that are already pseudobulks."""
     sym = np.asarray(adata.var[symbol_col] if symbol_col else adata.var_names, dtype=str)
     # map source genes onto the target axis (first occurrence wins for duplicated symbols)
     pos = {g: i for i, g in enumerate(genes_axis)}
@@ -56,14 +57,28 @@ def summarize(adata: ad.AnnData, pert_col: str, control: str, genes_axis: np.nda
     # one sequential pass over contiguous row blocks (fast on backed files, bounded memory):
     # per-group gene totals = indicator(groups x cells) @ X, restricted to genes on the axis
     tot = np.zeros((K, len(src_idx))); lib = np.zeros(K)
-    for s0 in range(0, N, chunk):
-        s1 = min(N, s0 + chunk)
-        X = adata.X[s0:s1]
-        X = sp.csr_matrix(X) if not sp.issparse(X) else X.tocsr()
-        S = sp.csr_matrix((np.ones(s1 - s0), (codes[s0:s1], np.arange(s1 - s0))), shape=(K, s1 - s0))
-        lib += np.asarray(S @ np.asarray(X.sum(1)).ravel()).ravel()
-        tot += (S @ X[:, src_idx]).toarray()
-    counts = np.bincount(codes, minlength=K)
+    if adata.isbacked and getattr(adata.X, "format", None) == "csc":
+        # column-major file: pass over contiguous gene blocks instead (all cells at once)
+        S = sp.csr_matrix((np.ones(N), (codes, np.arange(N))), shape=(K, N))
+        col_of = np.full(adata.n_vars, -1); col_of[src_idx] = np.arange(len(src_idx))
+        gchunk = max(1, int(chunk * 2e4 // max(N, 1)))
+        for g0 in range(0, adata.n_vars, gchunk):
+            g1 = min(adata.n_vars, g0 + gchunk)
+            X = sp.csc_matrix(adata.X[:, g0:g1])
+            T = (S @ X).toarray()
+            lib += T.sum(1)
+            m = col_of[g0:g1] >= 0
+            tot[:, col_of[g0:g1][m]] += T[:, m]
+    else:
+        for s0 in range(0, N, chunk):
+            s1 = min(N, s0 + chunk)
+            X = adata.X[s0:s1]
+            X = sp.csr_matrix(X) if not sp.issparse(X) else X.tocsr()
+            S = sp.csr_matrix((np.ones(s1 - s0), (codes[s0:s1], np.arange(s1 - s0))), shape=(K, s1 - s0))
+            lib += np.asarray(S @ np.asarray(X.sum(1)).ravel()).ravel()
+            tot += (S @ X[:, src_idx]).toarray()
+    w = None if weight_col is None else adata.obs[weight_col].to_numpy(float)
+    counts = np.bincount(codes, weights=w, minlength=K).round().astype(np.int64)
 
     def to_axis(k):
         v = np.full(G, 0.0); v[dst_idx] = tot[k] / max(lib[k], 1.0) * 1e6
@@ -100,10 +115,21 @@ def main():
     ap.add_argument("--min-cells", type=int, default=25)
     ap.add_argument("--max-kd", type=float, default=None,
                     help="drop constructs whose on-target remaining fraction exceeds this (e.g. 0.7)")
+    ap.add_argument("--weight-col", default=None,
+                    help="obs column with cells per row, when the input rows are already pseudobulks")
+    ap.add_argument("--where", action="append", default=[],
+                    help="keep only rows with obs COL == VALUE (COL=VALUE, repeatable); loads the subset")
     a = ap.parse_args()
     adata = ad.read_h5ad(a.h5ad, backed="r")
+    if a.where:
+        keep = np.ones(adata.n_obs, bool)
+        for cond in a.where:
+            col, val = cond.split("=", 1)
+            keep &= adata.obs[col].astype(str).values == val
+        adata = adata[keep].to_memory()
     genes = load_gene_axis(a.gene_axis, adata, a.symbol_col)
-    s = summarize(adata, a.pert_col, a.control, genes, a.symbol_col, a.min_cells, a.max_kd)
+    s = summarize(adata, a.pert_col, a.control, genes, a.symbol_col, a.min_cells, a.max_kd,
+                  weight_col=a.weight_col)
     np.savez_compressed(a.out, **s)
     print(f"{a.out}: {len(s['perts'])} perts, {s['present'].sum()}/{len(genes)} genes on axis, "
           f"median kd={np.nanmedian(s['kd']):.2f}")
