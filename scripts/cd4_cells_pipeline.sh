@@ -2,6 +2,7 @@
 # CD4+ T cell holdout subsets, one condition at a time on LOCAL disk (the network filesystem is too
 # slow for concurrent 100+ GB writes): download donor D4's cell file from the public S3 bucket ->
 # subset -> archive the raw file to gdrive:VCC2026/data/raw/CD4T_Marson2026_cells/cells -> check -> delete.
+# ARCHIVE=0 skips the Drive copy (files stay re-pullable from the authors' public S3 bucket).
 # Needs $DATA/scratch/CD4T_Marson2026/guide_to_target.csv (scripts/ingest_cd4.sh subset writes it) or
 # the pseudobulk file to build it. Run inside tmux. Log: logs/data_CD4T_Marson2026_cells.log
 source ~/.vcc_env; cd ~/vcc
@@ -31,7 +32,9 @@ for c in ${CONDS:-Rest Stim8hr Stim48hr}; do
       || { say "FAILED subset $c"; exit 1; }
     say "subset $c done"
   fi
-  if [ -s $L/$f ]; then
+  if [ -s $L/$f ] && [ "${ARCHIVE:-1}" = 0 ]; then
+    say "not archived (ARCHIVE=0; source of record: $B/$f)"; rm -f $L/$f
+  elif [ -s $L/$f ]; then
     rclone copy --stats 300s --stats-one-line -v --drive-chunk-size 256M $L/$f gdrive:VCC2026/data/raw/CD4T_Marson2026_cells/cells >> $log 2>&1 \
       && rclone check --size-only $L gdrive:VCC2026/data/raw/CD4T_Marson2026_cells/cells --include $f >> $log 2>&1 \
       && { say "rclone check OK $f"; rm -f $L/$f; } || { say "FAILED archive $f"; exit 3; }
