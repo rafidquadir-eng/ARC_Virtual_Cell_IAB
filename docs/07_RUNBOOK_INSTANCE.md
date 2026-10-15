@@ -135,6 +135,43 @@ vcc submit $DATA/preds/E012.vcc -m "E012 <spec name> with K562 GWPS" --wait
 ## ⏸ PAUSED (15 Oct ~03:30 UTC): don't start E013–E017
 Wait until the curation agent has pushed `reports/DATA_DONE.md`. If E013 is already running, let it finish and push its report, then stop. E013/E015 are folded into **E020** below; E014/E017 are replaced by **E021**. The earlier stages stay here for the record.
 
+## E025–E027 — noise-aware consensus (B4), proxy sweep, confirmation (see `docs/12_DIAGNOSIS.md`)
+Why: E021's raw MSE is 4.66 (V\* 3.2–6.8), almost 5× the true effect size, because source sampling noise is copied onto every gene. B4 denoises (low-rank), pools by line with noise weights, and shrinks; `vcc26.proxy` scores specs in seconds on CPU.
+
+**E025 (CPU only; can run while the GPU is busy):**
+```bash
+source ~/.vcc_env; cd ~/vcc; git pull
+for h in CD4T_Stim8hr KOLF2.1J K562_GWPS; do
+  python -m vcc26.proxy --config loco.json --holdout $h --holdout-dir $DATA/loco/E020/holdout_$h \
+    --specs specs_E025.json --out results/E025 --anatomy "B2_raw_gPL(E021),B4_lr1_pc20_t0.02_s0" 2>&1 | tee logs/E025_$h.log
+done
+python scripts/pick_e025.py results/E025 | tee results/E025/pick.txt     # writes specs_E026.json
+```
+Low-rank denoising runs a randomized SVD per source (cached per run). Expect ~10–30 min per held-out line, dominated by CD4T/KOLF/GWPS. The process needs ~30–60 GB RAM.
+**REPORT E025:**
+- the full ranked table from `pick.txt` (proxy, pds_sc, mse_sc_credit, mse_raw, de_sign, nmae_p, worst);
+- `n_lines` and `lowrank_k` per source if printed;
+- the anatomy JSON for the two specs.
+
+Commit `results/E025/*` and `specs_E026.json`.
+
+**E025b (after the curation agent's D7 re-summaries):** rerun E025 into `results/E025b`. Report how E021's config and the top B4 change.
+
+**E026 (GPU; when free):** real-metric V\* for the picked specs, plus V\*-far:
+```bash
+PANEL=$(find $DATA/challenge -name pert_counts.csv | head -1)
+python -m vcc26.vstar --config loco.json --panel-file $PANEL --specs specs_E026.json --out $DATA/loco/E020 --tag E026 --mode seen
+# V*-far: same lineage removed from the sources
+python -m vcc26.loco --config loco.json --holdout KOLF2.1J --mode seen --out $DATA/loco/E020 --panel-file $PANEL --specs specs_E026.json \
+  --sources K562,RPE1,HepG2,Jurkat,K562_GWPS,CD4T_Rest,CD4T_Stim8hr,CD4T_Stim48hr --tag E026far
+python -m vcc26.loco --config loco.json --holdout CD4T_Stim8hr --mode seen --out $DATA/loco/E020 --panel-file $PANEL --specs specs_E026.json \
+  --sources K562,RPE1,HepG2,K562_GWPS,H1,HipSci_iPSC,KOLF2.1J --tag E026far
+```
+(`--out $DATA/loco/E020` reuses the E020 holdouts and anchors.) If the GPU is still busy, add `--de-backend pdex --device cpu` (slower).
+**REPORT E026:** the V\* summary (selection, worst line, six metrics, per line) and the V\*-far rows; raw MSE per row.
+
+**E027: leaderboard** (state the day's count): E026's top spec with `--emit balanced --registry loco.json` and all summaries, as in E021. Report the metrics and compare with E021 (0.106).
+
 ## E016 + E020 + E021 — first stages after the data is in (`docs/11_BUILD_PLAN.md` §3)
 ```bash
 source ~/.vcc_env; cd ~/vcc; git pull

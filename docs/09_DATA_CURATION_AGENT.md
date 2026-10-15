@@ -148,6 +148,30 @@ The experiment session is **paused until you write `reports/DATA_DONE.md`**, so 
 
    Commit and push, then stop and wait.
 
+## Batch 2 (added 15 Oct ~17:45 UTC; see `docs/12_DIAGNOSIS.md` P7, P8, P13)
+1. **D7: composition-matched controls** (`git pull` first; `vcc26.pseudobulk` now has `--strata-col`):
+   - **CD4T:** rebuild `pb/CD4T_{Rest,Stim8hr,Stim48hr}.npz` from the pseudobulk file with `--strata-col <donor column>` (check the obs name, e.g. `donor_id`). Keep the old files as `*_pooled.npz`.
+   - **K562, K562_GWPS, RPE1:** rebuild with `--strata-col gem_group` (or whatever the obs batch column is).
+   - **HepG2/Jurkat:** rebuild with their batch/lane column if one exists.
+   - **HipSci:** rebuild with controls = `NonTarget` guides only, if there are ≥ 2,000 such cells; keep the old file as `HipSci_iPSC_unassigned.npz`.
+   - For each dataset, report median |lfc| on Y-chromosome and HLA genes before vs after. These are the donor-artefact genes.
+   - Don't touch `loco.json` names or paths; the summaries are replaced in place.
+2. **D8: epithelial and carcinoma perturbation data** (catalog first, as in Phase 1, with panel overlap computed). Look for single-cell CRISPRi/CRISPRko screens in:
+   - HeLa and other cervical/ovarian carcinoma lines;
+   - squamous carcinoma lines (head-and-neck, oesophageal, lung squamous, A431), keratinocytes or airway basal cells;
+   - T-ALL lines (MOLT-4, CCRF-CEM, Jurkat genome-wide).
+
+   Ingest anything with ≥ 20 panel targets, using `line` and `library` as before.
+3. **D9: LINCS L1000 (CMap)** CRISPR/shRNA consensus signatures. Check the licence and which cell lines and panel targets are covered, and report. Don't ingest yet; it's bulk data on 978 landmark genes and needs a separate adapter.
+4. **D10: X-Atlas/Orion.** Stays blocked until Rafid confirms permission.
+5. **D11: CCLE/DepMap context data** to `$DATA/priors/`:
+   - DepMap 24Q4 `OmicsExpressionProteinCodingGenesTPMLogp1.csv` and `Model.csv` (CC BY 4.0; check);
+   - we already have `CRISPRGeneEffect`.
+
+   Record each in `reports/priors.md`.
+
+Then write `reports/DATA_DONE_batch2.md` and stop.
+
 **Finish with:**
 - the ranked catalog;
 - what was ingested;

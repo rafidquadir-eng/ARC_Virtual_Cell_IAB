@@ -55,4 +55,5 @@ Paste the runbook's report block back here after each stage and I'll decide the 
 | `09_DATA_CURATION_AGENT.md` | prompt for the data-curation agent |
 | `10_PLAN_TO_TOP.md` | strategy: gap analysis, work packages, which outside ideas we use |
 | `11_BUILD_PLAN.md` | **the detailed build plan**: phases D/E/B/M/C/T, owners, acceptance rules, calendar |
+| `12_DIAGNOSIS.md` | **every known problem (engineering, data, biology, metric, ops) and its fix**, after E021 |
 | `EXPERIMENT_LOG.md` | running log (also mirrored as a Google Sheet) |

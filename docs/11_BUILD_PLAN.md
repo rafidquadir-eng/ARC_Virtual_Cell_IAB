@@ -68,6 +68,9 @@ Written 15 Oct 2026 ~03:30 UTC (Wed 14 Oct 23:30 ET). It expands `10_PLAN_TO_TOP
 
 ## 4. Phase B — strongest non-learned baseline (16 Oct)
 
+> **15 Oct update:** `12_DIAGNOSIS.md` puts B4 (noise-aware consensus, E025–E027) and the D7 data fixes ahead of B-3…B-5. Baseline-1 is now the best of B4 and the earlier B rows.
+
+
 | ID | What | Spec / code | Accept |
 |---|---|---|---|
 | B-1 | Emitter: balanced vs random, from the ORACLE and B2 rows of E020 | E020 | ORACLE-balanced > ORACLE-random on MSE/NMAE/REACH |

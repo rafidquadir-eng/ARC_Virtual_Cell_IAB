@@ -327,3 +327,187 @@ def predict_transfer_a1(targets, sources, target_ctrl_cpm=None, alpha_single: fl
 
 MODELS = {"B0_control": predict_control, "B1_generic": predict_generic,
           "B2_transfer": predict_transfer, "A1_transfer": predict_transfer_a1}
+
+
+# ---------------------------------------------------------------------------------------------
+# B4: noise-aware consensus transfer (15 Oct). Fixes found in E020/E021: transferred source noise
+# dominates the expression metrics (raw MSE 3-7 vs 0.9 for the mean baseline), datasets of one line
+# are counted several times, and noisy low-expression genes create expression the target never had.
+# ---------------------------------------------------------------------------------------------
+
+def _lfc_pc(src: dict, pc: float) -> np.ndarray:
+    """Source log2FC recomputed with CPM pseudocount pc (the stored lfc uses pc = 1 against the
+    possibly composition-matched control, recovered here from cpm and lfc)."""
+    if pc == 1.0:
+        return src["lfc"].astype(np.float64)
+    cpm = src["cpm"].astype(np.float64)
+    cref = np.maximum((cpm + 1.0) / np.power(2.0, src["lfc"].astype(np.float64)) - 1.0, 0.0)
+    return np.log2((cpm + pc) / (cref + pc))
+
+
+def _noise_var(src: dict, lfc: np.ndarray, pc: float) -> np.ndarray:
+    """Per-entry sampling variance of a pseudobulk log2FC: c / (n_cells * (ctrl CPM + pc)),
+    with c fitted per source from the median squared lfc (most target x gene pairs are null)."""
+    n = np.maximum(src["ncells"].astype(np.float64), 1.0)[:, None]
+    base = 1.0 / (n * (src["ctrl_cpm"].astype(np.float64)[None, :] + pc))
+    v = src["present"] & (src["ctrl_cpm"] > EPS_CPM)
+    c = np.median((lfc[:, v] ** 2) / base[:, v]) / 0.455 if v.any() and lfc.shape[0] >= 5 else 1.0
+    return c * base
+
+
+def _rsvd(Z: np.ndarray, k: int, seed: int = 0, n_iter: int = 4):
+    rng = np.random.default_rng(seed)
+    k = min(k, min(Z.shape) - 1)
+    Q = Z @ rng.standard_normal((Z.shape[1], k + 10))
+    for _ in range(n_iter):
+        Q, _ = np.linalg.qr(Z @ (Z.T @ Q))
+    Q, _ = np.linalg.qr(Q)
+    U, S, Vt = np.linalg.svd(Q.T @ Z, full_matrices=False)
+    return (Q @ U)[:, :k], S[:k], Vt[:k]
+
+
+_LR_CACHE: dict = {}
+
+
+def lowrank_denoise(src: dict, pc: float = 1.0, kmax: int = 300) -> dict:
+    """Gavish-Donoho optimal singular-value shrinkage of the noise-whitened (targets x genes) lfc
+    matrix. Pure noise has singular values below the Marchenko-Pastur edge and is removed; shared
+    response programs survive. Each target's own (cis) entry is restored unshrunk."""
+    key = (src.get("name"), id(src["lfc"]), pc, kmax)
+    if key in _LR_CACHE:
+        return _LR_CACHE[key]
+    lfc = _lfc_pc(src, pc)
+    v = src["present"] & (src["ctrl_cpm"] > EPS_CPM)
+    out = dict(src)
+    if lfc.shape[0] < 20 or v.sum() < 20:
+        out["lfc_pc"] = lfc; out["var_pc"] = _noise_var(src, lfc, pc); _LR_CACHE[key] = out
+        return out
+    var = _noise_var(src, lfc, pc)
+    sd = np.sqrt(var[:, v])
+    Z = lfc[:, v] / sd
+    m, n = Z.shape
+    tr = m > n
+    if tr:
+        Z = Z.T; m, n = n, m
+    beta = m / n
+    U, S, Vt = _rsvd(Z, kmax)
+    y = S / np.sqrt(n)
+    edge = 1 + np.sqrt(beta)
+    eta = np.where(y > edge, np.sqrt(np.maximum((y ** 2 - beta - 1) ** 2 - 4 * beta, 0.0)) / np.maximum(y, 1e-12), 0.0)
+    Zh = (U * (eta * np.sqrt(n))) @ Vt
+    if tr:
+        Zh = Zh.T
+    den = np.zeros_like(lfc)
+    den[:, v] = Zh * sd
+    gpos = {g: i for i, g in enumerate(src["genes"])}
+    for i, p in enumerate(src["perts"]):
+        j = gpos.get(p)
+        if j is not None:
+            den[i, j] = lfc[i, j]
+    out["lfc_pc"] = den
+    out["var_pc"] = var * 0.0 + np.mean(var[:, v]) * (int((eta > 0).sum()) / max(n, 1))   # residual var proxy
+    out["lowrank_k"] = int((eta > 0).sum())
+    _LR_CACHE[key] = out
+    return out
+
+
+def _ctrl_corr(a, b, min_cpm=1.0):
+    m = (a > min_cpm) | (b > min_cpm)
+    return float(np.corrcoef(np.log1p(a[m]), np.log1p(b[m]))[0, 1]) if m.sum() > 50 else 0.0
+
+
+def predict_consensus(targets, sources, target_ctrl_cpm=None, lowrank: bool = True, pc: float = 1.0,
+                      tau2: float = 0.02, sim_tau: float | None = None, gate_up_cpm: float = 1.0,
+                      gate_target_cpm: float | None = None, generic: str = "zero",
+                      beta: float = 1.0, shrink: bool = True, return_info: bool = False, **_):
+    """Random-effects consensus of each target's response across cell LINES.
+
+    1. Each dataset's lfc (pseudocount pc) is optionally low-rank denoised (Gavish-Donoho).
+    2. Datasets of the same line are merged by inverse noise variance, so a line counts once
+       (CD4T Rest/Stim8hr/Stim48hr = one line).
+    3. Lines are combined per gene by inverse (noise + tau2) variance: tau2 is the between-line
+       spread of true effects, so adding lines reduces noise but never claims more than the
+       context-to-context agreement allows. Optional similarity weighting exp(r/sim_tau) of each
+       line's control profile to the target context.
+    4. Empirical-Bayes shrinkage of the consensus toward 0 by its predictive variance (shrink).
+    5. Gates: genes the target context doesn't express (< gate_up_cpm) cannot be induced from
+       nothing (positive lfc clipped); optionally the whole response is scaled by the target
+       gene's own expression in the context (gate_target_cpm).
+    generic: 'zero' (unmeasured targets get no change) or 'gw' (mean response of genome-wide
+    libraries). beta: global effect scale. Returns log2FC with pseudocount pc converted back to
+    pc = 1 so the emitter's conversion is unchanged."""
+    G = len(sources[0]["genes"])
+    genes = sources[0]["genes"]; gpos = {g: i for i, g in enumerate(genes)}
+    srcs = [lowrank_denoise(s, pc) if lowrank else dict(s, lfc_pc=_lfc_pc(s, pc)) for s in sources]
+    for s in srcs:
+        if "var_pc" not in s:
+            s["var_pc"] = _noise_var(s, s["lfc_pc"], pc)
+    lines: dict[str, list] = {}
+    for s in srcs:
+        lines.setdefault(s.get("line") or s.get("name"), []).append(s)
+    line_w = {}
+    for L, ss in lines.items():
+        if sim_tau and target_ctrl_cpm is not None:
+            r = np.nanmean([_ctrl_corr(s["ctrl_cpm"], np.asarray(target_ctrl_cpm, float)) for s in ss])
+            line_w[L] = float(np.exp((0.0 if not np.isfinite(r) else r) / sim_tau))
+        else:
+            line_w[L] = 1.0
+    zmax = max(line_w.values()); line_w = {k: v / zmax for k, v in line_w.items()}
+    # (exp(r/tau) is normalised by its max, so the most similar line has weight 1)
+    out = np.zeros((len(targets), G))
+    n_lines = np.zeros(len(targets), int)
+    for r_, t in enumerate(targets):
+        num = np.zeros(G); den = np.zeros(G); var_sum = np.zeros(G); nl = 0
+        for L, ss in lines.items():
+            ln = np.zeros(G); lw = np.zeros(G)
+            for s in ss:
+                idx = np.where(s["perts"] == t)[0]
+                if not len(idx):
+                    continue
+                i = idx[0]
+                vg = s["present"] & (s["ctrl_cpm"] > EPS_CPM)
+                w = np.where(vg, 1.0 / np.maximum(s["var_pc"][i] if s["var_pc"].ndim == 2 else s["var_pc"], 1e-6), 0.0)
+                ln += w * s["lfc_pc"][i]; lw += w
+            if not lw.any():
+                continue
+            nl += 1
+            L_eff = np.where(lw > 0, ln / np.maximum(lw, 1e-12), 0.0)
+            L_var = np.where(lw > 0, 1.0 / np.maximum(lw, 1e-12), np.inf)
+            wL = np.where(lw > 0, line_w[L] / (L_var + tau2), 0.0)
+            num += wL * L_eff; den += wL
+        n_lines[r_] = nl
+        if nl == 0:
+            continue
+        mu = np.where(den > 0, num / np.maximum(den, 1e-12), 0.0)
+        if shrink:
+            pv = np.where(den > 0, 1.0 / np.maximum(den, 1e-12), np.inf)     # variance of the mean
+            sig2 = max(float(np.mean(mu ** 2) - np.mean(pv[np.isfinite(pv)])), 1e-6) if np.isfinite(pv).any() else 1e-6
+            mu = mu * sig2 / (sig2 + np.where(np.isfinite(pv), pv, 1e9))
+            j = gpos.get(t)
+            if j is not None:
+                mu[j] = num[j] / den[j] if den[j] > 0 else mu[j]              # keep the knockdown itself
+        out[r_] = mu
+    if generic == "gw":
+        gw = [s for s in srcs if s.get("library") == "genome_wide"] or srcs
+        g = np.mean([s["lfc_pc"].mean(0) for s in gw], 0)
+        out[n_lines == 0] = g
+    out *= beta
+    if target_ctrl_cpm is not None:
+        tc = np.asarray(target_ctrl_cpm, float)
+        if gate_up_cpm is not None:
+            out = np.where((tc[None, :] < gate_up_cpm) & (out > 0), 0.0, out)
+        if gate_target_cpm:
+            for r_, t in enumerate(targets):
+                j = gpos.get(t)
+                if j is not None:
+                    out[r_] *= min(1.0, tc[j] / gate_target_cpm)
+        # convert pseudocount pc back to the emitter's pc = 1 convention, in the target context
+        if pc != 1.0:
+            tcpm = np.maximum((tc[None, :] + pc) * np.power(2.0, out) - pc, 0.0)
+            out = np.log2((tcpm + 1.0) / (tc[None, :] + 1.0))
+    info = {"n_lines": n_lines.tolist(), "line_w": line_w,
+            "lowrank_k": {s.get("name"): s.get("lowrank_k") for s in srcs}}
+    return (out.astype(np.float32), info) if return_info else out.astype(np.float32)
+
+
+MODELS["B4_consensus"] = predict_consensus
