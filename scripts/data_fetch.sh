@@ -3,6 +3,7 @@
 # Downloads each URL (resumable) to $DATA/scratch/<name>/, archives the folder to
 # gdrive:VCC2026/data/raw/<name> and verifies it with rclone check. Run inside tmux;
 # log: logs/data_<name>.log. A URL may be written as <url>::<relative/out/path>.
+# SINGLE=1 downloads with a single resumable wget stream instead of aria2c.
 source ~/.vcc_env; cd ~/vcc
 name=$1; shift; D=$DATA/scratch/$name; log=logs/data_$name.log; mkdir -p $D logs
 say() { echo "[$(date -u +%FT%TZ)] $*" | tee -a $log; }
@@ -10,8 +11,14 @@ t0=$(date +%s); say "start $name ($# files)"
 for spec in "$@"; do
   url=${spec%%::*}; out=$(basename "${url%%\?*}"); [[ $spec == *::* ]] && out=${spec#*::}
   mkdir -p "$D/$(dirname "$out")"
-  aria2c -c -x8 -s8 --auto-file-renaming=false --summary-interval=60 --console-log-level=warn \
-    -d "$D/$(dirname "$out")" -o "$(basename "$out")" "$url" >> $log 2>&1 || { say "FAILED download $url"; exit 1; }
+  if [ -n "$SINGLE" ]; then   # presigned redirects that expire in seconds (figshare): one stream, resume on retry
+    for t in $(seq 1 50); do wget -q -c -O "$D/$out" "$url" && break; say "wget retry $t"; sleep 10; done
+    [ $t -lt 50 ] || { say "FAILED download $url"; exit 1; }
+  else
+    aria2c -c -x8 -s8 --auto-file-renaming=false --summary-interval=60 --console-log-level=warn \
+      --show-console-readout=false -d "$D/$(dirname "$out")" -o "$(basename "$out")" "$url" >> $log 2>&1 \
+      || { say "FAILED download $url"; exit 1; }
+  fi
   say "got $out $(du -h "$D/$out" | cut -f1)"
 done
 gb=$(du -sb $D | awk '{printf "%.1f", $1/1e9}'); free=$(rclone about gdrive: --json | python3 -c "import json,sys; print(round(json.load(sys.stdin)['free']/1e9,1))")
