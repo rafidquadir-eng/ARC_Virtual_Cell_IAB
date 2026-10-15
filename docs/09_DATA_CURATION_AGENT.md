@@ -36,10 +36,11 @@ Paste everything below the line into a dedicated Claude Code session on the Lamb
 Flag any new dataset in one of these cell lines; it is still useful if it adds panel targets or more depth.
 
 **Leads to check first.** All are unverified; confirm each one and compute its overlap.
-1. **Remaining VCC 2025 H1 data.** Check whether Arc released the validation/test ground truth after the 2025 challenge (about 150 more H1 perturbations, same chemistry, full gene set). Look at Arc, Hugging Face `arcinstitute` and the 2025 challenge pages.
+1. **Full VCC 2025 H1 data: confirmed available.** Arc's 2026 announcement says the full 2025 dataset can be downloaded from the Arc Virtual Cell Atlas (arcinstitute.org/tools/virtualcellatlas). That's about 300 H1 perturbations, about 150 more than our training split, with the same chemistry and full gene set. **Fetch this first.** Also check whether the Atlas hosts other Perturb-seq sets (e.g. the Tahoe/Arc/Biohub collaboration), and whether the 2026 contexts' own data will be released after the challenge (not usable now).
 2. **Xaira X-Atlas/Orion.** Reported as genome-wide Perturb-seq in two cancer lines with about 8M cells, under a non-commercial license (blocked; see Rules). Compute its panel overlap from public metadata anyway, so Rafid can decide whether to ask Xaira for permission.
 3. **Other genome-scale or large non-essential Perturb-seq (2023–2026) in non-K562 cells:** primary T cells, iPSC-derived cells, other cancer lines, and Arc's own releases (including any `PIE_*` repos).
-4. **Medium screens of immune, signalling or druggable genes** (CRISPRi or CRISPRko) in primary or immune cells. Only take those that hit at least 20 panel targets.
+4. **Illumina Billion Cell Atlas** (announced 13 Jan 2026: 1B cells, 200+ lines, genome-wide CRISPR). The press release names pharma partners and says nothing about public access. Check whether any part is public; if not, list it as blocked/unavailable. Illumina AI leads the leaderboard (0.461), likely with this data.
+5. **Medium screens of immune, signalling or druggable genes** (CRISPRi or CRISPRko) in primary or immune cells. Only take those that hit at least 20 panel targets.
 
 ## Phase 1: catalog (no bulk downloads; metadata and perturbation lists only)
 

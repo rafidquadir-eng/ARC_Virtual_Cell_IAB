@@ -34,7 +34,7 @@ import pandas as pd
 import scipy.sparse as sp
 
 from . import local_eval, models
-from .emit import control_cpm, emit_context
+from .emit import control_cpm, emit
 from .pseudobulk import load as load_summary
 
 CTRL = "non-targeting"
@@ -144,7 +144,13 @@ def run(cfg_path: str, holdout: str, mode: str, out: str, n_panel: int, n_cells:
             kw["fallback"] = models.knn_fallback(sources, emb, **spec.get("fb_kw", {}))
         kw["target_ctrl_cpm"] = tgt_cpm
         extra = {}
-        if spec["model"] == "A1_transfer":
+        if spec["model"] == "ORACLE":                # diagnostic ceiling: the held-out line's own lfc
+            real_ad = ad.read_h5ad(real_p)
+            from .pseudobulk import summarize
+            so = summarize(real_ad, "target", CTRL, np.asarray(axis), min_cells=1)
+            pos = {p: i for i, p in enumerate(so["perts"])}
+            lfc = np.vstack([so["lfc"][pos[p]] for p in panel])
+        elif spec["model"] == "A1_transfer":
             lfc, info = models.MODELS["A1_transfer"](panel, sources, return_info=True, **kw)
             pt = info["per_target"]
             extra = {"source_r": [round(float(x), 3) for x in info["source_r"]],
@@ -155,10 +161,11 @@ def run(cfg_path: str, holdout: str, mode: str, out: str, n_panel: int, n_cells:
                      "n_neighbor_targets": info.get("n_neighbor_targets", 0)}
         else:
             lfc = models.MODELS[spec["model"]](panel, sources, **kw)
-        pred = emit_context(ctrl, panel, lfc, n_cells=n_cells, context=holdout, seed=seed,
-                            include_control=n_cells)   # scorer requires the control label
+        pred = emit(spec.get("emit", "random"), ctrl, panel, lfc, n_cells=n_cells, context=holdout,
+                    seed=seed, include_control=n_cells)   # scorer requires the control label
         res = local_eval.score(pred, real_p, anchors, ecfg)
-        row = {"model": name, "holdout": holdout, "mode": mode, "sources": "+".join(src_names),
+        row = {"model": name, "emit": spec.get("emit", "random"), "holdout": holdout, "mode": mode,
+               "sources": "+".join(src_names),
                "n_panel": len(panel), "n_covered": cover, **{k: v for k, v in res.items() if k != "raw"},
                **{f"raw_{k}": v for k, v in res["raw"].items()}, **{k: json.dumps(v) if isinstance(v, list) else v for k, v in extra.items()},
                "secs": round(time.time() - t0, 1)}

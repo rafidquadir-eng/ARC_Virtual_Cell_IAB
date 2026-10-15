@@ -163,8 +163,45 @@ python -m vcc26.loco --config loco.json --holdout K562_GWPS --mode unseen --out 
 
 Commit the CSVs to `results/E013/`.
 
-**E014: leaderboard entry** (state the day's count first). Submit the top E013 spec **only if its selection score beats `B2_transfer` by ≥ 0.01**; otherwise skip and report. Use the E012 command with that spec's `--model`, `--kw` (the spec's kw JSON) and `--fallback none`, output `preds/E014.*`, message `"E014 <spec name>"`.
+**E014: superseded, don't submit.** The leaderboard entry moves to E017, which also uses the new emission (see E015). Still report E013 in full. Use the E012 command with that spec's `--model`, `--kw` (the spec's kw JSON) and `--fallback none`, output `preds/E014.*`, message `"E014 <spec name>"`.
 **REPORT E014:** overall and six per-metric scores, rank, and the comparison with E012 (0.069).
+
+## E015–E017 — emission fix (biggest known lever), context identity, leaderboard entry
+Why: the top teams score 0.79 on expression MSE, where every one of our runs scores 0 (clamped), locally too. Our emitter samples a *fresh random* set of control cells for every target, so each predicted pseudobulk carries sampling noise about as large as the weak effects we're predicting. On synthetic data that noise is ~0.2 log2 units RMSE; the new `balanced` emitter gets it to 0.02. That noise counts against MSE (the metric only credits prediction noise when the predictions spread enough), blurs PDS, and creates spurious Wilcoxon calls (jac/fid). The `balanced` emitter uses one herded set of 400 real control cells for all targets and sets each gene's total exactly, so the emitted pseudobulk equals the prediction. On synthetic data: B2 +0.09 to +0.14, MSE 0 → 0.24–0.40 (0.71 with `denoise`); with denoise plus effect scale 1.6, about +0.38.
+
+Run after E013 has finished (it reuses E013's holdouts):
+```bash
+source ~/.vcc_env; cd ~/vcc; git pull
+mkdir -p $DATA/loco/E015 $DATA/loco/E015u
+cp -rn $DATA/loco/E013/holdout_* $DATA/loco/E015/; cp -rn $DATA/loco/E013u/holdout_* $DATA/loco/E015u/
+# careful: E013 has TWO K562_GWPS holdouts (V2 in E013, V4 in E013u); keep them in separate dirs as above
+python -m vcc26.loco --config loco.json --holdout H1 --mode seen --out $DATA/loco/E015 --specs specs_E015.json --sources K562_GWPS --tag V1
+python -m vcc26.loco --config loco.json --holdout K562_GWPS --mode seen --out $DATA/loco/E015 --specs specs_E015.json \
+  --panel-file $DATA/h1_targets.csv --sources H1 --tag V2
+for c in RPE1 HepG2 Jurkat; do
+  python -m vcc26.loco --config loco.json --holdout $c --mode seen --out $DATA/loco/E015 --specs specs_E015.json --sources K562_GWPS,H1 --tag V3
+done
+python -m vcc26.loco --config loco.json --holdout K562_GWPS --mode unseen --out $DATA/loco/E015u --specs specs_E015.json \
+  --panel-file $PANEL --tag V4
+```
+Rows are keyed by `model` and `emit`.
+
+**REPORT E015:**
+- a table (model, emit) × {V1, V2, V3 mean, V4} with all six scaled metrics for V1 and V2;
+- the ORACLE rows (emitter ceiling: random vs balanced);
+- the same selection score as E013 (0.35·V1 + 0.35·V2 + 0.2·V3 + 0.1·V4), and the top (model, emit).
+
+Commit the CSVs to `results/E015/`.
+
+**E016: what are A, B and C?** (CPU, a minute)
+```bash
+python -m vcc26.context_id --controls-dir $DATA/challenge/controls --contexts A,B,C --gene-axis $AXIS \
+  --summaries $DATA/pb/*.npz --out reports/context_id.json
+```
+**REPORT E016:** the printed similarity table, the marker panel and the most-specific genes per context; commit `reports/context_id.json`. Then give your best guess of each context's cell type, marked as an inference.
+
+**E017: leaderboard entry** (state the day's count first). Submit the top E015 spec if its selection score beats `B2_transfer`+`random` by ≥ 0.02. Use the E012 command with that spec's `--model`/`--kw`, `--fallback none`, **`--emit balanced`** (if the winner is balanced), output `preds/E017.*`, message `"E017 <spec> emit=<emit>"`.
+**REPORT E017:** overall and six metrics, rank, and the comparison with E012 (0.069).
 
 ## E007 / E008 — A1 calibrated transfer sweeps (after E011/E012; rerun them in the E011 "testlike" setting)
 Same loop as E004, with the sweep spec files (both modes, every held-out context):

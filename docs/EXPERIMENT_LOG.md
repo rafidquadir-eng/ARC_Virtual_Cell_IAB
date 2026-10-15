@@ -15,6 +15,9 @@ Scores are scaled vcc2026 metrics (0 = context mean-response baseline, 1 = repli
 | E012 | 15 Oct | Transfer from GWPS lifts the leaderboard score | top E011 spec on A/B/C, all 6 summaries | LB | 0.313 | 0.000 | −0.014 | 0.088 | −0.013 | 0.042 |  | 0.069 (rank 827) | 1 submission (15 Oct) | done: +0.150 over E001 (pds 0.01 → 0.31, fid −0.45 → −0.01) | E007/E008 testlike |
 | E013 | 15 Oct | Denoising K562 lfc (EB shrinkage) and effect scale help on non-essential targets | specs_E013 on V1 (H1 ← GWPS), V2 (GWPS@H1 targets ← H1), V3 (essential lines ← GWPS+H1), V4 (panel, generic only) | seen | | | | | | | | | | planned | E014 |
 | E014 | 15 Oct | E013 winner lifts the leaderboard | submit only if selection beats B2_transfer by ≥ 0.01 | LB | | | | | | | | | ≤ 1 submission | planned | |
+| E015 | 15 Oct | Emission noise, not prediction, is capping MSE/PDS/DE | ORACLE and B2 variants × emit random/balanced on V1–V4 (specs_E015) | seen | | | | | | | | | | planned | E017 |
+| E016 | 15 Oct | Identify A/B/C cell types | control similarity to public lines + markers | – | | | | | | | | | | planned | |
+| E017 | 15 Oct | Balanced emission lifts the leaderboard | top E015 spec, --emit balanced | LB | | | | | | | | | 1 submission | planned | |
 | E006 | 17–19 Oct | iMEMORY gene vectors add signal | kNN on iMEMORY vs shuffle vs public prior | unseen | | | | | | | | | | blocked (EC2 files) | |
 | E007 | 17 Oct | A1: source weighting + target-expression gating | | both | | | | | | | | | | planned | |
 | E008 | 18 Oct | A1: per-target shrinkage + β and DE-count calibration | | both | | | | | | | | | | planned | |
@@ -40,3 +43,16 @@ alpha_min 0.6. Real tuning happens in E007/E008 on held-out public lines.
 - E011(b) (0.23) overstates the test because those holdouts score essential targets with strong effects. E011(a) (≈ 0) is the panel with nothing measured, about 37 targets in A/B/C. The realistic proxies are H1 ↔ K562 GWPS: V1/V2 in E013.
 - jac ≈ −0.6 in E011(a), with every spec below the mean-response baseline on significant-gene overlap. Hypothesis: transferred K562 sampling noise plus emission produce spurious DE calls. Test: `denoise` (E013). On synthetic data jac rose by about 0.3 and context score by 0.06.
 - No leaderboard command in vcc-cli; the top-10 scores have to be read from the website.
+
+## Planning note, 15 Oct ~02:30 UTC (leaderboard reference)
+Leaderboard top 5 (screenshot from Rafid, 14 Oct evening ET), scaled scores:
+| Rank | Team | Overall | PDS | MSE | JAC | NMAE | FID | REACH |
+|---|---|---|---|---|---|---|---|---|
+| 1 | Illumina AI (iCell) | 0.4610 | 0.874 | 0.787 | 0.088 | 0.419 | 0.153 | 0.444 |
+| 2 | cqawesome | 0.3304 | 0.830 | 0.455 | 0.026 | 0.288 | 0.089 | 0.295 |
+| 3 | Excell | 0.3302 | 0.847 | 0.488 | 0.019 | 0.265 | 0.074 | 0.288 |
+| 4 | X-team | 0.3271 | 0.776 | 0.458 | 0.084 | 0.284 | −0.000 | 0.362 |
+| 5 | JJJ | 0.3197 | 0.818 | 0.472 | 0.018 | 0.257 | 0.068 | 0.285 |
+| 827 | us (E012) | 0.069 | 0.313 | 0.000 | −0.013 | 0.042 | −0.014 | 0.088 |
+
+The gap to #1 is 0.39, and MSE (0.79) plus PDS (0.56) make up 1.35 of the 2.36 summed gap. Our MSE is 0 in every run, local and leaderboard, even at local PDS 0.74, which points at the emitter rather than the predictions. Diagnosis and fix: E015. Plan to the top: `docs/10_PLAN_TO_TOP.md`.

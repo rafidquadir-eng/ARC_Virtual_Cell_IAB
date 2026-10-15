@@ -1,0 +1,52 @@
+# Plan to the top of the leaderboard (target ≥ 0.50 overall)
+
+Written 15 Oct 2026, ~02:30 UTC, after E012 (0.069, rank 827). Final test contexts D/E/F are released Thu 22 Oct, and the final deadline is Thu 5 Nov 23:59 UTC. There is no size limit on the modelling work; the $7,000 compute budget is barely touched.
+
+## Where the gap is
+Leaderboard scaled scores (the top-5 table is in `EXPERIMENT_LOG.md`):
+
+| | PDS | MSE | JAC | NMAE | FID | REACH | Overall |
+|---|---|---|---|---|---|---|---|
+| Illumina AI (#1) | 0.874 | 0.787 | 0.088 | 0.419 | 0.153 | 0.444 | 0.461 |
+| #2–#5 (about) | 0.78–0.85 | 0.46–0.49 | 0.02–0.08 | 0.26–0.29 | 0.00–0.09 | 0.29–0.36 | 0.32–0.33 |
+| us, E012 | 0.313 | 0.000 | −0.013 | 0.042 | −0.014 | 0.088 | 0.069 |
+| what 0.50 needs (one way) | 0.90 | 0.85 | 0.10 | 0.50 | 0.20 | 0.50 | 0.51 |
+
+Facts that decide the plan:
+1. **MSE is 0 in every run we have, local and leaderboard,** even when local PDS is 0.74. The cause is the emitter: it resamples random control cells per target, and that sampling noise (about 0.2 log2 RMSE on synthetic data) is as large as the effects. The metric only credits prediction noise when predictions spread enough across targets, so the noise is charged to us. It also blurs PDS and creates spurious Wilcoxon calls. Fixed in code (`emit balanced`); measured on real holdouts in E015.
+2. **The panel is non-essential genes,** which have weak effects. Public per-target measurements exist almost only in K562 (GWPS, 263/300). The full 2025 H1 set (about 300 targets) is public via Arc's Virtual Cell Atlas [1].
+3. Arc confirms **six unnamed cell lines** (A/B/C validation, D/E/F test), no training set, and any data or model allowed [1]. E016 infers what A/B/C are.
+4. **Illumina AI is #1, and Illumina announced a 1-billion-cell, 200+-line genome-wide CRISPR atlas** in Jan 2026 with pharma partners; nothing says it is public [2]. #2–#5 sit at about 0.33, which is the realistic bar for a top-3 finish on public data. 0.50 means beating a team that very likely has proprietary multi-line genome-wide data, so it needs everything below to work. I'll say so plainly if it stops looking reachable.
+
+## Work packages (order = expected gain per day)
+
+| WP | What | Main metrics it moves | Local test | Status |
+|---|---|---|---|---|
+| 1 | **Emission without sampling noise** (`emit balanced`: shared herded base cells, exact per-gene totals) | MSE, NMAE, REACH, PDS | E015: ORACLE and B2 × random/balanced on V1–V4 | code done, E015 queued |
+| 2 | **Per-target signal**: empirical-Bayes denoising of source lfc, effect scale β, pooling every measurement of a target (GWPS + full H1 + new data) | PDS, JAC, FID | E013/E015 | code done |
+| 3 | **Learned context translator**: predict a target's response in a new line from its measured response elsewhere + both lines' control profiles. Training pairs: ~2k essential targets measured in K562/RPE1/HepG2/Jurkat (12 directed line pairs), GWPS↔H1 (127+ shared), and any new data. Start with a gene-wise gradient-boosted model on (target, gene) features; then a low-rank neural model on GPU. Leave-one-line-out validation; must beat WP2 on V1/V2. | PDS, MSE, NMAE | new E018+ | to build next |
+| 4 | **DE calibration**: per target, predict how many genes the truth will call significant (from the source's own call count, scaled by depth and cell number) and set each target's emitted effect scale so our Wilcoxon calls match. FID penalises under-calling, JAC rewards set overlap, and REACH needs the ranking. | FID, JAC, REACH | E019 | design |
+| 5 | **Unmeasured targets (~37 + any filtered)**: kNN over gene-function embeddings (STRING, GO, ESM-2 protein, LM text; iMEMORY gene vectors only if the EC2 files come back) trained to predict a target's GWPS response from its neighbours'. Test each embedding against a shuffled control. | PDS on uncovered targets | E020 | design |
+| 6 | **Data**: full 2025 H1 (confirmed public), then the curation agent's catalog; X-Atlas/Orion if Xaira grants permission | everything via WP2/3 | E021 | agent running |
+| 7 | **Final-test strategy**: D/E/F have no leaderboard. Pick by local validation only, ensemble the robust variants, refresh the final entry only on local wins, and freeze by Wed 4 Nov. | — | — | Oct 22 → |
+
+## Decision rules
+- Every change must win on the pre-registered local selection score (V1 H1←GWPS, V2 GWPS@H1←H1, V3 essential lines, V4 panel-generic) before it reaches the leaderboard. At most one leaderboard entry per day is used as a confirmation, never for tuning.
+- If WP1 doesn't lift local MSE above 0 on V1/V2, stop and debug against the metric code before anything else.
+- WP3 is worth its cost only if it beats WP2 by ≥ 0.02 on V1/V2. Otherwise fold its features into WP2's simpler model.
+
+## Calendar
+| Dates | Work |
+|---|---|
+| 15 Oct | E013, E015, E016, E017 (leaderboard: emission fix) |
+| 15–16 Oct | full H1 2025 ingested; WP4 design; WP3 data tables built |
+| 16–19 Oct | WP3 translator (CPU GBM first, then GPU neural); WP5 embeddings |
+| 19–21 Oct | WP4 calibration; ensemble; daily leaderboard confirmations |
+| 22 Oct | D/E/F released: rerun E016 on them, run the final pipeline, first final entry |
+| 23 Oct – 4 Nov | improve only on local wins; 2 final entries per day max; freeze 4 Nov |
+
+## Sources
+1. [Arc Institute — The 2026 Virtual Cell Challenge](https://arcinstitute.org/news/virtual-cell-challenge-2026)
+2. [Illumina press release, 13 Jan 2026 — Billion Cell Atlas](https://www.illumina.com/company/news-center/press-releases/2026/fda84c92-b4b3-4691-a402-35555abe8605.html)
+3. [cell-eval2 vcc2026 metric brief](https://github.com/ArcInstitute/cell-eval2/blob/main/docs/vcc2026_metrics/vcc2026-metrics-brief.md)
+4. [PRiMeFlow (Altos Labs), the 2025 generalist-prize approach Arc recommends reading](https://www.alphaxiv.org/abs/2604.13986)

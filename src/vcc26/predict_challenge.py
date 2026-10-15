@@ -24,7 +24,7 @@ import pandas as pd
 import json
 
 from . import models
-from .emit import control_cpm, emit_context
+from .emit import control_cpm, emit
 from .loco import CTRL, subset_summary
 from .pseudobulk import load as load_summary
 
@@ -49,6 +49,8 @@ def main():
     ap.add_argument("--pert-col", default="target_gene")
     ap.add_argument("--kw", default="{}", help='extra model kwargs as JSON, e.g. {"alpha_single": 0.7}')
     ap.add_argument("--seed", type=int, default=0); ap.add_argument("--out", required=True)
+    ap.add_argument("--emit", default="random", choices=["random", "balanced"],
+                    help="balanced = shared herded base cells + exact per-gene totals (no sampling noise)")
     a = ap.parse_args()
     axis = pd.read_csv(a.gene_names, header=None).iloc[:, 0].astype(str).values
     pl = pd.read_csv(a.perts).iloc[:, 0].astype(str)
@@ -65,7 +67,7 @@ def main():
         ctrl = ctrl[:, axis].copy()                     # enforce the official gene order
         # context-specific prediction: A1 uses this context's own control profile
         lfc = models.MODELS[a.model](targets, sources, target_ctrl_cpm=control_cpm(ctrl), **kw)
-        parts.append(emit_context(ctrl, targets, lfc, n_cells=a.cells, pert_col=a.pert_col,
+        parts.append(emit(a.emit, ctrl, targets, lfc, n_cells=a.cells, pert_col=a.pert_col,
                                   context=c, include_control=a.n_control, seed=a.seed + i))
     out = ad.concat(parts, merge="same")
     os.makedirs(os.path.dirname(a.out) or ".", exist_ok=True)
