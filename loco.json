@@ -59,6 +59,16 @@
    "control": "non-targeting",
    "symbol_col": null,
    "summary": "/lambda/nfs/LambdaFilesystem/vcc-data/pb/H1_valtest.npz"
+  },
+  {
+   "name": "HipSci_iPSC",
+   "line": "HipSci_iPSC",
+   "library": "genome_wide",
+   "h5ad": "/lambda/nfs/LambdaFilesystem/vcc-data/subsets/HipSci_iPSC.h5ad",
+   "pert_col": "target",
+   "control": "non-targeting",
+   "symbol_col": null,
+   "summary": "/lambda/nfs/LambdaFilesystem/vcc-data/pb/HipSci_iPSC.npz"
   }
  ]
 }
