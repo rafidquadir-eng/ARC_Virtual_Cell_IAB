@@ -50,6 +50,15 @@
    "control": "non-targeting",
    "symbol_col": "gene_name",
    "summary": "/lambda/nfs/LambdaFilesystem/vcc-data/pb/K562_GWPS.npz"
+  },
+  {
+   "name": "H1_valtest",
+   "line": "H1",
+   "h5ad": "/lambda/nfs/LambdaFilesystem/vcc-data/subsets/H1_valtest.h5ad",
+   "pert_col": "target",
+   "control": "non-targeting",
+   "symbol_col": null,
+   "summary": "/lambda/nfs/LambdaFilesystem/vcc-data/pb/H1_valtest.npz"
   }
  ]
 }
