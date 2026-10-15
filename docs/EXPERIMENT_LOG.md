@@ -16,7 +16,7 @@ Scores are scaled vcc2026 metrics (0 = context mean-response baseline, 1 = repli
 | E013 | 15 Oct | Denoising K562 lfc (EB shrinkage) and effect scale help on non-essential targets | specs_E013 on V1 (H1 ← GWPS), V2 (GWPS@H1 targets ← H1), V3 (essential lines ← GWPS+H1), V4 (panel, generic only) | seen | | | | | | | | | | planned | E014 |
 | E014 | 15 Oct | E013 winner lifts the leaderboard | submit only if selection beats B2_transfer by ≥ 0.01 | LB | | | | | | | | | ≤ 1 submission | planned | |
 | E015 | 15 Oct | Emission noise, not prediction, is capping MSE/PDS/DE | ORACLE and B2 variants × emit random/balanced on V1–V4 (specs_E015) | seen | | | | | | | | | | planned | E017 |
-| E016 | 15 Oct | Identify A/B/C cell types | control similarity to public lines + markers | – | | | | | | | | | | planned | |
+| E016 | 15 Oct | Identify A/B/C cell types | control similarity to public lines + markers | – | | | | | | | | | CPU 1 min | done (inference): A = male immature T-ALL-like (CD3/TRBC1/CD1A/DNTT; nearest CD4T r 0.85); B = female carcinoma-like with mesenchymal component (KRT7/8/18, VIM, COL, FOLR1, CDKN2A high); C = male squamous/basal epithelial (TP63, KRT5/13/15, SOX2). B~C 0.84; no source of B/C lineage. `reports/context_id.json` | E020 |
 | E017 | 15 Oct | Balanced emission lifts the leaderboard | top E015 spec, --emit balanced | LB | | | | | | | | | 1 submission | planned | |
 | E020 | after data done | V* (leave-one-line-out on panel targets): emitter, multi-line transfer, new baseline | specs_E020 via vcc26.vstar, seen + unseen | both | | | | | | | | | | planned (paused for data) | E021 |
 | E021 | after E020 | E020 winner on the leaderboard | --emit balanced, all summaries | LB | | | | | | | | | 1 submission | planned | |
