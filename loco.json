@@ -8,7 +8,8 @@
    "control": "non-targeting",
    "symbol_col": "gene_name",
    "summary": "/lambda/nfs/LambdaFilesystem/vcc-data/pb/K562.npz",
-   "line": "K562"
+   "line": "K562",
+   "library": "essential"
   },
   {
    "name": "RPE1",
@@ -16,7 +17,9 @@
    "pert_col": "gene",
    "control": "non-targeting",
    "symbol_col": "gene_name",
-   "summary": "/lambda/nfs/LambdaFilesystem/vcc-data/pb/RPE1.npz"
+   "summary": "/lambda/nfs/LambdaFilesystem/vcc-data/pb/RPE1.npz",
+   "line": "RPE1",
+   "library": "essential"
   },
   {
    "name": "HepG2",
@@ -24,7 +27,9 @@
    "pert_col": "gene",
    "control": "non-targeting",
    "symbol_col": "gene_name",
-   "summary": "/lambda/nfs/LambdaFilesystem/vcc-data/pb/HepG2.npz"
+   "summary": "/lambda/nfs/LambdaFilesystem/vcc-data/pb/HepG2.npz",
+   "line": "HepG2",
+   "library": "essential"
   },
   {
    "name": "Jurkat",
@@ -32,15 +37,19 @@
    "pert_col": "gene",
    "control": "non-targeting",
    "symbol_col": "gene_name",
-   "summary": "/lambda/nfs/LambdaFilesystem/vcc-data/pb/Jurkat.npz"
+   "summary": "/lambda/nfs/LambdaFilesystem/vcc-data/pb/Jurkat.npz",
+   "line": "Jurkat",
+   "library": "essential"
   },
   {
    "name": "H1",
-   "h5ad": "/lambda/nfs/LambdaFilesystem/vcc-data/raw/h1_2025/h1_train_counts.h5ad",
-   "pert_col": "target_gene",
+   "h5ad": "/lambda/nfs/LambdaFilesystem/vcc-data/subsets/H1.h5ad",
+   "pert_col": "target",
    "control": "non-targeting",
    "symbol_col": null,
-   "summary": "/lambda/nfs/LambdaFilesystem/vcc-data/pb/H1.npz"
+   "summary": "/lambda/nfs/LambdaFilesystem/vcc-data/pb/H1.npz",
+   "line": "H1",
+   "library": "targeted"
   },
   {
    "name": "K562_GWPS",
@@ -49,16 +58,8 @@
    "pert_col": "gene",
    "control": "non-targeting",
    "symbol_col": "gene_name",
-   "summary": "/lambda/nfs/LambdaFilesystem/vcc-data/pb/K562_GWPS.npz"
-  },
-  {
-   "name": "H1_valtest",
-   "line": "H1",
-   "h5ad": "/lambda/nfs/LambdaFilesystem/vcc-data/subsets/H1_valtest.h5ad",
-   "pert_col": "target",
-   "control": "non-targeting",
-   "symbol_col": null,
-   "summary": "/lambda/nfs/LambdaFilesystem/vcc-data/pb/H1_valtest.npz"
+   "summary": "/lambda/nfs/LambdaFilesystem/vcc-data/pb/K562_GWPS.npz",
+   "library": "genome_wide"
   },
   {
    "name": "HipSci_iPSC",
