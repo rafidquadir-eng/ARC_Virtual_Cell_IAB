@@ -80,6 +80,36 @@
    "control": "NTC",
    "symbol_col": null,
    "summary": "/lambda/nfs/LambdaFilesystem/vcc-data/pb/KOLF2.1J.npz"
+  },
+  {
+   "name": "CD4T_Rest",
+   "line": "CD4T",
+   "library": "genome_wide",
+   "h5ad": "/lambda/nfs/LambdaFilesystem/vcc-data/subsets/CD4T_Rest.h5ad",
+   "pert_col": "target",
+   "control": "non-targeting",
+   "symbol_col": null,
+   "summary": "/lambda/nfs/LambdaFilesystem/vcc-data/pb/CD4T_Rest.npz"
+  },
+  {
+   "name": "CD4T_Stim8hr",
+   "line": "CD4T",
+   "library": "genome_wide",
+   "h5ad": "/lambda/nfs/LambdaFilesystem/vcc-data/subsets/CD4T_Stim8hr.h5ad",
+   "pert_col": "target",
+   "control": "non-targeting",
+   "symbol_col": null,
+   "summary": "/lambda/nfs/LambdaFilesystem/vcc-data/pb/CD4T_Stim8hr.npz"
+  },
+  {
+   "name": "CD4T_Stim48hr",
+   "line": "CD4T",
+   "library": "genome_wide",
+   "h5ad": "/lambda/nfs/LambdaFilesystem/vcc-data/subsets/CD4T_Stim48hr.h5ad",
+   "pert_col": "target",
+   "control": "non-targeting",
+   "symbol_col": null,
+   "summary": "/lambda/nfs/LambdaFilesystem/vcc-data/pb/CD4T_Stim48hr.npz"
   }
  ]
 }

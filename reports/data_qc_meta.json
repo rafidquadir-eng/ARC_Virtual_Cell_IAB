@@ -1,0 +1,68 @@
+{
+ "K562": {
+  "cells": 310385,
+  "controls": 10691,
+  "licence": "CC BY 4.0 (Replogle 2022, figshare 20029387)",
+  "source": "K562_essential_raw_singlecell_01.h5ad"
+ },
+ "RPE1": {
+  "cells": 247914,
+  "controls": 11485,
+  "licence": "CC BY 4.0 (Replogle 2022, figshare 20029387)",
+  "source": "rpe1_raw_singlecell_01.h5ad"
+ },
+ "HepG2": {
+  "cells": 145473,
+  "controls": 4976,
+  "licence": "GEO GSE264667 (Nadig 2025; public)",
+  "source": "hepg2.h5ad"
+ },
+ "Jurkat": {
+  "cells": 262956,
+  "controls": 12013,
+  "licence": "GEO GSE264667 (Nadig 2025; public)",
+  "source": "jurkat.h5ad"
+ },
+ "K562_GWPS": {
+  "cells": 1989578,
+  "controls": 75328,
+  "licence": "CC BY 4.0 (Replogle 2022, figshare 20029387)",
+  "source": "K562_gwps_raw_singlecell_01.h5ad"
+ },
+ "H1": {
+  "cells": 414694,
+  "controls": 38176,
+  "licence": "Arc Virtual Cell Atlas (licence not stated; unverified)",
+  "source": "VCC 2025 train+validation+test (gs://arc-institute-virtual-cell-atlas)"
+ },
+ "HipSci_iPSC": {
+  "cells": 719204,
+  "controls": 499998,
+  "licence": "MIT (figshare 27989294)",
+  "source": "Feng 2025 genome-wide screens (controls = NonTarget + unassigned)"
+ },
+ "KOLF2.1J": {
+  "cells": 2659209,
+  "controls": 146747,
+  "licence": "CC BY 4.0 (figshare.plus 27261219)",
+  "source": "Nourreddine 2026 KOLF_Pan_Genome_QC_Filtered.h5ad"
+ },
+ "CD4T_Rest": {
+  "cells": 7386081,
+  "controls": 313989,
+  "licence": "MIT (CZI VCP dataset card)",
+  "source": "Zhu/Dann 2026 pseudobulk (4 donors); subset from donor D4"
+ },
+ "CD4T_Stim48hr": {
+  "cells": 7466545,
+  "controls": 322089,
+  "licence": "MIT (CZI VCP dataset card)",
+  "source": "Zhu/Dann 2026 pseudobulk (4 donors); subset from donor D4"
+ },
+ "CD4T_Stim8hr": {
+  "cells": 7143639,
+  "controls": 303457,
+  "licence": "MIT (CZI VCP dataset card)",
+  "source": "Zhu/Dann 2026 pseudobulk (4 donors); subset from donor D4"
+ }
+}
