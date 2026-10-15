@@ -70,6 +70,16 @@
    "control": "non-targeting",
    "symbol_col": null,
    "summary": "/lambda/nfs/LambdaFilesystem/vcc-data/pb/HipSci_iPSC.npz"
+  },
+  {
+   "name": "KOLF2.1J",
+   "line": "KOLF2.1J",
+   "library": "genome_wide",
+   "h5ad": "/lambda/nfs/LambdaFilesystem/vcc-data/subsets/KOLF2.1J.h5ad",
+   "pert_col": "target",
+   "control": "NTC",
+   "symbol_col": null,
+   "summary": "/lambda/nfs/LambdaFilesystem/vcc-data/pb/KOLF2.1J.npz"
   }
  ]
 }
