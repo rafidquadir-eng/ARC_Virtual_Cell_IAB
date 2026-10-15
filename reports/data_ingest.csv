@@ -1,0 +1,2 @@
+name,cells,perts_kept,genes_on_axis,median_kd,panel_targets,new_target_context_pairs,gb_downloaded,gb_kept,wall_time_min,notes
+H1_valtest,231597,150,18077,0.06,12,12,18.9,0.8,16.8,"validation (50) + test (100) splits; shared 38,176 NTC cells deduplicated; source gs://arc-institute-virtual-cell-atlas/virtual-cell-challenge/2025"
