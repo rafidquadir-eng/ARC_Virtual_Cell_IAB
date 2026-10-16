@@ -1,0 +1,531 @@
+{
+ "n_models": 1673,
+ "n_genes_used": 3000,
+ "contexts": {
+  "A": {
+   "sex_markers_log2cpm": {
+    "XIST": NaN,
+    "RPS4Y1": NaN,
+    "DDX3Y": 3.63,
+    "UTY": 5.05
+   },
+   "top": [
+    {
+     "Unnamed: 0": "ACH-000995",
+     "spearman": 0.884,
+     "centred_pearson": 0.856,
+     "rank_sum": 2.0,
+     "CellLineName": "JURKAT",
+     "OncotreeLineage": "Lymphoid",
+     "OncotreePrimaryDisease": "T-Lymphoblastic Leukemia/Lymphoma",
+     "OncotreeSubtype": "T-Lymphoblastic Leukemia/Lymphoma",
+     "Sex": "Male"
+    },
+    {
+     "Unnamed: 0": "ACH-000937",
+     "spearman": 0.76,
+     "centred_pearson": 0.727,
+     "rank_sum": 4.0,
+     "CellLineName": "PF-382",
+     "OncotreeLineage": "Lymphoid",
+     "OncotreePrimaryDisease": "T-Lymphoblastic Leukemia/Lymphoma",
+     "OncotreeSubtype": "T-Lymphoblastic Leukemia/Lymphoma",
+     "Sex": "Female"
+    },
+    {
+     "Unnamed: 0": "ACH-000101",
+     "spearman": 0.755,
+     "centred_pearson": 0.661,
+     "rank_sum": 7.0,
+     "CellLineName": "KE-37",
+     "OncotreeLineage": "Lymphoid",
+     "OncotreePrimaryDisease": "Mature T and NK Neoplasms",
+     "OncotreeSubtype": "Adult T-Cell Leukemia/Lymphoma",
+     "Sex": "Male"
+    },
+    {
+     "Unnamed: 0": "ACH-000964",
+     "spearman": 0.748,
+     "centred_pearson": 0.669,
+     "rank_sum": 7.0,
+     "CellLineName": "MOLT-3",
+     "OncotreeLineage": "Lymphoid",
+     "OncotreePrimaryDisease": "Mature T and NK Neoplasms",
+     "OncotreeSubtype": "Adult T-Cell Leukemia/Lymphoma",
+     "Sex": "Male"
+    },
+    {
+     "Unnamed: 0": "ACH-000372",
+     "spearman": 0.728,
+     "centred_pearson": 0.66,
+     "rank_sum": 10.0,
+     "CellLineName": "P12-ICHIKAWA",
+     "OncotreeLineage": "Lymphoid",
+     "OncotreePrimaryDisease": "T-Lymphoblastic Leukemia/Lymphoma",
+     "OncotreeSubtype": "T-Lymphoblastic Leukemia/Lymphoma",
+     "Sex": "Male"
+    },
+    {
+     "Unnamed: 0": "ACH-001737",
+     "spearman": 0.728,
+     "centred_pearson": 0.63,
+     "rank_sum": 13.0,
+     "CellLineName": "CTV-1-DM",
+     "OncotreeLineage": "Lymphoid",
+     "OncotreePrimaryDisease": "Mature T and NK Neoplasms",
+     "OncotreeSubtype": "Adult T-Cell Leukemia/Lymphoma",
+     "Sex": "Male"
+    },
+    {
+     "Unnamed: 0": "ACH-000920",
+     "spearman": 0.707,
+     "centred_pearson": 0.66,
+     "rank_sum": 13.0,
+     "CellLineName": "CML-T1",
+     "OncotreeLineage": "Myeloid",
+     "OncotreePrimaryDisease": "Myeloproliferative Neoplasms",
+     "OncotreeSubtype": "Chronic Myeloid Leukemia, BCR-ABL1+",
+     "Sex": "Female"
+    },
+    {
+     "Unnamed: 0": "ACH-000636",
+     "spearman": 0.693,
+     "centred_pearson": 0.63,
+     "rank_sum": 17.0,
+     "CellLineName": "RPMI-8402",
+     "OncotreeLineage": "Lymphoid",
+     "OncotreePrimaryDisease": "T-Lymphoblastic Leukemia/Lymphoma",
+     "OncotreeSubtype": "T-Lymphoblastic Leukemia/Lymphoma",
+     "Sex": "Female"
+    },
+    {
+     "Unnamed: 0": "ACH-000918",
+     "spearman": 0.697,
+     "centred_pearson": 0.625,
+     "rank_sum": 17.0,
+     "CellLineName": "MOLT-16",
+     "OncotreeLineage": "Lymphoid",
+     "OncotreePrimaryDisease": "T-Lymphoblastic Leukemia/Lymphoma",
+     "OncotreeSubtype": "T-Lymphoblastic Leukemia/Lymphoma",
+     "Sex": "Female"
+    },
+    {
+     "Unnamed: 0": "ACH-000519",
+     "spearman": 0.67,
+     "centred_pearson": 0.601,
+     "rank_sum": 22.0,
+     "CellLineName": "PEER",
+     "OncotreeLineage": "Lymphoid",
+     "OncotreePrimaryDisease": "T-Lymphoblastic Leukemia/Lymphoma",
+     "OncotreeSubtype": "T-Lymphoblastic Leukemia/Lymphoma",
+     "Sex": "Female"
+    },
+    {
+     "Unnamed: 0": "ACH-000953",
+     "spearman": 0.668,
+     "centred_pearson": 0.604,
+     "rank_sum": 22.0,
+     "CellLineName": "SUP-T1",
+     "OncotreeLineage": "Lymphoid",
+     "OncotreePrimaryDisease": "T-Lymphoblastic Leukemia/Lymphoma",
+     "OncotreeSubtype": "T-Lymphoblastic Leukemia/Lymphoma",
+     "Sex": "Male"
+    },
+    {
+     "Unnamed: 0": "ACH-002676",
+     "spearman": 0.684,
+     "centred_pearson": 0.586,
+     "rank_sum": 23.0,
+     "CellLineName": "TK-6",
+     "OncotreeLineage": "Myeloid",
+     "OncotreePrimaryDisease": "Myeloproliferative Neoplasms",
+     "OncotreeSubtype": "Chronic Myeloid Leukemia, BCR-ABL1+",
+     "Sex": "Male"
+    },
+    {
+     "Unnamed: 0": "ACH-000942",
+     "spearman": 0.628,
+     "centred_pearson": 0.587,
+     "rank_sum": 26.0,
+     "CellLineName": "HPB-ALL",
+     "OncotreeLineage": "Lymphoid",
+     "OncotreePrimaryDisease": "T-Lymphoblastic Leukemia/Lymphoma",
+     "OncotreeSubtype": "T-Lymphoblastic Leukemia/Lymphoma",
+     "Sex": "Male"
+    },
+    {
+     "Unnamed: 0": "ACH-000104",
+     "spearman": 0.647,
+     "centred_pearson": 0.582,
+     "rank_sum": 27.0,
+     "CellLineName": "Loucy",
+     "OncotreeLineage": "Lymphoid",
+     "OncotreePrimaryDisease": "T-Lymphoblastic Leukemia/Lymphoma",
+     "OncotreeSubtype": "Early T-Cell Precursor Lymphoblastic Leukemia",
+     "Sex": "Female"
+    },
+    {
+     "Unnamed: 0": "ACH-000981",
+     "spearman": 0.596,
+     "centred_pearson": 0.571,
+     "rank_sum": 31.0,
+     "CellLineName": "DND-41",
+     "OncotreeLineage": "Lymphoid",
+     "OncotreePrimaryDisease": "T-Lymphoblastic Leukemia/Lymphoma",
+     "OncotreeSubtype": "T-Lymphoblastic Leukemia/Lymphoma",
+     "Sex": "Male"
+    }
+   ]
+  },
+  "B": {
+   "sex_markers_log2cpm": {
+    "XIST": NaN,
+    "RPS4Y1": NaN,
+    "DDX3Y": 0.0,
+    "UTY": 0.0
+   },
+   "top": [
+    {
+     "Unnamed: 0": "ACH-001086",
+     "spearman": 0.845,
+     "centred_pearson": 0.685,
+     "rank_sum": 2.0,
+     "CellLineName": "HeLa",
+     "OncotreeLineage": "Cervix",
+     "OncotreePrimaryDisease": "Cervical Adenocarcinoma",
+     "OncotreeSubtype": "Endocervical Adenocarcinoma",
+     "Sex": "Female"
+    },
+    {
+     "Unnamed: 0": "ACH-000556",
+     "spearman": 0.633,
+     "centred_pearson": 0.372,
+     "rank_sum": 6.0,
+     "CellLineName": "SIHA",
+     "OncotreeLineage": "Cervix",
+     "OncotreePrimaryDisease": "Cervical Squamous Cell Carcinoma",
+     "OncotreeSubtype": "Cervical Squamous Cell Carcinoma",
+     "Sex": "Female"
+    },
+    {
+     "Unnamed: 0": "ACH-000496",
+     "spearman": 0.604,
+     "centred_pearson": 0.37,
+     "rank_sum": 12.0,
+     "CellLineName": "NCI-H1792",
+     "OncotreeLineage": "Lung",
+     "OncotreePrimaryDisease": "Non-Small Cell Lung Cancer",
+     "OncotreeSubtype": "Lung Adenocarcinoma",
+     "Sex": "Male"
+    },
+    {
+     "Unnamed: 0": "ACH-000892",
+     "spearman": 0.605,
+     "centred_pearson": 0.362,
+     "rank_sum": 14.0,
+     "CellLineName": "NCI-H1563",
+     "OncotreeLineage": "Lung",
+     "OncotreePrimaryDisease": "Non-Small Cell Lung Cancer",
+     "OncotreeSubtype": "Lung Adenocarcinoma",
+     "Sex": "Male"
+    },
+    {
+     "Unnamed: 0": "ACH-000237",
+     "spearman": 0.598,
+     "centred_pearson": 0.383,
+     "rank_sum": 14.0,
+     "CellLineName": "JHOM-1",
+     "OncotreeLineage": "Ovary/Fallopian Tube",
+     "OncotreePrimaryDisease": "Ovarian Epithelial Tumor",
+     "OncotreeSubtype": "Mucinous Ovarian Cancer",
+     "Sex": "Female"
+    },
+    {
+     "Unnamed: 0": "ACH-000630",
+     "spearman": 0.595,
+     "centred_pearson": 0.389,
+     "rank_sum": 16.0,
+     "CellLineName": "YD-8",
+     "OncotreeLineage": "Head and Neck",
+     "OncotreePrimaryDisease": "Head and Neck Squamous Cell Carcinoma",
+     "OncotreeSubtype": "Oral Cavity Squamous Cell Carcinoma",
+     "Sex": "Female"
+    },
+    {
+     "Unnamed: 0": "ACH-000500",
+     "spearman": 0.602,
+     "centred_pearson": 0.368,
+     "rank_sum": 16.0,
+     "CellLineName": "SNU-46",
+     "OncotreeLineage": "Head and Neck",
+     "OncotreePrimaryDisease": "Head and Neck Squamous Cell Carcinoma",
+     "OncotreeSubtype": "Larynx Squamous Cell Carcinoma",
+     "Sex": "Male"
+    },
+    {
+     "Unnamed: 0": "ACH-000062",
+     "spearman": 0.591,
+     "centred_pearson": 0.364,
+     "rank_sum": 23.0,
+     "CellLineName": "RERF-LC-MS",
+     "OncotreeLineage": "Lung",
+     "OncotreePrimaryDisease": "Non-Small Cell Lung Cancer",
+     "OncotreeSubtype": "Lung Adenocarcinoma",
+     "Sex": "Male"
+    },
+    {
+     "Unnamed: 0": "ACH-000787",
+     "spearman": 0.593,
+     "centred_pearson": 0.357,
+     "rank_sum": 24.0,
+     "CellLineName": "LXF-289",
+     "OncotreeLineage": "Lung",
+     "OncotreePrimaryDisease": "Non-Small Cell Lung Cancer",
+     "OncotreeSubtype": "Lung Adenocarcinoma",
+     "Sex": "Male"
+    },
+    {
+     "Unnamed: 0": "ACH-000511",
+     "spearman": 0.596,
+     "centred_pearson": 0.338,
+     "rank_sum": 24.0,
+     "CellLineName": "Calu-1",
+     "OncotreeLineage": "Lung",
+     "OncotreePrimaryDisease": "Non-Small Cell Lung Cancer",
+     "OncotreeSubtype": "Lung Squamous Cell Carcinoma",
+     "Sex": "Male"
+    },
+    {
+     "Unnamed: 0": "ACH-000516",
+     "spearman": 0.578,
+     "centred_pearson": 0.354,
+     "rank_sum": 40.0,
+     "CellLineName": "CAL-78",
+     "OncotreeLineage": "Bone",
+     "OncotreePrimaryDisease": "Chondrosarcoma",
+     "OncotreeSubtype": "Dedifferentiated Chondrosarcoma",
+     "Sex": "Male"
+    },
+    {
+     "Unnamed: 0": "ACH-000861",
+     "spearman": 0.585,
+     "centred_pearson": 0.313,
+     "rank_sum": 41.0,
+     "CellLineName": "HOP-62",
+     "OncotreeLineage": "Lung",
+     "OncotreePrimaryDisease": "Non-Small Cell Lung Cancer",
+     "OncotreeSubtype": "Lung Adenocarcinoma",
+     "Sex": "Female"
+    },
+    {
+     "Unnamed: 0": "ACH-001557",
+     "spearman": 0.589,
+     "centred_pearson": 0.3,
+     "rank_sum": 47.0,
+     "CellLineName": "Mero-41",
+     "OncotreeLineage": "Pleura",
+     "OncotreePrimaryDisease": "Pleural Mesothelioma",
+     "OncotreeSubtype": "Pleural Mesothelioma, Epithelioid Type",
+     "Sex": "Male"
+    },
+    {
+     "Unnamed: 0": "ACH-001310",
+     "spearman": 0.574,
+     "centred_pearson": 0.332,
+     "rank_sum": 47.0,
+     "CellLineName": "HA1E",
+     "OncotreeLineage": "Kidney",
+     "OncotreePrimaryDisease": "Non-Cancerous",
+     "OncotreeSubtype": "Immortalized Embyonic Kidney Cells",
+     "Sex": "Male"
+    },
+    {
+     "Unnamed: 0": "ACH-000706",
+     "spearman": 0.574,
+     "centred_pearson": 0.33,
+     "rank_sum": 49.0,
+     "CellLineName": "EKVX",
+     "OncotreeLineage": "Lung",
+     "OncotreePrimaryDisease": "Non-Small Cell Lung Cancer",
+     "OncotreeSubtype": "Lung Adenocarcinoma",
+     "Sex": "Male"
+    }
+   ]
+  },
+  "C": {
+   "sex_markers_log2cpm": {
+    "XIST": NaN,
+    "RPS4Y1": NaN,
+    "DDX3Y": 6.57,
+    "UTY": 5.32
+   },
+   "top": [
+    {
+     "Unnamed: 0": "ACH-000518",
+     "spearman": 0.823,
+     "centred_pearson": 0.75,
+     "rank_sum": 2.0,
+     "CellLineName": "CAL-33",
+     "OncotreeLineage": "Head and Neck",
+     "OncotreePrimaryDisease": "Head and Neck Squamous Cell Carcinoma",
+     "OncotreeSubtype": "Oral Cavity Squamous Cell Carcinoma",
+     "Sex": "Male"
+    },
+    {
+     "Unnamed: 0": "ACH-000832",
+     "spearman": 0.761,
+     "centred_pearson": 0.628,
+     "rank_sum": 4.0,
+     "CellLineName": "CAL 27",
+     "OncotreeLineage": "Head and Neck",
+     "OncotreePrimaryDisease": "Head and Neck Squamous Cell Carcinoma",
+     "OncotreeSubtype": "Oral Cavity Squamous Cell Carcinoma",
+     "Sex": "Male"
+    },
+    {
+     "Unnamed: 0": "ACH-000619",
+     "spearman": 0.718,
+     "centred_pearson": 0.587,
+     "rank_sum": 10.0,
+     "CellLineName": "PE/CA-PJ15",
+     "OncotreeLineage": "Head and Neck",
+     "OncotreePrimaryDisease": "Head and Neck Squamous Cell Carcinoma",
+     "OncotreeSubtype": "Oral Cavity Squamous Cell Carcinoma",
+     "Sex": "Male"
+    },
+    {
+     "Unnamed: 0": "ACH-000606",
+     "spearman": 0.727,
+     "centred_pearson": 0.571,
+     "rank_sum": 11.0,
+     "CellLineName": "PE/CA-PJ34 (clone C12)",
+     "OncotreeLineage": "Head and Neck",
+     "OncotreePrimaryDisease": "Head and Neck Squamous Cell Carcinoma",
+     "OncotreeSubtype": "Oral Cavity Squamous Cell Carcinoma",
+     "Sex": "Male"
+    },
+    {
+     "Unnamed: 0": "ACH-001523",
+     "spearman": 0.722,
+     "centred_pearson": 0.57,
+     "rank_sum": 14.0,
+     "CellLineName": "HSC-1",
+     "OncotreeLineage": "Skin",
+     "OncotreePrimaryDisease": "Cutaneous Squamous Cell Carcinoma",
+     "OncotreeSubtype": "Cutaneous Squamous Cell Carcinoma",
+     "Sex": "Male"
+    },
+    {
+     "Unnamed: 0": "ACH-001695",
+     "spearman": 0.716,
+     "centred_pearson": 0.546,
+     "rank_sum": 21.0,
+     "CellLineName": "UPCI-SCC-099",
+     "OncotreeLineage": "Head and Neck",
+     "OncotreePrimaryDisease": "Head and Neck Squamous Cell Carcinoma",
+     "OncotreeSubtype": "Oral Cavity Squamous Cell Carcinoma",
+     "Sex": "Male"
+    },
+    {
+     "Unnamed: 0": "ACH-001694",
+     "spearman": 0.702,
+     "centred_pearson": 0.566,
+     "rank_sum": 24.0,
+     "CellLineName": "UPCI-SCC-074",
+     "OncotreeLineage": "Head and Neck",
+     "OncotreePrimaryDisease": "Head and Neck Squamous Cell Carcinoma",
+     "OncotreeSubtype": "Oral Cavity Squamous Cell Carcinoma",
+     "Sex": "Female"
+    },
+    {
+     "Unnamed: 0": "ACH-000694",
+     "spearman": 0.7,
+     "centred_pearson": 0.572,
+     "rank_sum": 24.0,
+     "CellLineName": "TE-9",
+     "OncotreeLineage": "Esophagus/Stomach",
+     "OncotreePrimaryDisease": "Esophageal Squamous Cell Carcinoma",
+     "OncotreeSubtype": "Esophageal Squamous Cell Carcinoma",
+     "Sex": "Male"
+    },
+    {
+     "Unnamed: 0": "ACH-000682",
+     "spearman": 0.695,
+     "centred_pearson": 0.614,
+     "rank_sum": 25.0,
+     "CellLineName": "SNU-1066",
+     "OncotreeLineage": "Head and Neck",
+     "OncotreePrimaryDisease": "Head and Neck Squamous Cell Carcinoma",
+     "OncotreeSubtype": "Larynx Squamous Cell Carcinoma",
+     "Sex": "Male"
+    },
+    {
+     "Unnamed: 0": "ACH-000546",
+     "spearman": 0.695,
+     "centred_pearson": 0.584,
+     "rank_sum": 28.0,
+     "CellLineName": "HSC-4",
+     "OncotreeLineage": "Head and Neck",
+     "OncotreePrimaryDisease": "Head and Neck Squamous Cell Carcinoma",
+     "OncotreeSubtype": "Oral Cavity Squamous Cell Carcinoma",
+     "Sex": "Male"
+    },
+    {
+     "Unnamed: 0": "ACH-000549",
+     "spearman": 0.697,
+     "centred_pearson": 0.568,
+     "rank_sum": 30.0,
+     "CellLineName": "SNU-1076",
+     "OncotreeLineage": "Head and Neck",
+     "OncotreePrimaryDisease": "Head and Neck Squamous Cell Carcinoma",
+     "OncotreeSubtype": "Larynx Squamous Cell Carcinoma",
+     "Sex": "Male"
+    },
+    {
+     "Unnamed: 0": "ACH-001442",
+     "spearman": 0.727,
+     "centred_pearson": 0.502,
+     "rank_sum": 34.0,
+     "CellLineName": "A388",
+     "OncotreeLineage": "Skin",
+     "OncotreePrimaryDisease": "Cutaneous Squamous Cell Carcinoma",
+     "OncotreeSubtype": "Cutaneous Squamous Cell Carcinoma",
+     "Sex": "Male"
+    },
+    {
+     "Unnamed: 0": "ACH-000824",
+     "spearman": 0.705,
+     "centred_pearson": 0.497,
+     "rank_sum": 44.0,
+     "CellLineName": "KYSE-510",
+     "OncotreeLineage": "Esophagus/Stomach",
+     "OncotreePrimaryDisease": "Esophageal Squamous Cell Carcinoma",
+     "OncotreeSubtype": "Esophageal Squamous Cell Carcinoma",
+     "Sex": "Female"
+    },
+    {
+     "Unnamed: 0": "ACH-000802",
+     "spearman": 0.681,
+     "centred_pearson": 0.56,
+     "rank_sum": 45.0,
+     "CellLineName": "BFTC-905",
+     "OncotreeLineage": "Bladder/Urinary Tract",
+     "OncotreePrimaryDisease": "Bladder Urothelial Carcinoma",
+     "OncotreeSubtype": "Bladder Urothelial Carcinoma",
+     "Sex": "Female"
+    },
+    {
+     "Unnamed: 0": "ACH-000488",
+     "spearman": 0.711,
+     "centred_pearson": 0.489,
+     "rank_sum": 48.0,
+     "CellLineName": "TE-11",
+     "OncotreeLineage": "Esophagus/Stomach",
+     "OncotreePrimaryDisease": "Esophageal Squamous Cell Carcinoma",
+     "OncotreeSubtype": "Esophageal Squamous Cell Carcinoma",
+     "Sex": "Male"
+    }
+   ]
+  }
+ }
+}
