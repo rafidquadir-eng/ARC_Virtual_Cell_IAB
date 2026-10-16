@@ -122,16 +122,33 @@ Notes:
   `@genome_wide` + `@targeted`, no fallback), selection 0.167, worst line 0.154. The margin over the E012 config is 0.003;
   without the paired bootstrap (E-4, not built yet), that is within noise.
 
-### Unseen mode: **not complete**
+### Unseen mode: `vstar_summary_E020_unseen.csv` (panel targets dropped from every source; `n_covered` = 0 on all 3 lines)
 
-- 1st attempt (16:04 UTC): `ImportError: libcublas.so.12`. At 15:44 UTC another session on this instance (cwd `~/proj2`)
-  installed packages into `~/vcc/.venv`, and that upgraded torch to 2.14.1+cu130. Fixed: torch 2.11.0+cu128 / torchvision
-  0.26.0+cu128, CUDA 13 libs removed, cu12 libs reinstalled; torch, cupy matmul, NVRTC and cell-eval2 checked.
-- 2nd attempt (17:03 UTC): `cupy OutOfMemoryError` on the first holdout. The `~/proj2` session's `scripts/50_pretrain.py`
-  (`--max-hours 8`) holds 32 GB of the 40 GB A100. I did not stop it. Unseen mode needs the GPU free; rerun with
-  `--mode unseen` (the anchors are cached) once it is.
+| model                | emit     |   selection |   worst_line |    pds |   mse |   fid |   reach |    jac |   nmae |   line_CD4T_Stim8hr |   line_KOLF2.1J |   line_K562_GWPS |
+|:---------------------|:---------|------------:|-------------:|-------:|------:|------:|--------:|-------:|-------:|--------------------:|----------------:|-----------------:|
+| ORACLE               | balanced |       1.239 |        1.012 |  1.246 |     1 | 1.53  |   1.248 |  0.308 |  2.101 |               1.285 |           1.42  |            1.012 |
+| ORACLE               | random   |       1.204 |        0.994 |  1.246 |     1 | 1.581 |   1.253 | -0.179 |  2.324 |               1.303 |           1.315 |            0.994 |
+| B1_generic           | balanced |       0.046 |       -0.001 |  0.009 |     0 | 0.507 |  -0.014 | -0.331 |  0.105 |               0.104 |           0.035 |           -0.001 |
+| B2_transfer          | balanced |       0.046 |       -0.001 |  0.009 |     0 | 0.507 |  -0.014 | -0.331 |  0.105 |               0.104 |           0.035 |           -0.001 |
+| B2_raw_gPL_dn_b1.6   | balanced |       0.033 |       -0.044 |  0.009 |     0 | 0.477 |  -0.054 | -0.333 |  0.101 |               0.097 |           0.047 |           -0.044 |
+| B2_raw_gPL_dn_b1.3   | balanced |       0.032 |       -0.053 |  0.009 |     0 | 0.466 |  -0.048 | -0.335 |  0.102 |               0.102 |           0.048 |           -0.053 |
+| B1_gPL               | balanced |       0.031 |       -0.039 |  0.009 |     0 | 0.467 |  -0.042 | -0.341 |  0.089 |               0.094 |           0.037 |           -0.039 |
+| B2_raw_gPL           | balanced |       0.031 |       -0.039 |  0.009 |     0 | 0.467 |  -0.042 | -0.341 |  0.089 |               0.094 |           0.037 |           -0.039 |
+| B2_raw_gPL_dn        | balanced |       0.03  |       -0.055 |  0.009 |     0 | 0.457 |  -0.056 | -0.334 |  0.102 |               0.098 |           0.046 |           -0.055 |
+| B3_raw_gPL_dn_linear | balanced |       0.029 |       -0.061 | -0.001 |     0 | 0.453 |  -0.048 | -0.334 |  0.103 |               0.098 |           0.05  |           -0.061 |
+| B2_transfer          | random   |       0.028 |       -0.01  |  0.019 |     0 | 0.432 |  -0.034 | -0.367 |  0.117 |               0.044 |           0.05  |           -0.01  |
+| A1_gPL_dn            | balanced |       0.027 |       -0.043 |  0.009 |     0 | 0.461 |  -0.067 | -0.343 |  0.1   |               0.097 |           0.026 |           -0.043 |
 
-CSVs: `results/E020/vstar_summary_E020_seen.csv`, `results/E020/vstar_rows_E020_seen.csv`.
+Notes:
+- With no source measuring any panel target, every transfer spec falls back to a generic shift. B2_transfer (balanced) equals B1_generic
+  (0.046), and the `raw`/gPL specs equal B1_gPL (0.031). Denoise, β and A1 change the score by ≤ 0.02. Unmeasured-target performance
+  is therefore about 0.03–0.05, close to the mean baseline, and only ~1 % of challenge targets (EPHB2 plus thin ones) are in this regime.
+- The random emitter is worse than balanced here (0.028 vs 0.046), mostly on fid and jac.
+- ORACLE rows are identical to seen mode (truth-based).
+- Run history: the 1st attempt failed with `libcublas.so.12` (the shared venv was changed by another session, then fixed); the 2nd ran out of GPU
+  memory (another session's pretraining held 32 GB); the 3rd, 22:19–01:37 UTC on 15/16 Oct, ran clean.
+
+CSVs: `results/E020/vstar_{summary,rows}_E020_{seen,unseen}.csv`.
 
 ---
 
