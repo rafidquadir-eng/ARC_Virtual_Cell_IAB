@@ -110,6 +110,30 @@
    "control": "non-targeting",
    "symbol_col": null,
    "summary": "/lambda/nfs/LambdaFilesystem/vcc-data/pb/CD4T_Stim48hr.npz"
+  },
+  {
+   "name": "Orion_HCT116",
+   "line": "HCT116",
+   "library": "genome_wide",
+   "lineage": "epithelial",
+   "licence": "CC BY-NC-SA 4.0",
+   "h5ad": "/lambda/nfs/LambdaFilesystem/vcc-data/subsets/Orion_HCT116.h5ad",
+   "pert_col": "target",
+   "control": "Non-Targeting",
+   "symbol_col": null,
+   "summary": "/lambda/nfs/LambdaFilesystem/vcc-data/pb/Orion_HCT116.npz"
+  },
+  {
+   "name": "Orion_HEK293T",
+   "line": "HEK293T",
+   "library": "genome_wide",
+   "lineage": "epithelial",
+   "licence": "CC BY-NC-SA 4.0",
+   "h5ad": "/lambda/nfs/LambdaFilesystem/vcc-data/subsets/Orion_HEK293T.h5ad",
+   "pert_col": "target",
+   "control": "Non-Targeting",
+   "symbol_col": null,
+   "summary": "/lambda/nfs/LambdaFilesystem/vcc-data/pb/Orion_HEK293T.npz"
   }
  ]
 }
