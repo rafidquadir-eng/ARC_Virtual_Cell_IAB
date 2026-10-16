@@ -190,3 +190,40 @@ Findings:
 **E032 decision:** V\* Δ = +0.029 ≥ 0.01 ✓. V\*-far aggregate Δ = +0.007, so not worse ✓ (but worse on 2 of 3 far runs). Submitted as E032 (see below).
 
 CSVs: `results/E031/` (summary, rows, far scores, bootstrap JSONs).
+
+
+---
+
+## REPORT E032 — leaderboard: E031's top spec
+
+Submissions on 16 Oct (UTC) before this entry: 0, so this is **1 of 2** for 16 Oct.
+
+```
+python -m vcc26.predict_challenge --controls-dir $DATA/challenge/controls --contexts A,B,C --perts pert_counts.csv --gene-names gene_axis.csv \
+  --registry loco.json --summaries <13 loco.json summaries incl. Orion> --spec-file specs_E031.json --spec "B5_z2_a0.5_cis5000" \
+  --emit balanced --n-control 0 --out $DATA/preds/E032.h5ad
+vcc prep ... -o $DATA/preds/E032.vcc     # passed
+vcc submit $DATA/preds/E032.vcc -m "E032 B5_z2_a0.5_cis5000 emit=balanced (E031 V* top), 13 summaries incl. Orion" --wait
+```
+
+Entry `n0phFb0FI8GRgERAALGD`, published. **Overall 0.1077, rank 688** (E021: 0.1060, now rank 690). Δ = +0.002.
+
+| metric | raw E032 | raw E021 | scaled E032 | scaled E021 | Δ scaled |
+|---|---|---|---|---|---|
+| pds | 0.7638 | 0.7266 | 0.5825 | 0.5009 | +0.0817 |
+| mse | 0.8512 | 4.6628 | 0.1438 | 0.0000 | +0.1438 |
+| nmae | 0.9337 | 0.9468 | 0.1109 | 0.0862 | +0.0247 |
+| fid | 0.4248 | 0.4926 | -0.2931 | -0.0667 | -0.2264 |
+| reach | 0.1697 | 0.1748 | 0.1022 | 0.1078 | -0.0056 |
+| jac | 0.0309 | 0.0333 | 0.0001 | 0.0076 | -0.0075 |
+
+Interpretation:
+- **MSE is above zero on the leaderboard for the first time** (0.144; raw 4.66 → 0.85), and pds rises (0.50 → 0.58), as V\* predicted.
+- **fid collapses (−0.067 → −0.293)**, which cancels nearly all of it. In V\*, B5's fid was 0.75 vs 0.79 for E021, a small drop. On A/B/C, keeping only the ~1,000
+  sign-consistent genes per target and predicting zero elsewhere makes many truly-DE genes "direction wrong/absent". The test contexts likely have broader
+  DE sets than the source consensus covers. reach also falls slightly (0.108 → 0.102) and jac goes to 0.
+- V\* forecast +0.029; the leaderboard gave +0.002. The gap fits the V\*-far warning (HEK293T and KOLF reverse without a same-lineage source),
+  since A/B/C have no same-lineage source except A ~ CD4T.
+
+### E033 addendum: E032 status JSON
+`results/E033_E032_status.json`: like E021's, it has no per-context (A/B/C) fields (keys seen: score_avg, pds_cosine, expr_mse_unbiased_capped_norm).

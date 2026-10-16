@@ -95,3 +95,7 @@ Full diagnosis in `docs/12_DIAGNOSIS.md`. The headline: raw MSE 4.66 on the lead
 
 ## Planning note, 16 Oct ~07:30 UTC (after E025–E026, batch 2)
 B4 retired: its shrinkage was mis-scaled, so it fixed MSE but lost PDS. The E025 anatomy shows dense transfer is noise per gene (cos 0.003–0.08). New: B5 sparse cross-line-consistent consensus + CRISPRi cis effects; proxy ORACLE_TOPK/ORACLE_CIS ceilings and cis-share anatomy; `top50_overlap`; `scripts/pick_specs.py`. V* now has 5 lines (Orion HCT116/HEK293T). See `docs/14_DIAGNOSIS_ROUND2.md`.
+
+| E030 | 16 Oct | B5 sparse consistent consensus (+cis) beats dense transfer | proxy, specs_E030 (32), 5 V* lines | seen | | | | | | | proxy 0.336 (B5x_tl0.05) vs 0.300 (E021) | | CPU 50 min | done: truth sparse (top-10 genes = full pds); cis ≈ 0.1 % of signal | E031 |
+| E031 | 16 Oct | B5 holds on the real metric | 5-line V* + V*-far | seen | 0.664 | 0.261 | 0.752 | 0.210 | −0.516 | 0.205 | 0.263 vs E021 0.234 (CI90 +0.011..+0.039) | | GPU 4 h | done: B5_z2_a0.5_cis5000 top; far aggregate +0.007 (worse on 2/3) | E032 |
+| E032 | 16 Oct | B5 lifts the leaderboard | B5_z2_a0.5_cis5000, balanced, 13 summaries | LB | 0.583 | 0.144 | −0.293 | 0.102 | 0.000 | 0.111 | | 0.1077 (rank 688) | 1 submission (1/2 on 16 Oct) | done: +0.002 vs E021; first LB MSE > 0 but fid collapses | |
