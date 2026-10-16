@@ -96,3 +96,50 @@ Reading:
 - About 70 % of the squared error sits in genes with control CPM 20 or more.
 
 Files: `results/E025/pick.txt`, `proxy_*_seen.csv`, `anatomy_*_seen.json`; `specs_E026.json`.
+
+
+---
+
+## REPORT E025b — proxy on the D7 composition-matched summaries
+
+Same command as E025 into `results/E025b`, with a temporary config pointing the summaries for K562, RPE1, HepG2, Jurkat, K562_GWPS and
+CD4T_{Rest,Stim8hr,Stim48hr} at `$DATA/pb/d7/`. HipSci keeps its old summary: only 48 cells carry NonTarget guides, below the
+≥ 2,000 cells D7 requires. The live `loco.json` and `pb/` were not changed while E026 ran.
+
+D7 strata: `gem_group` for the Replogle/Nadig files (48–267 groups) and `donor_id` (4 donors) for CD4T.
+
+### Donor artefact (`reports/d7_artifact_check.csv`; male-specific chrY genes with control CPM ≥ 5 vs autosomal genes at matched CPM)
+
+| dataset       |   perts_old |   perts_new |   median_kd_old |   median_kd_new |   n_Yexpr |   Yexpr_old |   Yexpr_new |   floor_old |   floor_new |   Yexcess_fold_drop |
+|:--------------|------------:|------------:|----------------:|----------------:|----------:|------------:|------------:|------------:|------------:|--------------------:|
+| K562          |        1952 |        1954 |           0.171 |           0.171 |         0 |     nan     |     nan     |     nan     |     nan     |             inf     |
+| RPE1          |        2087 |        2086 |           0.091 |           0.091 |         0 |     nan     |     nan     |     nan     |     nan     |             inf     |
+| HepG2         |        1970 |        1970 |           0.117 |           0.116 |         6 |       0.236 |       0.239 |       0.25  |       0.251 |             inf     |
+| Jurkat        |        2117 |        2117 |           0.122 |           0.122 |         7 |       0.25  |       0.253 |       0.189 |       0.189 |               0.975 |
+| K562_GWPS     |        9315 |        9321 |           0.153 |           0.153 |         0 |     nan     |     nan     |     nan     |     nan     |             inf     |
+| CD4T_Rest     |       10754 |       10753 |           0.125 |           0.125 |         5 |       0.536 |       0.187 |       0.119 |       0.11  |               5.393 |
+| CD4T_Stim8hr  |       10929 |       10929 |           0.117 |           0.117 |         5 |       0.509 |       0.219 |       0.105 |       0.097 |               3.322 |
+| CD4T_Stim48hr |       10701 |       10700 |           0.138 |           0.138 |         5 |       0.473 |       0.155 |       0.093 |       0.085 |               5.432 |
+
+`Yexcess_fold_drop` = (Y − floor) before ÷ after. CD4T: 5.4× (Rest), 3.3× (Stim8hr), 5.4× (Stim48hr), so the ≥ 5× target is met for 2 of 3.
+K562, RPE1 and K562_GWPS have no expressed male-specific chrY genes. HepG2 and Jurkat are single-donor and unchanged, as expected.
+There are no HLA genes on the challenge axis, so the HLA half of the check can't be run.
+
+### Proxy before vs after (top 8 by E025b proxy)
+
+| spec                                      |   proxy_E025 |   proxy_E025b |   Δproxy |   pds_sc_E025 |   pds_sc_E025b |   mse_raw_E025 |   mse_raw_E025b |   de_sign_E025 |   de_sign_E025b |   worst_E025 |   worst_E025b |
+|:------------------------------------------|-------------:|--------------:|---------:|--------------:|---------------:|---------------:|----------------:|---------------:|----------------:|-------------:|--------------:|
+| B2_raw_gPL(E021)                          |        0.454 |         0.457 |    0.003 |         0.301 |          0.315 |          4.404 |           4.223 |          0.533 |           0.532 |        0.423 |         0.416 |
+| B1_gPL                                    |        0.394 |         0.407 |    0.013 |         0     |          0     |          1.131 |           1.123 |          0.592 |           0.611 |        0.344 |         0.375 |
+| B4x_lowrankTrue_pc20_tau20.02_shrinkFalse |        0.38  |         0.38  |    0     |         0.181 |          0.195 |          1.749 |           1.678 |          0.48  |           0.473 |        0.35  |         0.357 |
+| B4_lr1_pc1_t0.005_s0                      |        0.38  |         0.378 |   -0.002 |         0.15  |          0.162 |          1.529 |           1.453 |          0.495 |           0.486 |        0.347 |         0.348 |
+| B2_raw_gPL_dn                             |        0.365 |         0.371 |    0.006 |         0.253 |          0.263 |          1.439 |           1.375 |          0.421 |           0.425 |        0.316 |         0.324 |
+| B4_lr1_pc5_t0.005_s0                      |        0.311 |         0.299 |   -0.012 |         0.148 |          0.167 |          1.273 |           1.231 |          0.393 |           0.365 |        0.286 |         0.256 |
+| B4_lr1_pc20_t0.005_s0                     |        0.219 |         0.211 |   -0.008 |         0.123 |          0.133 |          1.113 |           1.093 |          0.267 |           0.251 |        0.165 |         0.148 |
+| B4_lr1_pc1_t0.005_s0.1                    |        0.207 |         0.204 |   -0.003 |         0.066 |          0.064 |          1.242 |           1.24  |          0.277 |           0.274 |        0.135 |         0.131 |
+
+- The E021 config gains +0.003 (pds_sc +0.014, raw MSE 4.40 → 4.22). B1_gPL gains +0.013 (de_sign +0.019, worst line +0.031).
+  The top two B4s are unchanged (±0.002). Over all 46 specs the mean is −0.002, with 3 better: B4 with more shrinkage loses a little.
+- Acceptance (E025b ≥ E025 for the same spec) holds for the E021 config and B1_gPL, and is a tie for the top B4s. `pick_e025.py` picks the same 4 specs
+  (`results/E025b/specs_E026_from_E025b.json`).
+- Decision: swap the D7 summaries into `pb/` after E026 (originals kept as `*_pooled.npz`), as `docs/09` D7 says. The gain is small.
