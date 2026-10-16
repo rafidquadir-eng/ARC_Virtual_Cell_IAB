@@ -28,9 +28,12 @@ from .pseudobulk import load as load_summary
 METRICS = ["pds", "mse", "fid", "reach", "jac", "nmae"]
 
 
-def eligible(cfg: dict, panel: set[str], min_panel: int, min_cells: int) -> list[tuple[str, int]]:
+def eligible(cfg: dict, panel: set[str], min_panel: int, min_cells: int,
+             exclude_licence: str | None = None) -> list[tuple[str, int]]:
     best: dict[str, tuple[str, int]] = {}
     for c in cfg["contexts"]:
+        if exclude_licence and exclude_licence in str(c.get("licence", "")):
+            continue
         s = load_summary(c["summary"])
         n = int(sum(1 for p, k in zip(s["perts"], s["ncells"]) if p in panel and k >= min_cells))
         line = c.get("line", c["name"])
@@ -59,10 +62,11 @@ def main():
     ap.add_argument("--cells", type=int, default=400); ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--de-backend", default="auto"); ap.add_argument("--device", default="auto")
     ap.add_argument("--dry-run", action="store_true", help="only list the eligible held-out lines")
+    ap.add_argument("--exclude-licence", default=None, help='drop lines/sources whose licence contains this, e.g. "NC"')
     a = ap.parse_args()
     cfg = json.load(open(a.config))
     panel = loco.read_panel(a.panel_file)
-    elig = eligible(cfg, panel, a.min_panel, a.min_cells)
+    elig = eligible(cfg, panel, a.min_panel, a.min_cells, a.exclude_licence)
     if a.lines:
         want = set(a.lines.split(","))
         elig = [e for e in elig if e[0] in want]
@@ -74,7 +78,7 @@ def main():
     frames = []
     for name, _ in elig:
         df = loco.run(a.config, name, a.mode, a.out, 300, a.cells, a.seed, specs, a.de_backend, a.device,
-                      None, a.tag, a.panel_file, None)
+                      None, a.tag, a.panel_file, None, a.exclude_licence)
         frames.append(df)
         rows = pd.concat(frames, ignore_index=True)
         rows.to_csv(f"{a.out}/vstar_rows_{a.tag}_{a.mode}.csv", index=False)   # checkpoint after each line

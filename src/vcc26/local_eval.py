@@ -109,11 +109,14 @@ def scale(u: dict, anchors: dict) -> dict:
     return out
 
 
-def score(pred, real_path: str, anchors: dict, cfg: EvalConfig) -> dict:
-    u = raw_metrics(pred, real_path, cfg)
+def score(pred, real_path: str, anchors: dict, cfg: EvalConfig, return_frame: bool = False):
+    """Scaled + raw panel metrics. return_frame=True also returns cell-eval2's per-perturbation
+    frame (perturbation, metric, value), which vcc26.compare bootstraps."""
+    df = compute_metrics(pred, real_path, config=cfg)
+    u = _agg(df)
     res = scale(u, anchors)
     res["raw"] = {SHORT[m]: u[m] for m in SCORED}
-    return res
+    return (res, df) if return_frame else res
 
 
 def main():

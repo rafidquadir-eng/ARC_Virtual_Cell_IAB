@@ -67,3 +67,23 @@ Written 16 Oct 2026 ~07:30 UTC. Sources: `reports/REPORTS_E025_E027.md`, `report
 - **E032:** leaderboard confirmation if E031's top beats the E021 config by ≥ 0.01 on both V\* and V\*-far.
 - **E033:** per-context leaderboard breakdown of E012/E021 (no submission).
 - **PLAN in parallel:** paired bootstrap (R13), then M-1 translator data tables with B5 features (R6/R7).
+
+## 4. Implementation status (16 Oct ~08:30 UTC)
+
+| Solution | Code | Queued in runbook | Notes |
+|---|---|---|---|
+| B5 sparse consistent consensus + cis effects (R1, R2) | ✅ `models.predict_sparse` | ✅ E030–E032 | |
+| Sparsity/cis ceilings, cis-share anatomy, top-50 overlap (R3) | ✅ `proxy` | ✅ E030 | |
+| Per-context leaderboard breakdown (R14) | n/a | ✅ E033 | |
+| 5-line V\* incl. epithelial lines, V\*-far (R12) | ✅ | ✅ E031 | V\*-far via `--sources` lists |
+| Paired bootstrap CIs (R13) | ✅ `vcc26.compare`, per-target parquet from `loco` | ✅ E034b | leaderboard rule: CI lower bound > 0 |
+| Learned translator M1 (R6, R7) | ✅ `vcc26.translator` (`M1_gbm`) | ✅ E034 | simulation: error 0.44 vs B5 2.6 vs dense 4.4; synthetic LOCO 0.71 vs 0.50 |
+| Context-programme projection (WP9) | ✅ `models.apply_post` | ✅ E034 | |
+| NC data on/off switch (R17) | ✅ `--exclude-licence NC` everywhere | ✅ E035 | |
+| Final pipeline + dress rehearsal (Phase T) | ✅ `scripts/final_pipeline.sh`, `predict_challenge --spec-file` | ✅ E036 | |
+| DE-count calibration (C-1, R9) | ❌ | — | after E031/E034 show the call-count error; target 18 Oct |
+| Expected-score optimiser + simulated-truth harness (C-2, R10) | ❌ | — | target 19–20 Oct |
+| Context-dependency feature (DepMap/CCLE, C4) | ❌ (data in `$DATA/priors/depmap`) | — | becomes an extra M1 feature, target 18 Oct |
+| Prior-knowledge encoders (STRING/GO/ESM-2/HetGAT, M-4) | ❌ | — | lower priority now: every target is measured in ≥ 2 lines; M1 features first |
+| Neural model v2 (M-2) | ❌ | — | only if M1 plateaus; target 19–21 Oct |
+| Ensemble (M-3) | ❌ | — | 21 Oct, from out-of-fold V\* predictions |

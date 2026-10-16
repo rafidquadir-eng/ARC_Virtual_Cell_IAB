@@ -50,9 +50,19 @@ def main():
     ap.add_argument("--kw", default="{}", help='extra model kwargs as JSON, e.g. {"alpha_single": 0.7}')
     ap.add_argument("--seed", type=int, default=0); ap.add_argument("--out", required=True)
     ap.add_argument("--registry", default=None, help="loco.json, to tag sources with name/library/line")
+    ap.add_argument("--exclude-licence", default=None, help='with --registry: skip summaries whose licence contains this, e.g. "NC"')
+    ap.add_argument("--spec-file", default=None, help="take model/kw/fallback/emit/post from this specs JSON ...")
+    ap.add_argument("--spec", default=None, help="... the spec with this name")
+    ap.add_argument("--post", default=None, help='post-processing JSON, e.g. {"project": {"k": 200, "lam": 0.5}}')
     ap.add_argument("--emit", default="random", choices=["random", "balanced"],
                     help="balanced = shared herded base cells + exact per-gene totals (no sampling noise)")
     a = ap.parse_args()
+    post = json.loads(a.post) if a.post else None
+    if a.spec_file:
+        sp_ = {x["name"]: x for x in json.load(open(a.spec_file))}[a.spec]
+        a.model = sp_["model"]; a.kw = json.dumps(sp_.get("kw", {})); a.fallback = sp_.get("fallback") or "none"
+        a.emit = sp_.get("emit", a.emit); post = sp_.get("post", post)
+        print(f"spec {a.spec}: model {a.model} kw {a.kw} fallback {a.fallback} emit {a.emit} post {post}")
     axis = pd.read_csv(a.gene_names, header=None).iloc[:, 0].astype(str).values
     pl = pd.read_csv(a.perts).iloc[:, 0].astype(str)
     targets = sorted(t for t in pl.unique() if t != CTRL)
@@ -64,6 +74,8 @@ def main():
     sources = []
     for p in a.summaries:
         c = reg.get(os.path.abspath(p), {})
+        if a.exclude_licence and a.exclude_licence in str(c.get("licence", "")):
+            print(f"skip {p} (licence {c.get('licence')})"); continue
         sources.append(dict(subset_summary(load_summary(p), axis),
                             name=c.get("name", os.path.splitext(os.path.basename(p))[0]),
                             library=c.get("library"), line=c.get("line")))
@@ -76,6 +88,7 @@ def main():
         ctrl = ctrl[:, axis].copy()                     # enforce the official gene order
         # context-specific prediction: A1 uses this context's own control profile
         lfc = models.MODELS[a.model](targets, sources, target_ctrl_cpm=control_cpm(ctrl), **kw)
+        lfc = models.apply_post(lfc, post, ctrl)
         parts.append(emit(a.emit, ctrl, targets, lfc, n_cells=a.cells, pert_col=a.pert_col,
                                   context=c, include_control=a.n_control, seed=a.seed + i))
     out = ad.concat(parts, merge="same")

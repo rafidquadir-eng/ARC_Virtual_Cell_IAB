@@ -200,6 +200,7 @@ def main():
     ap.add_argument("--mode", default="seen", choices=["seen", "unseen"])
     ap.add_argument("--sources", default=None); ap.add_argument("--anatomy", default=None,
                     help="comma-separated spec names to print an error anatomy for")
+    ap.add_argument("--exclude-licence", default=None, help='drop sources whose licence contains this, e.g. "NC"')
     ap.add_argument("--tss", default=None, help="TSS csv (for ORACLE_CIS, cis anatomy and B5 cis effects)")
     ap.add_argument("--panel-file", default=None,
                     help="if the holdout dir has no real.h5ad yet, build it (challenge panel targets the line measured)")
@@ -214,7 +215,8 @@ def main():
     ctrl = ad.read_h5ad(f"{a.holdout_dir}/ctrl.h5ad")
     ccpm = control_cpm(ctrl)
     only = a.sources.split(",") if a.sources else None
-    names = [n for n, c in ctxs.items() if n != a.holdout and c.get("line", n) != line and (not only or n in only)]
+    names = [n for n, c in ctxs.items() if n != a.holdout and c.get("line", n) != line and (not only or n in only)
+             and not (a.exclude_licence and a.exclude_licence in str(c.get("licence", "")))]
     drop = set(panel) if a.mode == "unseen" else None
     sources = [dict(loco.subset_summary(load_summary(ctxs[n]["summary"]), axis, drop), name=n,
                     library=ctxs[n].get("library"), line=ctxs[n].get("line", n)) for n in names]
@@ -238,6 +240,8 @@ def main():
                 lfc, info = models.MODELS["B5_sparse"](panel, sources, target_ctrl_cpm=ccpm, return_info=True, **kw)
             else:
                 lfc = models.MODELS[sp_["model"]](panel, sources, target_ctrl_cpm=ccpm, **kw)
+        if not sp_["model"].startswith("ORACLE"):
+            lfc = models.apply_post(np.asarray(lfc, float), sp_.get("post"), ctrl)
         r = score(np.asarray(lfc, float), T, pset, ccpm)
         row = {"spec": name, "holdout": a.holdout, "mode": a.mode, **{k: v for k, v in r.items() if not k.startswith("_")}, **info}
         rows.append(row); print(json.dumps({k: (round(v, 4) if isinstance(v, float) else v) for k, v in row.items()}))

@@ -619,3 +619,58 @@ def predict_sparse(targets, sources, target_ctrl_cpm=None, pc: float = 1.0, z_th
 
 
 MODELS["B5_sparse"] = predict_sparse
+
+
+# ---------------------------------------------------------------------------------------------
+# Post-processing (WP9 / C1): pull each predicted effect onto the target context's own programs.
+# ---------------------------------------------------------------------------------------------
+
+_PC_CACHE: dict = {}
+
+
+def ctrl_programs(ctrl, k: int = 200, n_top: int = 3000, seed: int = 0):
+    """Top-k principal axes of the context's control cells (log1p CPM over the n_top most expressed
+    genes). Returns (gene indices, loadings V (n_top, k)). Cached per AnnData object."""
+    import scipy.sparse as sp
+    key = (id(ctrl), k, n_top)
+    if key in _PC_CACHE:
+        return _PC_CACHE[key]
+    X = ctrl.X.tocsr() if sp.issparse(ctrl.X) else sp.csr_matrix(ctrl.X)
+    lib = np.asarray(X.sum(1)).ravel()
+    top = np.argsort(-np.asarray(X.sum(0)).ravel())[:n_top]
+    L = np.log1p(X[:, top].toarray() / np.maximum(lib, 1)[:, None] * 1e4)
+    rng = np.random.default_rng(seed)
+    if L.shape[0] > 8000:
+        L = L[rng.choice(L.shape[0], 8000, replace=False)]
+    L -= L.mean(0)
+    _, _, Vt = np.linalg.svd(L, full_matrices=False)
+    out = (top, Vt[: min(k, Vt.shape[0])].T)
+    _PC_CACHE[key] = out
+    return out
+
+
+def project_ctrl(lfc: np.ndarray, ctrl, k: int = 200, lam: float = 0.5, n_top: int = 3000) -> np.ndarray:
+    """lam * (projection of each target's effect on the context's top-k control programs) +
+    (1 - lam) * effect, on the n_top expressed genes; other genes unchanged."""
+    top, V = ctrl_programs(ctrl, k, n_top)
+    out = np.array(lfc, dtype=np.float64, copy=True)
+    E = out[:, top]
+    out[:, top] = lam * (E @ V) @ V.T + (1 - lam) * E
+    return out.astype(np.float32)
+
+
+def apply_post(lfc: np.ndarray, post: dict | None, ctrl=None) -> np.ndarray:
+    """Spec-level post-processing, e.g. {"project": {"k": 200, "lam": 0.5}, "scale": 1.2}."""
+    if not post:
+        return lfc
+    if "project" in post and ctrl is not None:
+        lfc = project_ctrl(lfc, ctrl, **post["project"])
+    if "scale" in post:
+        lfc = lfc * float(post["scale"])
+    return lfc
+
+
+try:                                # M1_gbm registers itself in MODELS
+    from . import translator  # noqa: F401
+except Exception as _e:             # sklearn missing etc.
+    pass

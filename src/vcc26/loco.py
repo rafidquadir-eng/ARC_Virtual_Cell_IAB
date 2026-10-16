@@ -31,6 +31,7 @@ import time
 import anndata as ad
 import numpy as np
 import pandas as pd
+import polars as pl
 import scipy.sparse as sp
 
 from . import local_eval, models
@@ -107,7 +108,7 @@ def prepare_holdout(ctx: dict, axis_all: np.ndarray, outdir: str, n_panel: int, 
 def run(cfg_path: str, holdout: str, mode: str, out: str, n_panel: int, n_cells: int, seed: int,
         model_specs: list[dict], de_backend: str = "auto", device: str = "auto",
         extra_emb: dict | None = None, tag: str = "default", panel_file: str | None = None,
-        only_sources: list[str] | None = None):
+        only_sources: list[str] | None = None, exclude_licence: str | None = None):
     cfg = json.load(open(cfg_path))
     axis_all = pd.read_csv(cfg["gene_axis"], header=None).iloc[:, 0].astype(str).values
     ctxs = {c["name"]: c for c in cfg["contexts"]}
@@ -124,7 +125,8 @@ def run(cfg_path: str, holdout: str, mode: str, out: str, n_panel: int, n_cells:
     # never use a source from the same cell line as the held-out context (e.g. K562 essential vs K562 GWPS)
     line = hold.get("line", holdout)
     src_names = [n for n, c in ctxs.items() if n != holdout and c.get("line", n) != line
-                 and (not only_sources or n in only_sources)]
+                 and (not only_sources or n in only_sources)
+                 and not (exclude_licence and exclude_licence in str(c.get("licence", "")))]
     if not src_names:
         raise ValueError("no source contexts left after line/--sources filtering")
     sources = [dict(subset_summary(load_summary(ctxs[n]["summary"]), axis, drop), name=n,
@@ -134,7 +136,7 @@ def run(cfg_path: str, holdout: str, mode: str, out: str, n_panel: int, n_cells:
           f"{cover} panel targets measured in >=1 source")
     ctrl = ad.read_h5ad(ctrl_p)
     tgt_cpm = control_cpm(ctrl)            # target context's control profile (all a model may see)
-    rows = []
+    rows, frames = [], []
     for spec in model_specs:
         t0 = time.time()
         name, kw = spec["name"], dict(spec.get("kw", {}))
@@ -163,9 +165,11 @@ def run(cfg_path: str, holdout: str, mode: str, out: str, n_panel: int, n_cells:
                      "n_neighbor_targets": info.get("n_neighbor_targets", 0)}
         else:
             lfc = models.MODELS[spec["model"]](panel, sources, **kw)
+        lfc = models.apply_post(lfc, spec.get("post"), ctrl)
         pred = emit(spec.get("emit", "random"), ctrl, panel, lfc, n_cells=n_cells, context=holdout,
                     seed=seed, include_control=n_cells)   # scorer requires the control label
-        res = local_eval.score(pred, real_p, anchors, ecfg)
+        res, pframe = local_eval.score(pred, real_p, anchors, ecfg, return_frame=True)
+        frames.append(pframe.with_columns(pl.lit(name).alias("spec"), pl.lit(spec.get("emit", "random")).alias("emit")))
         row = {"model": name, "emit": spec.get("emit", "random"), "holdout": holdout, "mode": mode,
                "sources": "+".join(src_names),
                "n_panel": len(panel), "n_covered": cover, **{k: v for k, v in res.items() if k != "raw"},
@@ -177,6 +181,8 @@ def run(cfg_path: str, holdout: str, mode: str, out: str, n_panel: int, n_cells:
     if os.path.exists(path):                       # never overwrite an earlier sweep
         path = path.replace(".csv", f"_{time.strftime('%Y%m%d-%H%M%S')}.csv")
     df.to_csv(path, index=False)
+    if frames:   # per-target metrics for paired bootstrap comparisons (vcc26.compare)
+        pl.concat(frames, how="diagonal").write_parquet(path.replace("scores_", "pertarget_").replace(".csv", ".parquet"))
     print(f"wrote {path}")
     return df
 
@@ -204,6 +210,7 @@ def main():
                     help="restrict the held-out panel to these targets (e.g. the challenge pert_counts.csv)")
     ap.add_argument("--sources", default=None, help="comma-separated source context names to use (default: all)")
     ap.add_argument("--tag", default=None, help="suffix for the scores file (default: specs file name)")
+    ap.add_argument("--exclude-licence", default=None, help='drop sources whose licence contains this, e.g. "NC"')
     a = ap.parse_args()
     specs = json.load(open(a.specs)) if a.specs else DEFAULT_SPECS
     embs = {}
@@ -211,7 +218,7 @@ def main():
         n, p = e.split("=", 1); z = np.load(p, allow_pickle=True); embs[n] = {k: z[k] for k in z.files}
     tag = a.tag or (os.path.splitext(os.path.basename(a.specs))[0] if a.specs else "default")
     run(a.config, a.holdout, a.mode, a.out, a.panel, a.cells, a.seed, specs, a.de_backend, a.device, embs, tag,
-        a.panel_file, a.sources.split(",") if a.sources else None)
+        a.panel_file, a.sources.split(",") if a.sources else None, a.exclude_licence)
 
 
 if __name__ == "__main__":

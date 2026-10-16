@@ -27,6 +27,9 @@ Scores are scaled vcc2026 metrics (0 = context mean-response baseline, 1 = repli
 | E031 | 16 Oct | B5 wins on the real metric, incl. V*-far | vstar 5 lines + far | seen | | | | | | | | | GPU | planned | E032 |
 | E032 | 16 Oct | B5 lifts the leaderboard | E031 top, balanced, all summaries | LB | | | | | | | | | ≤ 1 | planned | |
 | E033 | 16 Oct | Where the leaderboard score comes from (A vs B/C) | vcc status JSON, no submission | – | | | | | | | | | – | planned | |
+| E034 | 16–17 Oct | Learned translator (M1) and context-programme projection beat B5/E021 | proxy + V* + bootstrap, specs_E034 | seen | | | | | | | | | CPU+GPU | planned | E035 |
+| E035 | 17 Oct | NC (Orion) sources help non-NC lines | V* with/without NC | seen | | | | | | | | | GPU | planned | |
+| E036 | 17 Oct | Final pipeline runs end to end in time | dress rehearsal A/B/C, NC on/off | – | | | | | | | | | – | planned | |
 | E006 | 17–19 Oct | iMEMORY gene vectors add signal | kNN on iMEMORY vs shuffle vs public prior | unseen | | | | | | | | | | blocked (EC2 files) | |
 | E007 | 17 Oct | A1: source weighting + target-expression gating | | both | | | | | | | | | | planned | |
 | E008 | 18 Oct | A1: per-target shrinkage + β and DE-count calibration | | both | | | | | | | | | | planned | |

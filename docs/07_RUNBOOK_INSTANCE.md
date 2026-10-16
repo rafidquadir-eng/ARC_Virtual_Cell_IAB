@@ -135,6 +135,50 @@ vcc submit $DATA/preds/E012.vcc -m "E012 <spec name> with K562 GWPS" --wait
 ## ⏸ PAUSED (15 Oct ~03:30 UTC): don't start E013–E017
 Wait until the curation agent has pushed `reports/DATA_DONE.md`. If E013 is already running, let it finish and push its report, then stop. E013/E015 are folded into **E020** below; E014/E017 are replaced by **E021**. The earlier stages stay here for the record.
 
+## E034–E036 — learned translator (M1), context-programme projection, NC on/off, dress rehearsal
+Run after E031/E032 (independent of their outcome). New code: `vcc26/translator.py` (`M1_gbm`), `models.apply_post` (spec `"post": {"project": {...}}`), `vcc26/compare.py` (paired bootstrap; `loco` now writes `pertarget_*.parquet`), `--exclude-licence NC` (loco/vstar/proxy/predict_challenge), `predict_challenge --spec-file/--spec`, `scripts/final_pipeline.sh`.
+
+M1 trains itself on the sources it's given: each source line in turn plays the target, with the others as evidence. So the held-out line is never seen. The fit takes a few minutes per source set and is cached across specs. It needs scikit-learn (already in the venv via scanpy; check `python -c "import sklearn"`) and ~40 GB RAM.
+
+**E034a (CPU, proxy):**
+```bash
+source ~/.vcc_env; cd ~/vcc; git pull
+sed "s#__DATA__#$DATA#g" specs_E034.json > specs_E034.local.json
+for h in CD4T_Stim8hr KOLF2.1J K562_GWPS Orion_HCT116 Orion_HEK293T; do
+  python -m vcc26.proxy --config loco.json --holdout $h --holdout-dir $DATA/loco/E020/holdout_$h --panel-file $PANEL \
+    --tss $DATA/tss.csv --specs specs_E034.local.json --out results/E034 --anatomy "M1" 2>&1 | tee logs/E034_$h.log
+done
+python scripts/pick_specs.py --results results/E034 --specs specs_E034.local.json --out specs_E034b.json | tee results/E034/pick.txt
+```
+Add the best spec from E031 to `specs_E034b.json` by hand if it isn't already there.
+
+**E034b (GPU, real V\* + bootstrap):**
+```bash
+python -m vcc26.vstar --config loco.json --panel-file $PANEL --specs specs_E034b.json --out $DATA/loco/E020 --tag E034 --mode seen
+python -m vcc26.compare --dir $DATA/loco/E020 --tag E034 --a "<best E034b spec>" --b "B2_raw_gPL(E021)" --n 1000 | tee results/E034/bootstrap.json
+```
+**REPORT E034:**
+- the proxy table, M1 anatomy and `train_rows`;
+- the V\* summary;
+- the bootstrap Δ with its 90% CI.
+
+**Leaderboard rule from here on:** submit only when the bootstrap CI lower bound vs the current leaderboard config is > 0.
+
+**E035 (GPU): does the NC data help?** For the top spec, run V\* on the three non-NC lines with and without NC sources:
+```bash
+python -m vcc26.vstar --config loco.json --panel-file $PANEL --specs specs_E035.json --out $DATA/loco/E020 --tag E035nc --mode seen --lines CD4T_Stim8hr,KOLF2.1J,K562_GWPS
+python -m vcc26.vstar --config loco.json --panel-file $PANEL --specs specs_E035.json --out $DATA/loco/E020 --tag E035nonc --mode seen --lines CD4T_Stim8hr,KOLF2.1J,K562_GWPS --exclude-licence NC
+```
+(`specs_E035.json` = the top spec only; write it from `specs_E034b.json`.)
+**REPORT E035:** selection with vs without NC sources, per line. R decides the NC question with these numbers.
+
+**E036 (dress rehearsal, no submission):** run the full final pipeline on A/B/C as if they were unknown, with and without NC:
+```bash
+bash scripts/final_pipeline.sh $DATA/challenge/controls A,B,C specs_E035.json "<top spec>" E036 on
+bash scripts/final_pipeline.sh $DATA/challenge/controls A,B,C specs_E035.json "<top spec>" E036 off
+```
+**REPORT E036:** timings, whether `vcc prep` passed for both, file sizes, and any failure. This is the procedure for 22 Oct.
+
 ## E030–E033 — sparse consistent consensus + cis effects (B5), 5-line V\*, per-context leaderboard (see `docs/14_DIAGNOSIS_ROUND2.md`)
 Why: E025/E026 showed the dense transfer is mostly noise per gene (cos 0.003–0.08), and B4's shrinkage killed what signal there was. B5 keeps only genes that are significant and sign-consistent across lines, plus CRISPRi neighbour (cis) effects. The ORACLE_TOPK/ORACLE_CIS ceilings tell us how sparse the truth is and how much of it is cis. B4 is retired; don't include it in new runs.
 
