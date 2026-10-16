@@ -303,3 +303,58 @@ Findings:
 - The proxy overrates M1 for the same reason it overrated B5x_tl0.05 in E030: it weights pds/DE sign and under-weights fid/reach/MSE as the real scorer does. Worth recalibrating before using it to pick.
 
 Files: `results/E034/` (proxy CSVs, anatomy, pick.txt, V\* summary/rows, bootstrap JSONs); `specs_E034b.json`.
+
+
+---
+
+## REPORT E035 — do the NC (Orion) sources help the non-NC lines?
+
+```
+python -m vcc26.vstar ... --specs specs_E035.json --tag E035nc   --lines CD4T_Stim8hr,KOLF2.1J,K562_GWPS
+python -m vcc26.vstar ... --specs specs_E035.json --tag E035nonc --lines CD4T_Stim8hr,KOLF2.1J,K562_GWPS --exclude-licence NC
+```
+`specs_E035.json` = the top spec `B5_z2_a0.5_cis5000` only. 15:50–16:35 UTC.
+
+| sources                  | model              |   selection |   worst_line |   line_CD4T_Stim8hr |   line_K562_GWPS |   line_KOLF2.1J |   pds |   mse |   fid |   reach |    jac |   nmae |
+|:-------------------------|:-------------------|------------:|-------------:|--------------------:|-----------------:|----------------:|------:|------:|------:|--------:|-------:|-------:|
+| with NC (13 contexts)    | B5_z2_a0.5_cis5000 |       0.196 |        0.141 |               0.184 |            0.262 |           0.141 | 0.446 | 0.09  | 0.661 |   0.096 | -0.298 |  0.179 |
+| without NC (11 contexts) | B5_z2_a0.5_cis5000 |       0.181 |        0.168 |               0.168 |            0.202 |           0.172 | 0.362 | 0.085 | 0.738 |   0.048 | -0.31  |  0.159 |
+
+Raw MSE per line:
+
+| holdout      |   with NC |   without NC |
+|:-------------|----------:|-------------:|
+| CD4T_Stim8hr |     0.989 |        1.004 |
+| KOLF2.1J     |     1.007 |        1     |
+| K562_GWPS    |     0.818 |        0.843 |
+
+- **With NC sources the selection is 0.196 vs 0.181 without (+0.015).** CD4T +0.016 and K562_GWPS +0.060 gain; **KOLF2.1J loses** (0.141 with vs 0.172 without, −0.031),
+  so the worst line is better without NC (0.168 vs 0.141).
+- NC sources raise pds (0.45 vs 0.36) and reach (0.10 vs 0.05). Without them fid is higher (0.74 vs 0.66). MSE is about the same.
+- Not bootstrapped (the runbook asked for selection per line); `results/E035/` has the per-target data if R wants a CI.
+- The selection here (3 lines, 0.196) is lower than the 5-line E031 figure (0.263) because the two Orion lines, where B5 scores highest, are held out of E035.
+- Context for the decision: in E036's context identification, **Orion_HCT116 is the nearest public line to context C (r 0.811) and third nearest to B (0.781)**.
+  So the NC data is the only source close to B/C. In V\*-far (E031), though, the B5 gain on HEK293T disappeared without HCT116.
+
+---
+
+## REPORT E036 — final-pipeline dress rehearsal on A/B/C (no submission)
+
+```
+bash scripts/final_pipeline.sh $DATA/challenge/controls A,B,C specs_E035.json "B5_z2_a0.5_cis5000" E036 on
+bash scripts/final_pipeline.sh $DATA/challenge/controls A,B,C specs_E035.json "B5_z2_a0.5_cis5000" E036 off
+```
+Run under `/usr/bin/time -v`, alongside the E035 GPU job, so the timings are an upper bound.
+
+| run | context_id | predict | `vcc prep` | total wall | peak RAM | prep | .h5ad | .vcc |
+|---|---|---|---|---|---|---|---|---|
+| NC on (13 summaries) | 77 s | 1,353 s | 192 s | **27 min 02 s** | 73 GB | ✓ passed, 360,000 cells | 17.0 GB | 3.34 GB |
+| NC off (11 summaries) | 98 s | 1,247 s | 180 s | **25 min 25 s** | 66 GB | ✓ passed, 360,000 cells | 17.0 GB | 3.34 GB |
+
+- No failures. Both `.vcc` files are ready (`$DATA/preds/E036_nc{on,off}.vcc`); neither was submitted.
+- The context identification (`reports/E036_context_id.json`) is the same in both runs: `context_id` always uses all summaries, and only prediction honours `--exclude-licence`.
+  Nearest sources: **A**: CD4T_Stim48hr 0.856, CD4T_Rest 0.852, CD4T_Stim8hr 0.848, context_B 0.78; **B**: context_C 0.842, H1 0.792, Orion_HCT116 0.781, context_A 0.78; **C**: context_B 0.842, Orion_HCT116 0.811, H1 0.791, CD4T_Stim48hr 0.771.
+- Small issues for 22 Oct:
+  - the script writes `logs/<tag>_predict.log`, `_prep.log` and `reports/<tag>_context_id.json` without the NC suffix, so two runs with one tag overwrite each other (I kept per-run copies);
+  - the upload for `vcc submit` takes about 4–5 min at about 12 MiB/s.
+  - Total, including submit: about 35 min per context set with the current B5 spec, all on this instance.

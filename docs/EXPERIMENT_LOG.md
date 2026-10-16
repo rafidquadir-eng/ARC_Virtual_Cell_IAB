@@ -28,8 +28,8 @@ Scores are scaled vcc2026 metrics (0 = context mean-response baseline, 1 = repli
 | E032 | 16 Oct | B5 lifts the leaderboard | B5_z2_a0.5_cis5000, balanced, 13 summaries | LB | 0.583 | 0.144 | −0.293 | 0.102 | 0.000 | 0.111 | | 0.1077 (rank 688) | 1 submission (1/2 on 16 Oct) | done: +0.002 vs E021; first LB MSE > 0 but fid collapses | |
 | E033 | 16 Oct | Where the leaderboard score comes from (A vs B/C) | vcc status JSON, no submission | – | | | | | | | | | – | done: status JSON has no per-context fields; only latest entry retrievable | |
 | E034 | 16–17 Oct | Learned translator (M1) and context-programme projection beat B5/E021 | proxy + V* + bootstrap, specs_E034 | seen | 0.703 | 0.159 | 0.653 | 0.229 | −0.454 | 0.152 | M1_b1.3 0.240 vs B5 0.263 (Δ −0.023, CI −0.036..−0.005) | | CPU+GPU 5 h | done: M1 proxy winner (0.435) but below B5 on V*; best on HEK293T; top spec stays B5 | E035 |
-| E035 | 17 Oct | NC (Orion) sources help non-NC lines | V* with/without NC | seen | | | | | | | | | GPU | planned | |
-| E036 | 17 Oct | Final pipeline runs end to end in time | dress rehearsal A/B/C, NC on/off | – | | | | | | | | | – | planned | |
+| E035 | 17 Oct | NC (Orion) sources help non-NC lines | V* with/without NC | seen | 0.446 | 0.090 | 0.661 | 0.096 | −0.298 | 0.179 | 0.196 with NC vs 0.181 without | | GPU 45 min | done: +0.015 with NC (CD4T +0.016, GWPS +0.060, KOLF −0.031); R decides | |
+| E036 | 17 Oct | Final pipeline runs end to end in time | dress rehearsal A/B/C, NC on/off | – | | | | | | | | | – | done: both prep OK; 27 / 25 min wall, 73 / 66 GB RAM; .vcc 3.3 GB | |
 | E006 | 17–19 Oct | iMEMORY gene vectors add signal | kNN on iMEMORY vs shuffle vs public prior | unseen | | | | | | | | | | blocked (EC2 files) | |
 | E007 | 17 Oct | A1: source weighting + target-expression gating | | both | | | | | | | | | | planned | |
 | E008 | 18 Oct | A1: per-target shrinkage + β and DE-count calibration | | both | | | | | | | | | | planned | |
