@@ -80,9 +80,16 @@ def _split_halves(real: ad.AnnData, pert_col: str, seed: int):
     return real[np.sort(a_idx)].copy(), real[np.sort(b_idx)].copy()
 
 
-def build_anchors(real_path: str, cfg: EvalConfig, n_splits: int = 5) -> dict:
+# The OFFICIAL baseline arm has identical cells (emit="tile"): cell_eval2 0.18.0 competition.py
+# L304-305 "the baseline arm's cells are identical so its jk_pred is exactly 0". The library default
+# is emit="dispersed", which calls almost no DE genes and put our local fid/jac/reach anchors on the
+# wrong scale (local baseline fid 0.03 vs official 0.51). Review O-01, 17 Oct.
+BASELINE_EMIT = "tile"
+
+
+def build_anchors(real_path: str, cfg: EvalConfig, n_splits: int = 5, emit: str = BASELINE_EMIT) -> dict:
     real = ad.read_h5ad(real_path)
-    base = build_generic_baseline(real, config=cfg)
+    base = build_generic_baseline(real, config=cfg, emit=emit)
     agg = base.agg
     b = {m: float(agg.filter(pl.col("statistic") == "mean")[m][0]) for m in SCORED if m in agg.columns}
     reps = []
@@ -92,7 +99,7 @@ def build_anchors(real_path: str, cfg: EvalConfig, n_splits: int = 5) -> dict:
         reps.append(raw_metrics(hb, ha, rep_cfg))
     r = {m: float(np.mean([x[m] for x in reps])) for m in SCORED}
     r_sd = {m: float(np.std([x[m] for x in reps])) for m in SCORED}
-    return {"baseline": b, "replicate": r, "replicate_sd": r_sd, "n_splits": n_splits,
+    return {"baseline": b, "replicate": r, "replicate_sd": r_sd, "n_splits": n_splits, "baseline_emit": emit,
             "n_perts": int(real.obs[cfg.pert_col].nunique() - 1)}
 
 
@@ -123,6 +130,7 @@ def main():
     ap = argparse.ArgumentParser()
     sub = ap.add_subparsers(dest="cmd", required=True)
     a = sub.add_parser("anchors"); a.add_argument("--real", required=True); a.add_argument("--out", required=True)
+    a.add_argument("--emit", default=BASELINE_EMIT, choices=["tile", "dispersed"])
     a.add_argument("--n-splits", type=int, default=5)
     s = sub.add_parser("score"); s.add_argument("--pred", required=True); s.add_argument("--real", required=True)
     s.add_argument("--anchors", required=True)
@@ -132,7 +140,7 @@ def main():
     args = ap.parse_args()
     cfg = make_config(args.pert_col, args.control, args.device, args.de_backend)
     if args.cmd == "anchors":
-        anc = build_anchors(args.real, cfg, args.n_splits)
+        anc = build_anchors(args.real, cfg, args.n_splits, emit=args.emit)
         json.dump(anc, open(args.out, "w"), indent=2); print(json.dumps(anc, indent=2))
     else:
         print(json.dumps(score(args.pred, args.real, json.load(open(args.anchors)), cfg), indent=2))

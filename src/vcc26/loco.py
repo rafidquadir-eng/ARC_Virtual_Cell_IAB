@@ -143,6 +143,10 @@ def run(cfg_path: str, holdout: str, mode: str, out: str, n_panel: int, n_cells:
                                                   min_cells=min_target_cells, umi_target=umi_target)
     ecfg = local_eval.make_config("target", CTRL, device, de_backend)
     anc_p = f"{hdir}/anchors.json"
+    if os.path.exists(anc_p) and json.load(open(anc_p)).get("baseline_emit") != local_eval.BASELINE_EMIT:
+        # anchors built before 17 Oct used the dispersed baseline (wrong scale, review O-01): keep, rebuild
+        os.replace(anc_p, f"{hdir}/anchors_dispersed.json")
+        print(f"anchors: moved old dispersed-baseline anchors to {hdir}/anchors_dispersed.json; rebuilding with emit=tile")
     if not os.path.exists(anc_p):
         json.dump(local_eval.build_anchors(real_p, ecfg), open(anc_p, "w"), indent=2)
     anchors = json.load(open(anc_p))

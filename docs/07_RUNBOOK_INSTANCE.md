@@ -135,6 +135,72 @@ vcc submit $DATA/preds/E012.vcc -m "E012 <spec name> with K562 GWPS" --wait
 ## ⏸ PAUSED (15 Oct ~03:30 UTC): don't start E013–E017
 Wait until the curation agent has pushed `reports/DATA_DONE.md`. If E013 is already running, let it finish and push its report, then stop. E013/E015 are folded into **E020** below; E014/E017 are replaced by **E021**. The earlier stages stay here for the record.
 
+## E042 — corrected local anchors (review O-01, 17 Oct): do this first
+**Why.** The official baseline arm emits **identical cells** (`emit="tile"`: every cell = the context mean profile). `cell_eval2` 0.18.0 `competition.py` L304–305 says "the baseline arm's cells are identical so its `jk_pred` is exactly 0".
+
+Our `local_eval.build_anchors` used the library default `emit="dispersed"`, which calls almost no DE genes. That is why H1-R400's baseline fid was 0.03 instead of ~0.5, and why V\* misjudged fid (−0.04 vs −0.23 on the LB).
+
+A synthetic check with the scorer's own builder confirms the fix:
+- tile: fid 0.58, and jac = mean(N_conf/genes) exactly;
+- dispersed: fid 0.004, jac 0.
+
+The code now defaults to tile. `loco` moves any old anchors to `anchors_dispersed.json` and rebuilds automatically.
+
+```bash
+source ~/.vcc_env; cd ~/vcc; git pull
+PANEL=$(find $DATA/challenge -name pert_counts.csv | head -1)
+mkdir -p results/E042
+HOLD="$DATA/loco/E037/holdout_H1_R400 $DATA/loco/E037/holdout_CD4T_Stim48hr_R400 $DATA/loco/E020/holdout_CD4T_Stim8hr $DATA/loco/E020/holdout_KOLF2.1J $DATA/loco/E020/holdout_K562_GWPS $DATA/loco/E020/holdout_Orion_HCT116 $DATA/loco/E020/holdout_Orion_HEK293T"
+for d in $HOLD; do
+  [ -f $d/anchors.json ] && mv $d/anchors.json $d/anchors_dispersed.json
+  python -m vcc26.local_eval anchors --real $d/real.h5ad --out $d/anchors.json 2>&1 | tail -2
+  python scripts/regime_check.py --holdout-dir $d > results/E042/regime_$(basename $d).json
+done
+python scripts/rescale_rows.py --dir $DATA/loco/E020 \
+  --rows results/E020/vstar_rows_E020_seen.csv results/E031/vstar_rows_E031_seen.csv results/E034/vstar_rows_E034_seen.csv \
+  --out results/E042/rescaled_E020_E031_E034.csv | tee results/E042/rescaled_summary.txt
+python scripts/rescale_rows.py --dir $DATA/loco/E020 --rows results/E031/scores_*_seen_E031far.csv \
+  --out results/E042/rescaled_E031far.csv | tee results/E042/rescaled_far_summary.txt
+```
+The tile baseline holds a dense matrix: about 9–11 GB per holdout, which is fine.
+
+**REPORT E042:**
+1. Per holdout: old vs new baseline raw fid/jac/reach/pds/mse/nmae; the replicate is unchanged.
+2. **Key check:** H1-R400's new baseline fid should sit near 0.5 (official 0.506–0.523), and its jac near N_conf mean ÷ gated genes (≈ 855/10,775 ≈ 0.08).
+3. The rescaled V\* table: new vs old selection per spec.
+4. **Calibration:** Δ(`B5_z2_a0.5_cis5000` − `B2_raw_gPL(E021)`) per metric under the new anchors, next to the LB Δ (pds +0.082, mse +0.144, nmae +0.025, **fid −0.226**, reach −0.006, jac −0.008).
+
+**E042b — integrity checks** (cheap; run right after E042)
+```bash
+# (1) data manifest: hash every summary the LB configs read
+python -c "import json,hashlib;[print(hashlib.md5(open(c['summary'],'rb').read()).hexdigest(), c['name'], c['summary']) for c in json.load(open('loco.json'))['contexts']]" | tee results/E042/data_manifest_md5.txt
+# (2) is E032 reproducible from the current code + summaries? (only if $DATA/preds/E032.h5ad still exists)
+python -m vcc26.predict_challenge --controls-dir $DATA/challenge/controls --contexts A,B,C --perts $PANEL --gene-names $DATA/challenge/controls/gene_axis.csv \
+  --registry loco.json --summaries $(python -c "import json;print(' '.join(c['summary'] for c in json.load(open('loco.json'))['contexts']))") \
+  --spec-file specs_E031.json --spec "B5_z2_a0.5_cis5000" --emit balanced --n-control 0 --out $DATA/preds/E032_repro.h5ad
+python -c "
+import anndata as ad, numpy as np
+a=ad.read_h5ad('$DATA/preds/E032.h5ad', backed='r'); b=ad.read_h5ad('$DATA/preds/E032_repro.h5ad', backed='r')
+print('shape', a.shape, b.shape, 'obs equal', (a.obs.index==b.obs.index).all())
+import scipy.sparse as sp; A=a.X[:20000]; B=b.X[:20000]; print('first 20k rows identical:', (abs(A-B)).sum()==0)" | tee results/E042/E032_repro.txt
+# (3) emission-seed variance of the LB config on H1-R400 (holdout cached, so the seed only changes the emitted cells)
+for s in 1 2; do
+  python -m vcc26.loco --config loco.json --holdout H1 --mode seen --out $DATA/loco/E037 --specs specs_E042seed.json --tag E042seed$s --seed $s \
+    --holdout-tag R400 --min-target-cells 400 --umi-target 20000 2>&1 | tail -3
+done
+```
+The seed-0 row for this spec comes from E038 (`B5_z2_a0.5_cis5000`).
+
+**REPORT E042b:**
+- the md5 manifest;
+- whether E032 reproduces (if `E032.h5ad` is gone, say so);
+- context score and the six metrics for seeds 0/1/2: mean, SD, range.
+
+**After E042/E042b:**
+- If the key check passes, run **E038, E038b and E039 as written below**. They use the new anchors automatically.
+- **Do not run E040 (leaderboard) until planning confirms**; a full review is in progress (`review/`).
+- If the key check fails, report and stop.
+
 ## E037–E041 — round 3: make validation match the leaderboard, fix the DE call count and the emitter (see `docs/15_DIAGNOSIS_ROUND3.md`)
 **Why.**
 - fid = k / max(n_pred, N_conf), where k counts called genes whose direction matches the real log2FC of ANY sign. Calling ≥ N_conf genes therefore scores about chance (≈ 0.51, the official baseline). B5 under-calls and scores 0.42 (−0.29 scaled).
