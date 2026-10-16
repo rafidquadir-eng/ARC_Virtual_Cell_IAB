@@ -119,3 +119,74 @@ python scripts/pick_specs.py --results results/E030 --specs specs_E030.local.jso
   because those targets have about zero true energy there.
 
 Files: `results/E030/*`; `specs_E031.json`.
+
+
+---
+
+## REPORT E031 — real-metric V\* on 5 lines + V\*-far (GPU)
+
+```
+python -m vcc26.vstar --config loco.json --panel-file pert_counts.csv --specs specs_E031.json --out $DATA/loco/E020 --tag E031 --mode seen
+# V*-far: Orion_HCT116 without Orion_HEK293T, Orion_HEK293T without Orion_HCT116, KOLF2.1J without H1/HipSci
+```
+08:07–12:06 UTC. Sources: 13 contexts, with the D7 summaries and Orion. So E021's V\* score here (0.234) isn't comparable with the 3-line, pre-D7 0.167 from E020/E026.
+
+### V\* summary (`vstar_summary_E031_seen.csv`)
+
+| model              | emit     |   pds |   mse |   fid |   reach |    jac |   nmae |   selection |   worst_line |   line_CD4T_Stim8hr |   line_K562_GWPS |   line_KOLF2.1J |   line_Orion_HCT116 |   line_Orion_HEK293T |
+|:-------------------|:---------|------:|------:|------:|--------:|-------:|-------:|------------:|-------------:|--------------------:|-----------------:|----------------:|--------------------:|---------------------:|
+| B5_z2_a0.5_cis5000 | balanced | 0.664 | 0.261 | 0.752 |   0.21  | -0.516 |  0.205 |       0.263 |        0.141 |               0.184 |            0.262 |           0.141 |               0.483 |                0.242 |
+| B2_raw_gPL(E021)   | balanced | 0.563 | 0.002 | 0.791 |   0.328 | -0.522 |  0.24  |       0.234 |        0.172 |               0.192 |            0.225 |           0.172 |               0.339 |                0.24  |
+| B5x_tl0.05         | balanced | 0.665 | 0.186 | 0.701 |   0.15  | -0.518 |  0.165 |       0.225 |        0.104 |               0.181 |            0.211 |           0.104 |               0.418 |                0.211 |
+| B5x_ml2            | balanced | 0.69  | 0.172 | 0.682 |   0.099 | -0.511 |  0.161 |       0.215 |        0.091 |               0.185 |            0.197 |           0.091 |               0.407 |                0.198 |
+| B0_control         | balanced | 0.014 | 0.067 | 0.467 |  -0.066 | -0.577 |  0.056 |      -0.007 |       -0.095 |               0.095 |           -0.039 |           0.015 |              -0.009 |               -0.095 |
+
+### Raw MSE per row (B0 ≈ 1.0–1.1)
+
+| model              |   CD4T_Stim8hr |   K562_GWPS |   KOLF2.1J |   Orion_HCT116 |   Orion_HEK293T |
+|:-------------------|---------------:|------------:|-----------:|---------------:|----------------:|
+| B0_control         |           1.02 |        1.07 |       1.04 |           1.12 |            1.05 |
+| B2_raw_gPL(E021)   |           1.71 |        1.12 |       1.03 |           3.73 |            4.8  |
+| B5_z2_a0.5_cis5000 |           0.99 |        0.82 |       1.01 |           0.72 |            0.91 |
+| B5x_ml2            |           1    |        0.92 |       1.03 |           0.9  |            0.98 |
+| B5x_tl0.05         |           1    |        0.91 |       1.02 |           0.88 |            0.96 |
+
+### V\*-far
+
+| holdout       | model              |   n_covered |   context_score |   V* (all sources) |   Δ far − V* |   pds |   mse |    fid |   reach |    jac |   nmae |   raw_mse |
+|:--------------|:-------------------|------------:|----------------:|-------------------:|-------------:|------:|------:|-------:|--------:|-------:|-------:|----------:|
+| KOLF2.1J      | B2_raw_gPL(E021)   |         258 |           0.163 |              0.172 |       -0.008 | 0.195 | 0.006 |  0.555 |   0.04  |  0.121 |  0.062 |     1.032 |
+| KOLF2.1J      | B5x_tl0.05         |         258 |           0.094 |              0.104 |       -0.01  | 0.242 | 0.008 |  0.194 |  -0.003 |  0.047 |  0.074 |     1.03  |
+| KOLF2.1J      | B5x_ml2            |         258 |           0.085 |              0.091 |       -0.005 | 0.267 | 0.004 |  0.116 |  -0     |  0.043 |  0.081 |     1.034 |
+| KOLF2.1J      | B5_z2_a0.5_cis5000 |         258 |           0.123 |              0.141 |       -0.018 | 0.235 | 0.012 |  0.338 |   0.01  |  0.069 |  0.074 |     1.026 |
+| KOLF2.1J      | B0_control         |         258 |           0.015 |              0.015 |        0     | 0.052 | 0     | -0.008 |  -0.016 |  0     |  0.062 |     1.045 |
+| Orion_HCT116  | B2_raw_gPL(E021)   |         254 |           0.294 |              0.339 |       -0.046 | 0.979 | 0     |  0.822 |   0.489 | -0.833 |  0.306 |     7.73  |
+| Orion_HCT116  | B5x_tl0.05         |         254 |           0.343 |              0.418 |       -0.075 | 1.063 | 0.625 |  0.843 |   0.17  | -0.816 |  0.172 |     0.904 |
+| Orion_HCT116  | B5x_ml2            |         254 |           0.327 |              0.407 |       -0.08  | 1.073 | 0.596 |  0.849 |   0.1   | -0.809 |  0.151 |     0.924 |
+| Orion_HCT116  | B5_z2_a0.5_cis5000 |         254 |           0.405 |              0.483 |       -0.079 | 1.147 | 0.813 |  0.846 |   0.217 | -0.82  |  0.225 |     0.774 |
+| Orion_HCT116  | B0_control         |         254 |          -0.009 |             -0.009 |        0     | 0.038 | 0.312 |  0.58  |  -0.129 | -0.859 |  0.005 |     1.121 |
+| Orion_HEK293T | B2_raw_gPL(E021)   |         249 |           0.191 |              0.24  |       -0.049 | 0.445 | 0     |  0.886 |   0.53  | -0.938 |  0.224 |     6.707 |
+| Orion_HEK293T | B5x_tl0.05         |         249 |           0.147 |              0.211 |       -0.064 | 0.523 | 0.066 |  0.87  |   0.25  | -0.917 |  0.09  |     0.987 |
+| Orion_HEK293T | B5x_ml2            |         249 |           0.13  |              0.198 |       -0.068 | 0.584 | 0.058 |  0.845 |   0.114 | -0.905 |  0.084 |     0.994 |
+| Orion_HEK293T | B5_z2_a0.5_cis5000 |         249 |           0.143 |              0.242 |       -0.099 | 0.462 | 0     |  0.897 |   0.286 | -0.926 |  0.142 |     1.201 |
+| Orion_HEK293T | B0_control         |         249 |          -0.095 |             -0.095 |        0     | 0.005 | 0.005 |  0.415 |  -0.032 | -0.957 | -0.008 |     1.049 |
+
+### Paired bootstrap, `B5_z2_a0.5_cis5000` − `B2_raw_gPL(E021)` (`vcc26.compare`, 1,000 resamples over targets)
+
+| set | Δ mean | 90 % CI | P(Δ > 0) | per line |
+|---|---|---|---|---|
+| V\* (5 lines) | +0.029 | [+0.011, +0.039] | 0.995 | CD4T_Stim8hr -0.008, KOLF2.1J -0.030, K562_GWPS +0.037, Orion_HCT116 +0.144, Orion_HEK293T +0.002 |
+| V\*-far (3 runs) | +0.007 | [-0.019, +0.026] | 0.665 | Orion_HCT116 +0.111, Orion_HEK293T -0.048, KOLF2.1J -0.041 |
+
+Findings:
+- **Top spec: `B5_z2_a0.5_cis5000`, selection 0.263 vs 0.234 for the E021 config.** It's the first real-metric spec with a large MSE score (0.261 scaled; raw MSE below the
+  baseline on every line: 0.72–1.01 vs 1.03–4.8 for E021), and it has better pds (0.664 vs 0.563). It loses reach (0.21 vs 0.33) and nmae.
+  The gain is concentrated on Orion_HCT116 (+0.144) and K562_GWPS (+0.037); CD4T −0.008, KOLF −0.030.
+- The proxy winner `B5x_tl0.05` is 3rd on the real metric (0.225), below E021. The proxy overweights pds/MSE relative to reach/fid,
+  which the real metric rewards. The densest B5 (z 2, 1,002 genes kept) wins on the real metric.
+- V\*-far: the epithelial gain survives on HCT116 without HEK293T (+0.111). It reverses on HEK293T without HCT116 (−0.048) and on KOLF2.1J without the
+  pluripotent lines (−0.041). The aggregate far Δ is +0.007 (CI includes 0).
+
+**E032 decision:** V\* Δ = +0.029 ≥ 0.01 ✓. V\*-far aggregate Δ = +0.007, so not worse ✓ (but worse on 2 of 3 far runs). Submitted as E032 (see below).
+
+CSVs: `results/E031/` (summary, rows, far scores, bootstrap JSONs).
