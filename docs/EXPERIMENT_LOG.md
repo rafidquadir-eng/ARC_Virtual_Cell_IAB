@@ -23,6 +23,10 @@ Scores are scaled vcc2026 metrics (0 = context mean-response baseline, 1 = repli
 | E025 | 16 Oct | Source noise is what zeroes MSE; B4 (low-rank + line pooling + shrinkage) fixes it | proxy sweep, specs_E025 (47), 3 V* lines, CPU | seen | | | | | | | proxy 0.454 (E021) vs 0.380 (best B4) | | CPU ~75 min | done: B4 cuts raw MSE 4.4→1.1–1.7 but loses pds/de_sign as fast; no B4 beats E021 on the proxy; E021 per-target cos(pred,truth) ≈ 0.01–0.08. specs_E026 = E021, B1_gPL, 2 best B4 | E026 |
 | E026 | 16 Oct | Proxy winners hold on the real metric, incl. V*-far | vstar + far runs, specs_E026 | seen | 0.303 | 0.000 | 0.774 | 0.090 | −0.303 | 0.138 | 0.167 (worst 0.154) | | GPU 2.8 h | done: top is still the E021 config (0.167); best B4 0.104 (first mse_sc > 0, 0.026; raw MSE ≈ 1.0) but loses pds/fid; V*-far: E021 −0.006 on KOLF w/o pluripotent, 0 on CD4T w/o Jurkat | E027 not submitted (top = E021, already on LB) |
 | E027 | 16 Oct | B4 lifts the leaderboard | E026 top, balanced | LB | | | | | | | | | 1 submission | planned | |
+| E030 | 16 Oct | Truth is sparse/cis; B5 sparse consistent consensus + cis beats dense transfer | proxy, specs_E030 (32), 5 V* lines incl. Orion | seen | | | | | | | | | CPU | planned | E031 |
+| E031 | 16 Oct | B5 wins on the real metric, incl. V*-far | vstar 5 lines + far | seen | | | | | | | | | GPU | planned | E032 |
+| E032 | 16 Oct | B5 lifts the leaderboard | E031 top, balanced, all summaries | LB | | | | | | | | | ≤ 1 | planned | |
+| E033 | 16 Oct | Where the leaderboard score comes from (A vs B/C) | vcc status JSON, no submission | – | | | | | | | | | – | planned | |
 | E006 | 17–19 Oct | iMEMORY gene vectors add signal | kNN on iMEMORY vs shuffle vs public prior | unseen | | | | | | | | | | blocked (EC2 files) | |
 | E007 | 17 Oct | A1: source weighting + target-expression gating | | both | | | | | | | | | | planned | |
 | E008 | 18 Oct | A1: per-target shrinkage + β and DE-count calibration | | both | | | | | | | | | | planned | |
@@ -85,3 +89,6 @@ Full diagnosis in `docs/12_DIAGNOSIS.md`. The headline: raw MSE 4.66 on the lead
 - Done: E020 unseen, E025, E025b, E026 (reports in `reports/REPORTS_E016_E021.md` / `REPORTS_E025_E027.md`). E027 not submitted: E026's top is the E021 config (already on LB).
 - Curation batch 2 done: `reports/DATA_DONE_batch2.md`. `loco.json` now 13 contexts (Orion_HCT116, Orion_HEK293T, licence-tagged); D7 summaries swapped into `pb/` (originals `*_pooled.npz`). V* dry run lists 5 held-out lines.
 - Archive with own rclone client done and verified; KOLF raw deleted. Scratch held (deletable on request): Orion parquet 120 GB local, Orion converted h5ad 308 GB, d7 inputs 92 GB.
+
+## Planning note, 16 Oct ~07:30 UTC (after E025–E026, batch 2)
+B4 retired: its shrinkage was mis-scaled, so it fixed MSE but lost PDS. The E025 anatomy shows dense transfer is noise per gene (cos 0.003–0.08). New: B5 sparse cross-line-consistent consensus + CRISPRi cis effects; proxy ORACLE_TOPK/ORACLE_CIS ceilings and cis-share anatomy; `top50_overlap`; `scripts/pick_specs.py`. V* now has 5 lines (Orion HCT116/HEK293T). See `docs/14_DIAGNOSIS_ROUND2.md`.

@@ -65,11 +65,11 @@ def neighbor_pairs(tss: pd.DataFrame, genes_axis, max_bp: int = BINS[-1]) -> dic
 _PAIR_CACHE: dict = {}
 
 
-def load_pairs(tss_csv: str, genes_axis) -> dict:
+def load_pairs(tss_csv: str, genes_axis, max_bp: int = BINS[-1]) -> dict:
     """Cached neighbor_pairs for a TSS csv and gene axis."""
-    key = (tss_csv, len(genes_axis), str(genes_axis[0]) if len(genes_axis) else "")
+    key = (tss_csv, len(genes_axis), str(genes_axis[0]) if len(genes_axis) else "", max_bp)
     if key not in _PAIR_CACHE:
-        _PAIR_CACHE[key] = neighbor_pairs(pd.read_csv(tss_csv), genes_axis)
+        _PAIR_CACHE[key] = neighbor_pairs(pd.read_csv(tss_csv), genes_axis, max_bp)
     return _PAIR_CACHE[key]
 
 

@@ -1,0 +1,295 @@
+[
+ {
+  "name": "ORACLE",
+  "model": "ORACLE"
+ },
+ {
+  "name": "ORACLE_TOPK10",
+  "model": "ORACLE_TOPK",
+  "kw": {
+   "k": 10
+  }
+ },
+ {
+  "name": "ORACLE_TOPK50",
+  "model": "ORACLE_TOPK",
+  "kw": {
+   "k": 50
+  }
+ },
+ {
+  "name": "ORACLE_TOPK200",
+  "model": "ORACLE_TOPK",
+  "kw": {
+   "k": 200
+  }
+ },
+ {
+  "name": "ORACLE_TOPK1000",
+  "model": "ORACLE_TOPK",
+  "kw": {
+   "k": 1000
+  }
+ },
+ {
+  "name": "ORACLE_CIS1000",
+  "model": "ORACLE_CIS",
+  "kw": {
+   "max_bp": 1000
+  }
+ },
+ {
+  "name": "ORACLE_CIS5000",
+  "model": "ORACLE_CIS",
+  "kw": {
+   "max_bp": 5000
+  }
+ },
+ {
+  "name": "ORACLE_CIS20000",
+  "model": "ORACLE_CIS",
+  "kw": {
+   "max_bp": 20000
+  }
+ },
+ {
+  "name": "ORACLE_CIS100000",
+  "model": "ORACLE_CIS",
+  "kw": {
+   "max_bp": 100000
+  }
+ },
+ {
+  "name": "B0_control",
+  "model": "B0_control"
+ },
+ {
+  "name": "B2_raw_gPL(E021)",
+  "model": "B2_transfer",
+  "kw": {
+   "alpha": 1.0,
+   "raw": true,
+   "generic_from": [
+    "@genome_wide",
+    "@targeted"
+   ]
+  }
+ },
+ {
+  "name": "B5_z2_a0.5_cis0",
+  "model": "B5_sparse",
+  "kw": {
+   "z_thr": 2,
+   "agree": 0.5,
+   "cis_bp": null,
+   "tss": "__DATA__/tss.csv"
+  }
+ },
+ {
+  "name": "B5_z2_a0.5_cis5000",
+  "model": "B5_sparse",
+  "kw": {
+   "z_thr": 2,
+   "agree": 0.5,
+   "cis_bp": 5000,
+   "tss": "__DATA__/tss.csv"
+  }
+ },
+ {
+  "name": "B5_z2_a0.75_cis0",
+  "model": "B5_sparse",
+  "kw": {
+   "z_thr": 2,
+   "agree": 0.75,
+   "cis_bp": null,
+   "tss": "__DATA__/tss.csv"
+  }
+ },
+ {
+  "name": "B5_z2_a0.75_cis5000",
+  "model": "B5_sparse",
+  "kw": {
+   "z_thr": 2,
+   "agree": 0.75,
+   "cis_bp": 5000,
+   "tss": "__DATA__/tss.csv"
+  }
+ },
+ {
+  "name": "B5_z3_a0.5_cis0",
+  "model": "B5_sparse",
+  "kw": {
+   "z_thr": 3,
+   "agree": 0.5,
+   "cis_bp": null,
+   "tss": "__DATA__/tss.csv"
+  }
+ },
+ {
+  "name": "B5_z3_a0.5_cis5000",
+  "model": "B5_sparse",
+  "kw": {
+   "z_thr": 3,
+   "agree": 0.5,
+   "cis_bp": 5000,
+   "tss": "__DATA__/tss.csv"
+  }
+ },
+ {
+  "name": "B5_z3_a0.75_cis0",
+  "model": "B5_sparse",
+  "kw": {
+   "z_thr": 3,
+   "agree": 0.75,
+   "cis_bp": null,
+   "tss": "__DATA__/tss.csv"
+  }
+ },
+ {
+  "name": "B5_z3_a0.75_cis5000",
+  "model": "B5_sparse",
+  "kw": {
+   "z_thr": 3,
+   "agree": 0.75,
+   "cis_bp": 5000,
+   "tss": "__DATA__/tss.csv"
+  }
+ },
+ {
+  "name": "B5_z4_a0.5_cis0",
+  "model": "B5_sparse",
+  "kw": {
+   "z_thr": 4,
+   "agree": 0.5,
+   "cis_bp": null,
+   "tss": "__DATA__/tss.csv"
+  }
+ },
+ {
+  "name": "B5_z4_a0.5_cis5000",
+  "model": "B5_sparse",
+  "kw": {
+   "z_thr": 4,
+   "agree": 0.5,
+   "cis_bp": 5000,
+   "tss": "__DATA__/tss.csv"
+  }
+ },
+ {
+  "name": "B5_z4_a0.75_cis0",
+  "model": "B5_sparse",
+  "kw": {
+   "z_thr": 4,
+   "agree": 0.75,
+   "cis_bp": null,
+   "tss": "__DATA__/tss.csv"
+  }
+ },
+ {
+  "name": "B5_z4_a0.75_cis5000",
+  "model": "B5_sparse",
+  "kw": {
+   "z_thr": 4,
+   "agree": 0.75,
+   "cis_bp": 5000,
+   "tss": "__DATA__/tss.csv"
+  }
+ },
+ {
+  "name": "B5x_tl0.05",
+  "model": "B5_sparse",
+  "kw": {
+   "z_thr": 3,
+   "agree": 0.75,
+   "cis_bp": 5000,
+   "tss": "__DATA__/tss.csv",
+   "trans_lambda": 0.05
+  }
+ },
+ {
+  "name": "B5x_b1.5",
+  "model": "B5_sparse",
+  "kw": {
+   "z_thr": 3,
+   "agree": 0.75,
+   "cis_bp": 5000,
+   "tss": "__DATA__/tss.csv",
+   "beta": 1.5
+  }
+ },
+ {
+  "name": "B5x_b0.7",
+  "model": "B5_sparse",
+  "kw": {
+   "z_thr": 3,
+   "agree": 0.75,
+   "cis_bp": 5000,
+   "tss": "__DATA__/tss.csv",
+   "beta": 0.7
+  }
+ },
+ {
+  "name": "B5x_pc20",
+  "model": "B5_sparse",
+  "kw": {
+   "z_thr": 3,
+   "agree": 0.75,
+   "cis_bp": 5000,
+   "tss": "__DATA__/tss.csv",
+   "pc": 20
+  }
+ },
+ {
+  "name": "B5x_sim0.1",
+  "model": "B5_sparse",
+  "kw": {
+   "z_thr": 3,
+   "agree": 0.75,
+   "cis_bp": 5000,
+   "tss": "__DATA__/tss.csv",
+   "sim_tau": 0.1
+  }
+ },
+ {
+  "name": "B5x_gt5",
+  "model": "B5_sparse",
+  "kw": {
+   "z_thr": 3,
+   "agree": 0.75,
+   "cis_bp": 5000,
+   "tss": "__DATA__/tss.csv",
+   "gate_target_cpm": 5
+  }
+ },
+ {
+  "name": "B5x_ml2",
+  "model": "B5_sparse",
+  "kw": {
+   "z_thr": 3,
+   "agree": 0.75,
+   "cis_bp": 5000,
+   "tss": "__DATA__/tss.csv",
+   "min_lines": 2
+  }
+ },
+ {
+  "name": "B5x_cis20k",
+  "model": "B5_sparse",
+  "kw": {
+   "z_thr": 3,
+   "agree": 0.75,
+   "cis_bp": 20000,
+   "tss": "__DATA__/tss.csv"
+  }
+ },
+ {
+  "name": "B5x_z5",
+  "model": "B5_sparse",
+  "kw": {
+   "z_thr": 5,
+   "agree": 0.75,
+   "cis_bp": 5000,
+   "tss": "__DATA__/tss.csv"
+  }
+ }
+]

@@ -135,6 +135,51 @@ vcc submit $DATA/preds/E012.vcc -m "E012 <spec name> with K562 GWPS" --wait
 ## ⏸ PAUSED (15 Oct ~03:30 UTC): don't start E013–E017
 Wait until the curation agent has pushed `reports/DATA_DONE.md`. If E013 is already running, let it finish and push its report, then stop. E013/E015 are folded into **E020** below; E014/E017 are replaced by **E021**. The earlier stages stay here for the record.
 
+## E030–E033 — sparse consistent consensus + cis effects (B5), 5-line V\*, per-context leaderboard (see `docs/14_DIAGNOSIS_ROUND2.md`)
+Why: E025/E026 showed the dense transfer is mostly noise per gene (cos 0.003–0.08), and B4's shrinkage killed what signal there was. B5 keeps only genes that are significant and sign-consistent across lines, plus CRISPRi neighbour (cis) effects. The ORACLE_TOPK/ORACLE_CIS ceilings tell us how sparse the truth is and how much of it is cis. B4 is retired; don't include it in new runs.
+
+**E030 (CPU, proxy; ~15–30 min per line):**
+```bash
+source ~/.vcc_env; cd ~/vcc; git pull
+PANEL=$(find $DATA/challenge -name pert_counts.csv | head -1)
+sed "s#__DATA__#$DATA#g" specs_E030.json > specs_E030.local.json
+for h in CD4T_Stim8hr KOLF2.1J K562_GWPS Orion_HCT116 Orion_HEK293T; do
+  python -m vcc26.proxy --config loco.json --holdout $h --holdout-dir $DATA/loco/E020/holdout_$h --panel-file $PANEL \
+    --tss $DATA/tss.csv --specs specs_E030.local.json --out results/E030 \
+    --anatomy "B2_raw_gPL(E021),B5_z3_a0.75_cis5000" 2>&1 | tee logs/E030_$h.log
+done
+python scripts/pick_specs.py --results results/E030 --specs specs_E030.local.json --out specs_E031.json | tee results/E030/pick.txt
+```
+(`--panel-file` builds the Orion holdouts in `$DATA/loco/E020/holdout_Orion_*` the first time, so E031 reuses them.)
+**REPORT E030:**
+- the ORACLE diagnostics table from `pick.txt` (TOPK 10/50/200/1000, CIS 1k/5k/20k/100k: pds_sc, mse_sc, mse_raw, de_sign);
+- the full ranked table, with `genes_kept_median`, `cis_genes_median` and `top50_overlap`;
+- anatomy for the two specs, including `share_true_signal_within_{1000,5000,20000,100000}bp` per line.
+
+Commit `results/E030/*` and `specs_E031.json`.
+
+**E031 (GPU):** real V\* on all 5 lines plus V\*-far:
+```bash
+nvidia-smi    # must be free
+python -m vcc26.vstar --config loco.json --panel-file $PANEL --specs specs_E031.json --out $DATA/loco/E020 --tag E031 --mode seen
+for pair in "Orion_HCT116:Orion_HEK293T" "Orion_HEK293T:Orion_HCT116"; do h=${pair%%:*}; x=${pair##*:}
+  SRC=$(python -c "import json;print(','.join(c['name'] for c in json.load(open('loco.json'))['contexts'] if c['name'] not in ('$h','$x')))")
+  python -m vcc26.loco --config loco.json --holdout $h --mode seen --out $DATA/loco/E020 --panel-file $PANEL --specs specs_E031.json --sources $SRC --tag E031far
+done
+python -m vcc26.loco --config loco.json --holdout KOLF2.1J --mode seen --out $DATA/loco/E020 --panel-file $PANEL --specs specs_E031.json \
+  --sources K562,RPE1,HepG2,Jurkat,K562_GWPS,CD4T_Rest,CD4T_Stim8hr,CD4T_Stim48hr,Orion_HCT116,Orion_HEK293T --tag E031far
+```
+**REPORT E031:** the V\* summary (selection, worst line, six metrics, per line, raw MSE) and the V\*-far rows.
+
+**E032: leaderboard** (state the day's count first). Submit E031's top spec **only if** it beats `B2_raw_gPL(E021)` by ≥ 0.01 on V\* **and** isn't worse on V\*-far. Use `--emit balanced --registry loco.json`, all summaries (including Orion), and the spec's `--kw` (its tss path is already absolute in `specs_E031.json`). Report the six metrics, the rank, and the comparison with E021 (0.106).
+
+**E033 (no submission):** the per-context breakdown of our leaderboard entries:
+```bash
+vcc --json status QJexGFhKagEpbvXkiUku > results/E033_E021_status.json     # E021
+vcc --json status aZXPOs2QkOuKb5oZQzYu > results/E033_E012_status.json     # E012
+```
+**REPORT E033:** per-context (A/B/C) overall and six metrics, if the JSON has them. Do the same for E032 once it's scored.
+
 ## E025–E027 — noise-aware consensus (B4), proxy sweep, confirmation (see `docs/12_DIAGNOSIS.md`)
 Why: E021's raw MSE is 4.66 (V\* 3.2–6.8), almost 5× the true effect size, because source sampling noise is copied onto every gene. B4 denoises (low-rank), pools by line with noise weights, and shrinks; `vcc26.proxy` scores specs in seconds on CPU.
 

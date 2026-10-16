@@ -511,3 +511,111 @@ def predict_consensus(targets, sources, target_ctrl_cpm=None, lowrank: bool = Tr
 
 
 MODELS["B4_consensus"] = predict_consensus
+
+
+# ---------------------------------------------------------------------------------------------
+# B5: sparse, cross-line-consistent consensus + CRISPRi cis effects (16 Oct). E025/E026 showed that
+# per-gene transferred effects barely correlate with the truth (cos 0.003-0.08), that shrinking
+# everything (B4) kills the little signal there is, and that the MSE-optimal scale of the dense
+# transfer is ~0.01-0.1. So keep only genes whose response is significant AND sign-consistent across
+# independent lines, at full size, plus the CRISPRi neighbour (cis) effects, and predict 0 elsewhere.
+# ---------------------------------------------------------------------------------------------
+
+def _line_effects(sources, t, pc):
+    """{line: (effect (G,), noise var (G,))} for target t, merging datasets of a line by inverse variance."""
+    G = len(sources[0]["genes"])
+    acc = {}
+    for s in sources:
+        idx = np.where(s["perts"] == t)[0]
+        if not len(idx):
+            continue
+        i = idx[0]
+        if "_lfcpc" not in s or s.get("_pc") != pc:
+            s["_lfcpc"] = _lfc_pc(s, pc); s["_varpc"] = _noise_var(s, s["_lfcpc"], pc); s["_pc"] = pc
+        v = s["present"] & (s["ctrl_cpm"] > EPS_CPM)
+        w = np.where(v, 1.0 / np.maximum(s["_varpc"][i], 1e-8), 0.0) * s.get("_simw", 1.0)
+        L = s.get("line") or s.get("name")
+        e, ww = acc.get(L, (np.zeros(G), np.zeros(G)))
+        acc[L] = (e + w * s["_lfcpc"][i], ww + w)
+    return {L: (np.where(ww > 0, e / np.maximum(ww, 1e-12), 0.0), np.where(ww > 0, 1.0 / np.maximum(ww, 1e-12), np.inf))
+            for L, (e, ww) in acc.items()}
+
+
+def predict_sparse(targets, sources, target_ctrl_cpm=None, pc: float = 1.0, z_thr: float = 3.0,
+                   agree: float = 0.75, min_lines: int = 1, trans_lambda: float = 0.0, beta: float = 1.0,
+                   cis_bp: int | None = 5000, tss: str | None = None, cis_gate_cpm: float = 5.0,
+                   gate_target_cpm: float | None = None, sim_tau: float | None = None,
+                   return_info: bool = False, **_):
+    """Per target: meta-analyse its measured response across LINES (fixed-effect mean with a
+    Birge-ratio inflation of the standard error for between-line heterogeneity). Keep genes with
+    |z| >= z_thr whose sign agrees in >= `agree` of the lines measuring them; predict their consensus
+    at full size (x beta) and trans_lambda x consensus elsewhere (default 0).
+    cis: genes whose TSS lies within cis_bp of the target's TSS get their measured consensus
+    knockdown if negative, else the neighbour-prior knockdown for that distance; both gated by the
+    neighbour's expression in the target context (CPM / cis_gate_cpm, capped at 1).
+    gate_target_cpm: scale the trans part by the target gene's own expression in the context."""
+    G = len(sources[0]["genes"]); genes = sources[0]["genes"]; gpos = {g: i for i, g in enumerate(genes)}
+    tc = None if target_ctrl_cpm is None else np.asarray(target_ctrl_cpm, float)
+    for s in sources:
+        s["_simw"] = 1.0
+    if sim_tau and tc is not None:
+        rs = {}
+        for s in sources:
+            L = s.get("line") or s.get("name")
+            rs.setdefault(L, []).append(_ctrl_corr(s["ctrl_cpm"], tc))
+        rL = {L: np.nanmean(v) for L, v in rs.items()}
+        mx = max(rL.values())
+        for s in sources:
+            s["_simw"] = float(np.exp((rL[s.get("line") or s.get("name")] - mx) / sim_tau))
+    pairs, prior = {}, None
+    if cis_bp and tss:
+        from .neighbors import NeighborPrior, load_pairs
+        pairs = load_pairs(tss, genes, max_bp=cis_bp)
+        prior = NeighborPrior.learn(sources, load_pairs(tss, genes))      # 0-5 kb distance bins
+    out = np.zeros((len(targets), G))
+    kept, ncis = [], []
+    for r, t in enumerate(targets):
+        le = _line_effects(sources, t, pc)
+        if not le:
+            kept.append(0); ncis.append(0)
+            continue
+        E = np.vstack([e for e, _ in le.values()]); V = np.vstack([v for _, v in le.values()])
+        W = np.where(np.isfinite(V), 1.0 / V, 0.0)
+        sw = W.sum(0)
+        mu = np.where(sw > 0, (W * E).sum(0) / np.maximum(sw, 1e-12), 0.0)
+        k = (W > 0).sum(0)
+        Q = np.where(sw > 0, (W * (E - mu) ** 2).sum(0), 0.0)
+        birge = np.where(k > 1, np.maximum(1.0, Q / np.maximum(k - 1, 1)), 1.0)
+        se = np.where(sw > 0, np.sqrt(birge / np.maximum(sw, 1e-12)), np.inf)
+        z = mu / se
+        same = ((np.sign(E) == np.sign(mu)[None, :]) & (W > 0)).sum(0) / np.maximum(k, 1)
+        keep = (np.abs(z) >= z_thr) & (same >= agree) & (k >= min_lines)
+        pred = np.where(keep, mu * beta, trans_lambda * mu)
+        if gate_target_cpm and tc is not None and t in gpos:
+            pred *= min(1.0, tc[gpos[t]] / gate_target_cpm)
+        nc = 0
+        for nb, d in pairs.get(t, []):
+            j = gpos.get(nb)
+            if j is None:
+                continue
+            g = 1.0 if tc is None else float(np.clip(tc[j] / cis_gate_cpm, 0, 1))
+            if k[j] > 0 and mu[j] < 0:
+                pred[j] = mu[j] * g
+            elif prior is not None:
+                from .neighbors import _bin
+                b = _bin(d)
+                if b >= 0 and prior.bin_lfc[b] < 0:
+                    pred[j] = prior.bin_lfc[b] * g
+            nc += 1
+        out[r] = pred
+        kept.append(int(keep.sum())); ncis.append(nc)
+    if tc is not None:
+        if pc != 1.0:
+            tcpm = np.maximum((tc[None, :] + pc) * np.power(2.0, out) - pc, 0.0)
+            out = np.log2((tcpm + 1.0) / (tc[None, :] + 1.0))
+        out = np.where((tc[None, :] < 1.0) & (out > 0), 0.0, out)        # no induction from nothing
+    info = {"genes_kept_median": float(np.median(kept)) if kept else 0.0, "cis_genes_median": float(np.median(ncis)) if ncis else 0.0}
+    return (out.astype(np.float32), info) if return_info else out.astype(np.float32)
+
+
+MODELS["B5_sparse"] = predict_sparse

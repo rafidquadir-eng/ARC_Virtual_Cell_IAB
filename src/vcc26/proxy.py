@@ -111,11 +111,59 @@ def score(lfc: np.ndarray, T: dict, panel_genes: set, ctrl_cpm: np.ndarray) -> d
         top = cand[np.argsort(-np.abs(tl[i, cand]))[:50]]
         sgn.append(np.mean(np.sign(pl[i, top]) == np.sign(tl[i, top])))
         nm.append(np.abs(pl[i, top] - tl[i, top]).sum() / max(np.abs(tl[i, top]).sum(), 1e-9))
-    return {"mse_raw": float(mse), "mse_raw_credit": float(mse_credit), "mse_base_raw": float(mse_b),
+    # are we pointing at the right genes? overlap of each target's top-50 genes by |effect|
+    te = np.abs((b - bc) * mask); pe = np.abs((bh - bc) * mask)
+    tt = np.argsort(-te, axis=1)[:, :50]; pt = np.argsort(-pe, axis=1)[:, :50]
+    top50 = float(np.mean([len(set(tt[i]) & set(pt[i])) / 50 for i in range(n) if pe[i].max() > 0])) if (pe.max(1) > 0).any() else 0.0
+    return {"top50_overlap": top50,
+            "mse_raw": float(mse), "mse_raw_credit": float(mse_credit), "mse_base_raw": float(mse_b),
             "mse_sc": float(1 - mse / mse_b), "mse_sc_credit": float(min(1.0, max(0.0, 1 - mse_credit / mse_b))),
             "pds_raw": pds, "pds_rep": pds_r, "pds_sc": float((pds - 0.5) / max(pds_r - 0.5, 1e-9)),
             "de_sign": float(np.mean(sgn)), "nmae_p": float(np.mean(nm)),
             "_N": N, "_D": D, "_C": C, "_bh": bh, "_b": b, "_bc": bc, "_mask": mask}
+
+
+def cis_share(res: dict, T: dict, tss: str | None) -> dict:
+    """Share of the noise-corrected true signal energy that sits in genes whose TSS is within d of
+    the target's TSS (CRISPRi neighbour silencing), per distance."""
+    if not tss:
+        return {}
+    from .neighbors import load_pairs
+    genes = T["genes"]; gi = {g: i for i, g in enumerate(genes)}
+    b, bc, m = res["_b"], res["_bc"], res["_mask"]
+    sig = (b - bc) ** 2 * m
+    out = {}
+    for d in (1000, 5000, 20000, 100000):
+        pairs = load_pairs(tss, genes, max_bp=d)
+        num = 0.0
+        for r, t in enumerate(T["perts"]):
+            js = [gi[n] for n, _ in pairs.get(t, []) if n in gi]
+            num += sig[r, js].sum() if js else 0.0
+        out[f"share_true_signal_within_{d}bp"] = float(num / max(sig.sum(), 1e-12))
+    return out
+
+
+def oracle_variant(kind: str, kw: dict, T: dict, ccpm: np.ndarray, tss: str | None) -> np.ndarray:
+    """Diagnostic ceilings: the held-out line's own effect kept only on (a) its top-k genes per
+    target (ORACLE_TOPK, k) or (b) genes within max_bp of the target TSS (ORACLE_CIS)."""
+    cp = T["P"] / T["P"].sum(1, keepdims=True) * 1e6
+    lfc = np.log2((cp + 1) / (ccpm[None, :] + 1))
+    keep = np.zeros_like(lfc, bool)
+    if kind == "ORACLE_TOPK":
+        k = int(kw.get("k", 50))
+        b = bspace(T["P"]); bc = bspace(T["Pc"])[0]
+        e = np.abs(b - bc)
+        top = np.argsort(-e, axis=1)[:, :k]
+        keep[np.arange(len(lfc))[:, None], top] = True
+    else:
+        from .neighbors import load_pairs
+        gi = {g: i for i, g in enumerate(T["genes"])}
+        pairs = load_pairs(tss, T["genes"], max_bp=int(kw.get("max_bp", 5000)))
+        for r, t in enumerate(T["perts"]):
+            for n, _ in pairs.get(t, []):
+                if n in gi:
+                    keep[r, gi[n]] = True
+    return np.where(keep, lfc, 0.0)
 
 
 def anatomy(res: dict, T: dict, ctrl_cpm: np.ndarray) -> dict:
@@ -152,9 +200,15 @@ def main():
     ap.add_argument("--mode", default="seen", choices=["seen", "unseen"])
     ap.add_argument("--sources", default=None); ap.add_argument("--anatomy", default=None,
                     help="comma-separated spec names to print an error anatomy for")
+    ap.add_argument("--tss", default=None, help="TSS csv (for ORACLE_CIS, cis anatomy and B5 cis effects)")
+    ap.add_argument("--panel-file", default=None,
+                    help="if the holdout dir has no real.h5ad yet, build it (challenge panel targets the line measured)")
     a = ap.parse_args()
     cfg = json.load(open(a.config)); ctxs = {c["name"]: c for c in cfg["contexts"]}
     hold = ctxs[a.holdout]; line = hold.get("line", a.holdout)
+    if not os.path.exists(f"{a.holdout_dir}/real.h5ad"):
+        axis_all = pd.read_csv(cfg["gene_axis"], header=None).iloc[:, 0].astype(str).values
+        loco.prepare_holdout(hold, axis_all, a.holdout_dir, 300, 400, 0, panel_set=loco.read_panel(a.panel_file))
     T = truth_tables(f"{a.holdout_dir}/real.h5ad")
     axis = T["genes"]; panel = T["perts"]
     ctrl = ad.read_h5ad(f"{a.holdout_dir}/ctrl.h5ad")
@@ -170,18 +224,25 @@ def main():
     rows, anat = [], {}
     for sp_ in specs:
         name = sp_["name"]; kw = dict(sp_.get("kw", {}))
+        info = {}
         if sp_["model"] == "ORACLE":
             cp = T["P"] / T["P"].sum(1, keepdims=True) * 1e6
             lfc = np.log2((cp + 1) / (ccpm[None, :] + 1))
+        elif sp_["model"] in ("ORACLE_TOPK", "ORACLE_CIS"):
+            lfc = oracle_variant(sp_["model"], kw, T, ccpm, a.tss)
         else:
             if sp_.get("fallback") == "linear":
                 kw["fallback"] = models.linear_fallback(sources)
-            lfc = models.MODELS[sp_["model"]](panel, sources, target_ctrl_cpm=ccpm, **kw)
+            if sp_["model"] == "B5_sparse":
+                kw.setdefault("tss", a.tss)
+                lfc, info = models.MODELS["B5_sparse"](panel, sources, target_ctrl_cpm=ccpm, return_info=True, **kw)
+            else:
+                lfc = models.MODELS[sp_["model"]](panel, sources, target_ctrl_cpm=ccpm, **kw)
         r = score(np.asarray(lfc, float), T, pset, ccpm)
-        row = {"spec": name, "holdout": a.holdout, "mode": a.mode, **{k: v for k, v in r.items() if not k.startswith("_")}}
+        row = {"spec": name, "holdout": a.holdout, "mode": a.mode, **{k: v for k, v in r.items() if not k.startswith("_")}, **info}
         rows.append(row); print(json.dumps({k: (round(v, 4) if isinstance(v, float) else v) for k, v in row.items()}))
         if a.anatomy and name in a.anatomy.split(","):
-            anat[name] = anatomy(r, T, ccpm)
+            anat[name] = {**anatomy(r, T, ccpm), **cis_share(r, T, a.tss)}
     os.makedirs(a.out, exist_ok=True)
     df = pd.DataFrame(rows)
     df.to_csv(f"{a.out}/proxy_{a.holdout}_{a.mode}.csv", index=False)
