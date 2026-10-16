@@ -27,7 +27,7 @@ Scores are scaled vcc2026 metrics (0 = context mean-response baseline, 1 = repli
 | E031 | 16 Oct | B5 wins on the real metric, incl. V*-far | vstar 5 lines + far | seen | 0.664 | 0.261 | 0.752 | 0.210 | −0.516 | 0.205 | 0.263 vs E021 0.234 (CI90 +0.011..+0.039) | | GPU 4 h | done: B5_z2_a0.5_cis5000 top; far aggregate +0.007 (worse on 2/3) | E032 |
 | E032 | 16 Oct | B5 lifts the leaderboard | B5_z2_a0.5_cis5000, balanced, 13 summaries | LB | 0.583 | 0.144 | −0.293 | 0.102 | 0.000 | 0.111 | | 0.1077 (rank 688) | 1 submission (1/2 on 16 Oct) | done: +0.002 vs E021; first LB MSE > 0 but fid collapses | |
 | E033 | 16 Oct | Where the leaderboard score comes from (A vs B/C) | vcc status JSON, no submission | – | | | | | | | | | – | done: status JSON has no per-context fields; only latest entry retrievable | |
-| E034 | 16–17 Oct | Learned translator (M1) and context-programme projection beat B5/E021 | proxy + V* + bootstrap, specs_E034 | seen | | | | | | | | | CPU+GPU | planned | E035 |
+| E034 | 16–17 Oct | Learned translator (M1) and context-programme projection beat B5/E021 | proxy + V* + bootstrap, specs_E034 | seen | 0.703 | 0.159 | 0.653 | 0.229 | −0.454 | 0.152 | M1_b1.3 0.240 vs B5 0.263 (Δ −0.023, CI −0.036..−0.005) | | CPU+GPU 5 h | done: M1 proxy winner (0.435) but below B5 on V*; best on HEK293T; top spec stays B5 | E035 |
 | E035 | 17 Oct | NC (Orion) sources help non-NC lines | V* with/without NC | seen | | | | | | | | | GPU | planned | |
 | E036 | 17 Oct | Final pipeline runs end to end in time | dress rehearsal A/B/C, NC on/off | – | | | | | | | | | – | planned | |
 | E006 | 17–19 Oct | iMEMORY gene vectors add signal | kNN on iMEMORY vs shuffle vs public prior | unseen | | | | | | | | | | blocked (EC2 files) | |

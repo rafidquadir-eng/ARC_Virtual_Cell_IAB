@@ -227,3 +227,79 @@ Interpretation:
 
 ### E033 addendum: E032 status JSON
 `results/E033_E032_status.json`: like E021's, it has no per-context (A/B/C) fields (keys seen: score_avg, pds_cosine, expr_mse_unbiased_capped_norm).
+
+
+---
+
+## REPORT E034 — learned translator M1 + context-programme projection
+
+**E034a (CPU proxy, 5 lines; run alongside E030, 07:15–08:40 UTC):** `specs_E034.local.json` (10 specs) →
+`scripts/pick_specs.py` → `specs_E034b.json`, plus E031's best spec `B5_z2_a0.5_cis5000` added by hand.
+
+| spec                |   proxy |   pds_sc |   mse_sc |   mse_raw |   de_sign |   nmae_p |   worst |   p_CD4T_Stim8hr |   p_K562_GWPS |   p_KOLF2.1J |   p_Orion_HCT116 |   p_Orion_HEK293T |
+|:--------------------|--------:|---------:|---------:|----------:|----------:|---------:|--------:|-----------------:|--------------:|-------------:|-----------------:|------------------:|
+| M1_b0.7             |   0.435 |    0.727 |   -0.082 |     1.055 |     0.678 |    0.99  |   0.184 |            0.248 |         0.47  |        0.184 |            0.753 |             0.518 |
+| M1                  |   0.434 |    0.724 |   -0.121 |     1.091 |     0.679 |    0.988 |   0.184 |            0.247 |         0.47  |        0.184 |            0.751 |             0.516 |
+| M1_t1500            |   0.433 |    0.717 |   -0.13  |     1.101 |     0.687 |    0.987 |   0.24  |            0.258 |         0.45  |        0.24  |            0.741 |             0.477 |
+| M1_b1.3             |   0.432 |    0.72  |   -0.178 |     1.147 |     0.681 |    0.986 |   0.184 |            0.246 |         0.469 |        0.184 |            0.75  |             0.514 |
+| M1_proj200          |   0.41  |    0.674 |   -0.102 |     1.074 |     0.683 |    0.988 |   0.169 |            0.232 |         0.451 |        0.169 |            0.722 |             0.477 |
+| M1_proj50           |   0.407 |    0.668 |   -0.101 |     1.072 |     0.682 |    0.988 |   0.168 |            0.232 |         0.447 |        0.168 |            0.715 |             0.474 |
+| M1_min0.05          |   0.338 |    0.821 |   -0.112 |     1.083 |     0.318 |    0.993 |   0.08  |            0.267 |         0.347 |        0.08  |            0.486 |             0.509 |
+| B2_raw_gPL(E021)    |   0.3   |    0.568 |   -3.548 |     4.425 |     0.541 |    0.97  |   0.101 |            0.145 |         0.363 |        0.101 |            0.568 |             0.323 |
+| B5_z3_a0.75_cis5000 |   0.264 |    0.658 |   -0.366 |     1.33  |     0.337 |    0.994 |   0.04  |            0.068 |         0.337 |        0.04  |            0.574 |             0.3   |
+| B5_proj200          |   0.23  |    0.616 |   -0.283 |     1.25  |     0.306 |    0.995 |   0.002 |            0.036 |         0.318 |        0.002 |            0.531 |             0.264 |
+
+**M1 anatomy** (`results/E034/anatomy_*_seen.json`):
+
+| line          |   top-10% D share | cos by tier          | best scale by tier   | N/D by tier                     | sq-err share by ctrl-CPM bin   |
+|:--------------|------------------:|:---------------------|:---------------------|:--------------------------------|:-------------------------------|
+| CD4T_Stim8hr  |             0.412 | 0.053, 0.035, 0.022  | 0.57, 0.28, 0.18     | 1.00, 1.04, 1.19                | 0.01, 0.05, 0.18, 0.50, 0.25   |
+| K562_GWPS     |             0.379 | 0.112, 0.074, 0.027  | 0.53, 0.44, 0.13     | 1.00, 1.09, 2.44                | 0.00, 0.00, 0.18, 0.66, 0.16   |
+| KOLF2.1J      |             0.185 | 0.023, -0.006, 0.032 | 0.24, -0.11, 0.39    | 1.03, 1.05, 1.09                | 0.01, 0.07, 0.26, 0.49, 0.16   |
+| Orion_HCT116  |             0.621 | 0.060, 0.044, 0.021  | 0.77, 0.41, 0.18     | 0.99, 1.06, -109960986554465.03 | 0.02, 0.06, 0.25, 0.53, 0.14   |
+| Orion_HEK293T |             0.493 | 0.029, 0.061, 0.027  | 0.26, 0.36, 0.18     | 1.03, 1.07, ∞                   | 0.02, 0.06, 0.21, 0.53, 0.19   |
+
+**`train_rows`:** `translator.py` records it in the model's info dict, but neither `vcc26.proxy` nor `vcc26.vstar` writes that dict to their CSVs or logs.
+So it isn't available. It needs a one-line change in proxy/loco to save `info`, which is planning's code.
+
+**E034b (GPU V\*, 12:09–15:46 UTC):** `vstar_summary_E034_seen.csv`
+
+| model              | emit     |   pds |   mse |   fid |   reach |    jac |   nmae |   selection |   worst_line |   line_CD4T_Stim8hr |   line_K562_GWPS |   line_KOLF2.1J |   line_Orion_HCT116 |   line_Orion_HEK293T |
+|:-------------------|:---------|------:|------:|------:|--------:|-------:|-------:|------------:|-------------:|--------------------:|-----------------:|----------------:|--------------------:|---------------------:|
+| B5_z2_a0.5_cis5000 | balanced | 0.664 | 0.261 | 0.752 |   0.21  | -0.516 |  0.205 |       0.263 |        0.141 |               0.184 |            0.262 |           0.141 |               0.483 |                0.242 |
+| M1_b1.3            | balanced | 0.703 | 0.159 | 0.653 |   0.229 | -0.454 |  0.152 |       0.24  |        0.083 |               0.179 |            0.25  |           0.083 |               0.365 |                0.323 |
+| B2_raw_gPL(E021)   | balanced | 0.563 | 0.002 | 0.791 |   0.328 | -0.522 |  0.24  |       0.234 |        0.172 |               0.192 |            0.225 |           0.172 |               0.339 |                0.24  |
+| M1_min0.05         | balanced | 0.79  | 0.126 | 0.605 |   0.187 | -0.456 |  0.142 |       0.232 |        0.097 |               0.193 |            0.223 |           0.097 |               0.325 |                0.322 |
+| M1                 | balanced | 0.713 | 0.143 | 0.619 |   0.215 | -0.458 |  0.149 |       0.23  |        0.077 |               0.175 |            0.228 |           0.077 |               0.349 |                0.322 |
+| M1_t1500           | balanced | 0.698 | 0.141 | 0.614 |   0.21  | -0.465 |  0.151 |       0.225 |        0.085 |               0.18  |            0.22  |           0.085 |               0.33  |                0.309 |
+| M1_b0.7            | balanced | 0.715 | 0.124 | 0.568 |   0.184 | -0.474 |  0.133 |       0.209 |        0.071 |               0.171 |            0.196 |           0.071 |               0.313 |                0.291 |
+
+Raw MSE per row:
+
+| model              |   CD4T_Stim8hr |   K562_GWPS |   KOLF2.1J |   Orion_HCT116 |   Orion_HEK293T |
+|:-------------------|---------------:|------------:|-----------:|---------------:|----------------:|
+| B2_raw_gPL(E021)   |           1.71 |        1.12 |       1.03 |           3.73 |            4.8  |
+| B5_z2_a0.5_cis5000 |           0.99 |        0.82 |       1.01 |           0.72 |            0.91 |
+| M1                 |           0.99 |        0.9  |       1.03 |           1.02 |            0.97 |
+| M1_b0.7            |           1    |        0.95 |       1.03 |           1.04 |            0.99 |
+| M1_b1.3            |           0.98 |        0.87 |       1.02 |           1    |            0.95 |
+| M1_min0.05         |           1    |        0.93 |       1.03 |           1.05 |            0.98 |
+| M1_t1500           |           0.99 |        0.91 |       1.02 |           1.02 |            0.98 |
+
+**Paired bootstrap** (`vcc26.compare`, 1,000 resamples):
+
+| comparison | Δ mean | 90 % CI | P(Δ > 0) | per line |
+|---|---|---|---|---|
+| B5_z2_a0.5_cis5000 − E021 (runbook: best E034b spec vs E021) | +0.0291 | [+0.0113, +0.0388] | 0.995 | CD4T_Stim8hr -0.008, KOLF2.1J -0.030, K562_GWPS +0.037, Orion_HCT116 +0.144, Orion_HEK293T +0.002 |
+| M1_b1.3 − E021 | +0.0066 | [-0.0088, +0.0161] | 0.715 | CD4T_Stim8hr -0.013, KOLF2.1J -0.088, K562_GWPS +0.025, Orion_HCT116 +0.026, Orion_HEK293T +0.083 |
+| M1_b1.3 − B5_z2_a0.5_cis5000 (current LB config) | -0.0225 | [-0.0362, -0.0049] | 0.017 | CD4T_Stim8hr -0.005, KOLF2.1J -0.058, K562_GWPS -0.012, Orion_HCT116 -0.118, Orion_HEK293T +0.081 |
+
+Findings:
+- **The proxy and the real metric disagree on M1.** M1 is the proxy winner by a wide margin (0.435 vs B5 0.264 and E021 0.300; DE sign 0.68). On V\* the best M1 variant (β 1.3) is
+  0.240: above E021 (+0.007, CI includes 0) but **significantly below B5** (−0.023, CI [−0.036, −0.005]). M1 has the best pds (0.70–0.79), but less MSE than B5 (0.13–0.16 vs 0.26) and lower fid (0.57–0.65 vs 0.75).
+- M1 wins clearly on Orion_HEK293T (0.323 vs 0.242 for B5) and loses on KOLF2.1J (0.083 vs 0.141) and Orion_HCT116 (0.365 vs 0.483). Larger β helps M1 (0.7 → 1.0 → 1.3: 0.209 → 0.230 → 0.240), so it's under-scaled.
+- The projection variants (`M1_proj200/50`, `B5_proj200`) were below the bare models on the proxy and were not picked for V\*.
+- **Top spec for E035/E036: `B5_z2_a0.5_cis5000`** (V\* 0.263). **Leaderboard rule** (CI lower bound vs the current LB config > 0): the LB config is now B5 itself (E032), and no E034 spec beats it, so there's no submission.
+- The proxy overrates M1 for the same reason it overrated B5x_tl0.05 in E030: it weights pds/DE sign and under-weights fid/reach/MSE as the real scorer does. Worth recalibrating before using it to pick.
+
+Files: `results/E034/` (proxy CSVs, anatomy, pick.txt, V\* summary/rows, bootstrap JSONs); `specs_E034b.json`.
