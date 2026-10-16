@@ -23,10 +23,10 @@ Scores are scaled vcc2026 metrics (0 = context mean-response baseline, 1 = repli
 | E025 | 16 Oct | Source noise is what zeroes MSE; B4 (low-rank + line pooling + shrinkage) fixes it | proxy sweep, specs_E025 (47), 3 V* lines, CPU | seen | | | | | | | proxy 0.454 (E021) vs 0.380 (best B4) | | CPU ~75 min | done: B4 cuts raw MSE 4.4→1.1–1.7 but loses pds/de_sign as fast; no B4 beats E021 on the proxy; E021 per-target cos(pred,truth) ≈ 0.01–0.08. specs_E026 = E021, B1_gPL, 2 best B4 | E026 |
 | E026 | 16 Oct | Proxy winners hold on the real metric, incl. V*-far | vstar + far runs, specs_E026 | seen | 0.303 | 0.000 | 0.774 | 0.090 | −0.303 | 0.138 | 0.167 (worst 0.154) | | GPU 2.8 h | done: top is still the E021 config (0.167); best B4 0.104 (first mse_sc > 0, 0.026; raw MSE ≈ 1.0) but loses pds/fid; V*-far: E021 −0.006 on KOLF w/o pluripotent, 0 on CD4T w/o Jurkat | E027 not submitted (top = E021, already on LB) |
 | E027 | 16 Oct | B4 lifts the leaderboard | E026 top, balanced | LB | | | | | | | | | 1 submission | planned | |
-| E030 | 16 Oct | Truth is sparse/cis; B5 sparse consistent consensus + cis beats dense transfer | proxy, specs_E030 (32), 5 V* lines incl. Orion | seen | | | | | | | | | CPU | planned | E031 |
-| E031 | 16 Oct | B5 wins on the real metric, incl. V*-far | vstar 5 lines + far | seen | | | | | | | | | GPU | planned | E032 |
-| E032 | 16 Oct | B5 lifts the leaderboard | E031 top, balanced, all summaries | LB | | | | | | | | | ≤ 1 | planned | |
-| E033 | 16 Oct | Where the leaderboard score comes from (A vs B/C) | vcc status JSON, no submission | – | | | | | | | | | – | planned | |
+| E030 | 16 Oct | Truth is sparse/cis; B5 sparse consistent consensus + cis beats dense transfer | proxy, specs_E030 (32), 5 V* lines incl. Orion | seen | | | | | | | | | CPU 50 min | done: proxy 0.336 (B5x_tl0.05) vs 0.300 (E021); truth sparse (top-10 genes = full pds); cis ≈ 0.1 % of signal | E031 |
+| E031 | 16 Oct | B5 wins on the real metric, incl. V*-far | vstar 5 lines + far | seen | 0.664 | 0.261 | 0.752 | 0.210 | −0.516 | 0.205 | 0.263 vs E021 0.234 (CI90 +0.011..+0.039) | | GPU 4 h | done: B5_z2_a0.5_cis5000 top; far aggregate +0.007 (worse on 2/3) | E032 |
+| E032 | 16 Oct | B5 lifts the leaderboard | B5_z2_a0.5_cis5000, balanced, 13 summaries | LB | 0.583 | 0.144 | −0.293 | 0.102 | 0.000 | 0.111 | | 0.1077 (rank 688) | 1 submission (1/2 on 16 Oct) | done: +0.002 vs E021; first LB MSE > 0 but fid collapses | |
+| E033 | 16 Oct | Where the leaderboard score comes from (A vs B/C) | vcc status JSON, no submission | – | | | | | | | | | – | done: status JSON has no per-context fields; only latest entry retrievable | |
 | E034 | 16–17 Oct | Learned translator (M1) and context-programme projection beat B5/E021 | proxy + V* + bootstrap, specs_E034 | seen | | | | | | | | | CPU+GPU | planned | E035 |
 | E035 | 17 Oct | NC (Orion) sources help non-NC lines | V* with/without NC | seen | | | | | | | | | GPU | planned | |
 | E036 | 17 Oct | Final pipeline runs end to end in time | dress rehearsal A/B/C, NC on/off | – | | | | | | | | | – | planned | |
@@ -34,9 +34,6 @@ Scores are scaled vcc2026 metrics (0 = context mean-response baseline, 1 = repli
 | E007 | 17 Oct | A1: source weighting + target-expression gating | | both | | | | | | | | | | planned | |
 | E008 | 18 Oct | A1: per-target shrinkage + β and DE-count calibration | | both | | | | | | | | | | planned | |
 | E009 | 19–20 Oct | A2: CRISPRi neighbour silencing | | both | | | | | | | | | | planned | |
-| E030 | 16 Oct | B5 sparse consistent consensus (+cis) beats dense transfer | proxy, specs_E030 (32), 5 V* lines | seen | | | | | | | proxy 0.336 (B5x_tl0.05) vs 0.300 (E021) | | CPU 50 min | done: truth sparse (top-10 genes = full pds); cis ≈ 0.1 % of signal | E031 |
-| E031 | 16 Oct | B5 holds on the real metric | 5-line V* + V*-far | seen | 0.664 | 0.261 | 0.752 | 0.210 | −0.516 | 0.205 | 0.263 vs E021 0.234 (CI90 +0.011..+0.039) | | GPU 4 h | done: B5_z2_a0.5_cis5000 top; far aggregate +0.007 (worse on 2/3) | E032 |
-| E032 | 16 Oct | B5 lifts the leaderboard | B5_z2_a0.5_cis5000, balanced, 13 summaries | LB | 0.583 | 0.144 | −0.293 | 0.102 | 0.000 | 0.111 | | 0.1077 (rank 688) | 1 submission (1/2 on 16 Oct) | done: +0.002 vs E021; first LB MSE > 0 but fid collapses | |
 
 ## Synthetic harness check (14 Oct, planning session, not challenge data)
 3 synthetic contexts, held-out C1, seen mode: control −3.05, generic −0.37, per-target transfer +0.26. Confirms the pipeline (summaries → models → emission → official metrics → anchors → scaled score) runs end to end.
