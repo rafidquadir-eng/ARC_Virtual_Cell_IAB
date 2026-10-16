@@ -1,0 +1,110 @@
+{
+ "B2_raw_gPL(E021)": {
+  "share_D_top10pct_targets": 0.4926011083347067,
+  "cos_by_D_tier(top10%,10-50%,bottom50%)": [
+   0.017401119094716463,
+   0.04176112138062032,
+   0.014430600969106066
+  ],
+  "best_scale_by_D_tier": [
+   0.04202398312438699,
+   0.03911481900061556,
+   0.012475626881333777
+  ],
+  "N_over_D_by_tier": [
+   2.300927119617608,
+   5.337561057531115,
+   6831768137155083.0
+  ],
+  "error_by_expression_bin": [
+   {
+    "ctrl_cpm_bin": "[0,1)",
+    "genes": 5798,
+    "share_sq_error": 0.01605635939436318,
+    "share_true_signal": 0.015222224453642024
+   },
+   {
+    "ctrl_cpm_bin": "[1,5)",
+    "genes": 1653,
+    "share_sq_error": 0.04998449276706316,
+    "share_true_signal": 0.05772118474803423
+   },
+   {
+    "ctrl_cpm_bin": "[5,20)",
+    "genes": 2543,
+    "share_sq_error": 0.2025692437220606,
+    "share_true_signal": 0.20946798789202384
+   },
+   {
+    "ctrl_cpm_bin": "[20,100)",
+    "genes": 5837,
+    "share_sq_error": 0.5246782030572302,
+    "share_true_signal": 0.525510925518829
+   },
+   {
+    "ctrl_cpm_bin": "[100,1000000000.0)",
+    "genes": 2702,
+    "share_sq_error": 0.20671170105928283,
+    "share_true_signal": 0.19207767738747078
+   }
+  ],
+  "share_true_signal_within_1000bp": 0.000160960113419519,
+  "share_true_signal_within_5000bp": 0.000246026454457143,
+  "share_true_signal_within_20000bp": 0.0003644552943295034,
+  "share_true_signal_within_100000bp": 0.0005654737719804712
+ },
+ "B5_z3_a0.75_cis5000": {
+  "share_D_top10pct_targets": 0.4926011083347067,
+  "cos_by_D_tier(top10%,10-50%,bottom50%)": [
+   0.013595076436645608,
+   0.034215108829004574,
+   0.013231479843746863
+  ],
+  "best_scale_by_D_tier": [
+   0.04025331972723619,
+   0.0848848319724251,
+   0.03210102684583234
+  ],
+  "N_over_D_by_tier": [
+   1.1051158009495252,
+   1.4070917909140783,
+   566088512173240.5
+  ],
+  "error_by_expression_bin": [
+   {
+    "ctrl_cpm_bin": "[0,1)",
+    "genes": 5798,
+    "share_sq_error": 0.014275307061625662,
+    "share_true_signal": 0.015222224453642024
+   },
+   {
+    "ctrl_cpm_bin": "[1,5)",
+    "genes": 1653,
+    "share_sq_error": 0.05560275180808922,
+    "share_true_signal": 0.05772118474803423
+   },
+   {
+    "ctrl_cpm_bin": "[5,20)",
+    "genes": 2543,
+    "share_sq_error": 0.2049809333644687,
+    "share_true_signal": 0.20946798789202384
+   },
+   {
+    "ctrl_cpm_bin": "[20,100)",
+    "genes": 5837,
+    "share_sq_error": 0.5266785403440728,
+    "share_true_signal": 0.525510925518829
+   },
+   {
+    "ctrl_cpm_bin": "[100,1000000000.0)",
+    "genes": 2702,
+    "share_sq_error": 0.19846246742174378,
+    "share_true_signal": 0.19207767738747078
+   }
+  ],
+  "share_true_signal_within_1000bp": 0.000160960113419519,
+  "share_true_signal_within_5000bp": 0.000246026454457143,
+  "share_true_signal_within_20000bp": 0.0003644552943295034,
+  "share_true_signal_within_100000bp": 0.0005654737719804712
+ }
+}
