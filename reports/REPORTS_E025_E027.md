@@ -1,0 +1,98 @@
+# REPORT blocks E025–E027 — Lambda instance, 15–16 Oct 2026
+
+Runbook: `docs/07_RUNBOOK_INSTANCE.md` (E025–E027, commit 0784d5f); diagnosis `docs/12_DIAGNOSIS.md`.
+
+---
+
+## REPORT E025 — proxy sweep of B4 noise-aware consensus (CPU)
+
+```
+for h in CD4T_Stim8hr KOLF2.1J K562_GWPS; do
+  python -m vcc26.proxy --config loco.json --holdout $h --holdout-dir $DATA/loco/E020/holdout_$h \
+    --specs specs_E025.json --out results/E025 --anatomy "B2_raw_gPL(E021),B4_lr1_pc20_t0.02_s0"
+done
+python scripts/pick_e025.py results/E025 > results/E025/pick.txt   # writes specs_E026.json
+```
+47 specs × 3 V\* lines (seen mode, E020 holdouts), about 18–35 min per line on CPU, run alongside E020 unseen on the GPU.
+`loco.json` and the summaries are the E020 ones (the D7 re-summaries are not swapped in yet, so E025b will use them).
+
+### Ranked table (`pick.txt`; mean over the 3 lines, `worst` = worst line's proxy)
+
+| spec | proxy | pds_sc | mse_sc_credit | mse_raw | de_sign | nmae_p | worst |
+|---|---|---|---|---|---|---|---|
+| B2_raw_gPL(E021) | 0.454 | 0.301 | 0.994 | 4.404 | 0.533 | 0.980 | 0.423 |
+| B1_gPL | 0.394 | 0.000 | 1.000 | 1.131 | 0.592 | 0.991 | 0.344 |
+| B4x_lowrankTrue_pc20_tau20.02_shrinkFalse | 0.380 | 0.181 | 1.000 | 1.749 | 0.480 | 0.999 | 0.350 |
+| B4_lr1_pc1_t0.005_s0 | 0.380 | 0.150 | 1.000 | 1.529 | 0.495 | 0.993 | 0.347 |
+| B2_raw_gPL_dn | 0.365 | 0.253 | 1.000 | 1.439 | 0.421 | 1.000 | 0.316 |
+| B4_lr1_pc5_t0.005_s0 | 0.311 | 0.148 | 1.000 | 1.273 | 0.393 | 0.999 | 0.286 |
+| B4_lr1_pc1_t0.02_s0 | 0.223 | 0.097 | 1.000 | 1.112 | 0.286 | 0.998 | 0.211 |
+| B4_lr1_pc20_t0.005_s0 | 0.219 | 0.123 | 1.000 | 1.113 | 0.267 | 1.000 | 0.165 |
+| B4_lr1_pc1_t0.005_s0.1 | 0.207 | 0.066 | 1.000 | 1.242 | 0.277 | 0.996 | 0.135 |
+| B4_lr0_pc20_t0.005_s0 | 0.166 | 0.149 | 1.000 | 1.067 | 0.174 | 0.999 | 0.118 |
+| B4_lr0_pc5_t0.005_s0 | 0.145 | 0.140 | 1.000 | 1.088 | 0.147 | 0.999 | 0.094 |
+| B4_lr0_pc1_t0.005_s0 | 0.138 | 0.134 | 1.000 | 1.110 | 0.140 | 0.999 | 0.084 |
+| B4_lr1_pc5_t0.005_s0.1 | 0.132 | 0.051 | 1.000 | 1.119 | 0.172 | 0.999 | 0.053 |
+| B4_lr1_pc5_t0.02_s0 | 0.102 | 0.057 | 1.000 | 1.048 | 0.124 | 1.000 | 0.069 |
+| B4_lr1_pc20_t0.005_s0.1 | 0.101 | 0.041 | 1.000 | 1.061 | 0.131 | 1.000 | 0.036 |
+| B4_lr0_pc1_t0.02_s0 | 0.096 | 0.072 | 1.000 | 1.054 | 0.108 | 1.000 | 0.053 |
+| B4_lr0_pc20_t0.02_s0 | 0.095 | 0.053 | 1.000 | 1.040 | 0.117 | 1.000 | 0.048 |
+| B4_lr0_pc5_t0.02_s0 | 0.090 | 0.058 | 1.000 | 1.044 | 0.106 | 1.000 | 0.045 |
+| B4x_lowrankTrue_pc20_tau20.02_beta1.3 | 0.088 | 0.036 | 1.000 | 1.041 | 0.115 | 1.000 | 0.045 |
+| B4x_lowrankTrue_pc20_tau20.02_genericgw | 0.086 | 0.034 | 1.000 | 1.041 | 0.111 | 1.000 | 0.041 |
+| B4x_lowrankTrue_pc20_tau20.02_gate_up_cpmNone | 0.085 | 0.033 | 1.000 | 1.041 | 0.111 | 1.000 | 0.040 |
+| B4_lr1_pc20_t0.02_s0 | 0.085 | 0.033 | 1.000 | 1.041 | 0.110 | 1.000 | 0.040 |
+| B4x_lowrankTrue_pc20_tau20.02_gate_target_cpm5 | 0.083 | 0.032 | 1.000 | 1.041 | 0.108 | 1.000 | 0.038 |
+| B4x_lowrankTrue_pc20_tau20.02_beta0.7 | 0.082 | 0.031 | 1.000 | 1.041 | 0.107 | 1.000 | 0.036 |
+| B4_lr0_pc20_t0.005_s0.1 | 0.080 | 0.034 | 1.000 | 1.042 | 0.103 | 1.000 | 0.026 |
+| B4_lr1_pc1_t0.02_s0.1 | 0.078 | 0.017 | 1.000 | 1.049 | 0.108 | 1.000 | 0.025 |
+| B4_lr0_pc5_t0.005_s0.1 | 0.069 | 0.027 | 1.000 | 1.042 | 0.090 | 1.000 | 0.021 |
+| B4_lr0_pc20_t0.02_s0.1 | 0.068 | 0.018 | 1.000 | 1.042 | 0.094 | 1.000 | 0.017 |
+| B4_lr0_pc20_t0.1_s0 | 0.067 | 0.017 | 1.000 | 1.042 | 0.092 | 1.000 | 0.017 |
+| B4_lr1_pc5_t0.02_s0.1 | 0.066 | 0.014 | 1.000 | 1.042 | 0.092 | 1.000 | 0.013 |
+| B4_lr0_pc1_t0.005_s0.1 | 0.066 | 0.024 | 1.000 | 1.042 | 0.087 | 1.000 | 0.020 |
+| B4_lr1_pc20_t0.02_s0.1 | 0.065 | 0.011 | 1.000 | 1.042 | 0.092 | 1.000 | 0.014 |
+| B4_lr0_pc5_t0.1_s0 | 0.065 | 0.018 | 1.000 | 1.042 | 0.088 | 1.000 | 0.015 |
+| B4_lr0_pc5_t0.02_s0.1 | 0.064 | 0.015 | 1.000 | 1.042 | 0.088 | 1.000 | 0.013 |
+| B4_lr0_pc1_t0.1_s0 | 0.063 | 0.017 | 1.000 | 1.042 | 0.086 | 1.000 | 0.014 |
+| B4_lr1_pc20_t0.1_s0 | 0.062 | 0.009 | 1.000 | 1.042 | 0.089 | 1.000 | 0.013 |
+| B4_lr1_pc1_t0.1_s0 | 0.062 | 0.008 | 1.000 | 1.043 | 0.089 | 1.000 | 0.017 |
+| B4_lr0_pc20_t0.1_s0.1 | 0.062 | 0.008 | 1.000 | 1.042 | 0.088 | 1.000 | 0.012 |
+| B4_lr1_pc5_t0.1_s0 | 0.061 | 0.010 | 1.000 | 1.042 | 0.087 | 1.000 | 0.012 |
+| B4_lr0_pc1_t0.02_s0.1 | 0.061 | 0.013 | 1.000 | 1.042 | 0.085 | 1.000 | 0.011 |
+| B4_lr0_pc5_t0.1_s0.1 | 0.061 | 0.009 | 1.000 | 1.042 | 0.086 | 1.000 | 0.011 |
+| B4_lr1_pc20_t0.1_s0.1 | 0.059 | 0.004 | 1.000 | 1.042 | 0.087 | 1.000 | 0.010 |
+| B4_lr0_pc1_t0.1_s0.1 | 0.059 | 0.008 | 1.000 | 1.042 | 0.085 | 1.000 | 0.010 |
+| B4_lr1_pc5_t0.1_s0.1 | 0.059 | 0.004 | 1.000 | 1.042 | 0.086 | 1.000 | 0.009 |
+| B4_lr1_pc1_t0.1_s0.1 | 0.058 | 0.003 | 1.000 | 1.042 | 0.085 | 1.000 | 0.008 |
+| B0_control | 0.017 | 0.000 | 1.000 | 1.042 | 0.025 | 1.000 | 0.010 |
+
+ORACLE is left out of `pick.txt`. Its raw rows are in `proxy_*_seen.csv`: pds_sc 1.15/1.30/1.35 and mse_sc 4.6/4.1/10.1 (CD4T/KOLF/GWPS).
+
+**`specs_E026.json`:** `B2_raw_gPL(E021)`, `B1_gPL`, `B4x_lowrankTrue_pc20_tau20.02_shrinkFalse`, `B4_lr1_pc1_t0.005_s0`.
+
+**`n_lines` / `lowrank_k`:** `vcc26.proxy` doesn't print these (I checked all three logs), so they aren't reported.
+
+### Findings
+- **No B4 setting beats the E021 config on the proxy.** E021 scores 0.454 (worst line 0.423). The best B4 is 0.380: `B4x … shrinkFalse` and `B4_lr1_pc1_t0.005`, with low rank, little shrinkage and pc 1.
+- **B4 does what it was built for on MSE.** Raw MSE drops from 4.40 (E021) to 1.1–1.7 (B0 = 1.04), which removes the source-noise copy that `docs/12` diagnosed. It loses pds (0.30 → 0.15–0.18) and DE sign (0.53 → 0.48–0.50) at the same time.
+- **More shrinkage, larger `tau2` and `sim_tau` 0.1 all push B4 towards B0** (proxy → 0.06, raw MSE → 1.04). The gating, β and generic-source variants of `B4x` change almost nothing; they all sit at 0.08–0.09.
+- `mse_sc_credit` is about 1.0 for every spec except E021 (0.994). The proxy only rewards MSE below the baseline, and no non-oracle spec gets there. So MSE isn't moving the proxy ranking: B4's lower MSE is still above the mean-baseline MSE.
+
+### Anatomy (`anatomy_<line>_seen.json`; D = true effect energy per target, tiers = top 10 % / 10–50 % / bottom 50 % of targets by D)
+
+| line | spec | share of D in top-10 % targets | cos(pred, truth) by tier | best scale by tier | N/D by tier | share of squared error by ctrl-CPM bin [0,1) [1,5) [5,20) [20,100) [100,∞) |
+|---|---|---|---|---|---|---|
+| CD4T_Stim8hr | B2_raw_gPL (E021) | 0.41 | 0.024, 0.016, 0.008 | 0.041, 0.017, 0.007 | 1.6, 3.2, 10.2 | 0.01, 0.04, 0.16, 0.50, 0.29 |
+| CD4T_Stim8hr | B4_lr1_pc20_t0.02_s0 | 0.41 | −0.075, −0.051, −0.052 | −151, −294, −192 | 1.00, 1.02, 1.06 | 0.01, 0.05, 0.18, 0.51, 0.25 |
+| KOLF2.1J | B2_raw_gPL (E021) | 0.19 | 0.008, 0.003, 0.017 | 0.020, −0.006, 0.017 | 2.1, 2.5, 4.2 | 0.01, 0.06, 0.24, 0.49, 0.21 |
+| KOLF2.1J | B4_lr1_pc20_t0.02_s0 | 0.19 | −0.047, −0.008, −0.056 | −233, −29, −311 | 1.02, 1.03, 1.07 | 0.01, 0.07, 0.26, 0.49, 0.16 |
+| K562_GWPS | B2_raw_gPL (E021) | 0.38 | 0.081, 0.030, 0.010 | 0.112, 0.033, 0.010 | 2.9, 5.2, 38.6 | 0.00, 0.00, 0.16, 0.63, 0.20 |
+| K562_GWPS | B4_lr1_pc20_t0.02_s0 | 0.38 | 0.011, −0.031, −0.037 | −13, −85, −104 | 1.01, 1.05, 1.48 | 0.00, 0.00, 0.18, 0.66, 0.16 |
+
+Reading:
+- For E021, per-target cosine with the truth is close to 0 (0.003–0.08). The best scale is 0.01–0.11, so the transferred effects are mostly noise at the per-gene level. The predicted energy is 1.6–39× the true energy (N/D).
+- B4 at τ² 0.02 shrinks the predictions to near zero (N/D ≈ 1), and the little that's left anti-correlates slightly with the truth (cos −0.01 to −0.08). That's why its huge "best scale" is negative.
+- About 70 % of the squared error sits in genes with control CPM 20 or more.
+
+Files: `results/E025/pick.txt`, `proxy_*_seen.csv`, `anatomy_*_seen.json`; `specs_E026.json`.

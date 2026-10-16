@@ -1,0 +1,102 @@
+{
+ "B2_raw_gPL(E021)": {
+  "share_D_top10pct_targets": 0.37897663220835714,
+  "cos_by_D_tier(top10%,10-50%,bottom50%)": [
+   0.08086289957839647,
+   0.029643587204006838,
+   0.009846934441446471
+  ],
+  "best_scale_by_D_tier": [
+   0.11219813821246613,
+   0.03254985967882467,
+   0.010093360043983533
+  ],
+  "N_over_D_by_tier": [
+   2.8533767580408673,
+   5.159069362841894,
+   38.57941675406662
+  ],
+  "error_by_expression_bin": [
+   {
+    "ctrl_cpm_bin": "[0,1)",
+    "genes": 0,
+    "share_sq_error": 0.0,
+    "share_true_signal": 0.0
+   },
+   {
+    "ctrl_cpm_bin": "[1,5)",
+    "genes": 0,
+    "share_sq_error": 0.0,
+    "share_true_signal": 0.0
+   },
+   {
+    "ctrl_cpm_bin": "[5,20)",
+    "genes": 1137,
+    "share_sq_error": 0.1620576572057368,
+    "share_true_signal": 0.18275087287437922
+   },
+   {
+    "ctrl_cpm_bin": "[20,100)",
+    "genes": 4519,
+    "share_sq_error": 0.6331133534613408,
+    "share_true_signal": 0.6561728603784558
+   },
+   {
+    "ctrl_cpm_bin": "[100,1000000000.0)",
+    "genes": 2025,
+    "share_sq_error": 0.2048289893329224,
+    "share_true_signal": 0.16107626674716494
+   }
+  ]
+ },
+ "B4_lr1_pc20_t0.02_s0": {
+  "share_D_top10pct_targets": 0.37897663220835714,
+  "cos_by_D_tier(top10%,10-50%,bottom50%)": [
+   0.011467756045886077,
+   -0.031242734531436417,
+   -0.037488353317226955
+  ],
+  "best_scale_by_D_tier": [
+   -12.977677208102577,
+   -84.70802008161995,
+   -103.67864132062961
+  ],
+  "N_over_D_by_tier": [
+   1.0102625532522829,
+   1.053616137216862,
+   1.4771000325661345
+  ],
+  "error_by_expression_bin": [
+   {
+    "ctrl_cpm_bin": "[0,1)",
+    "genes": 0,
+    "share_sq_error": 0.0,
+    "share_true_signal": 0.0
+   },
+   {
+    "ctrl_cpm_bin": "[1,5)",
+    "genes": 0,
+    "share_sq_error": 0.0,
+    "share_true_signal": 0.0
+   },
+   {
+    "ctrl_cpm_bin": "[5,20)",
+    "genes": 1137,
+    "share_sq_error": 0.18279159187460717,
+    "share_true_signal": 0.18275087287437922
+   },
+   {
+    "ctrl_cpm_bin": "[20,100)",
+    "genes": 4519,
+    "share_sq_error": 0.656198397799057,
+    "share_true_signal": 0.6561728603784558
+   },
+   {
+    "ctrl_cpm_bin": "[100,1000000000.0)",
+    "genes": 2025,
+    "share_sq_error": 0.16101001032633577,
+    "share_true_signal": 0.16107626674716494
+   }
+  ]
+ }
+}
