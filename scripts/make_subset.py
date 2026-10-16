@@ -40,7 +40,14 @@ def main():
     ap.add_argument("--gene-block", type=int, default=500, help="genes per pass for CSC inputs")
     a = ap.parse_args()
 
-    A = ad.read_h5ad(a.h5ad, backed="r")
+    if a.layer:   # backed read_h5ad loads every layer into RAM; read obs/var and the layer lazily instead
+        from types import SimpleNamespace
+        f = h5py.File(a.h5ad, "r")
+        _obs, _var = ad.io.read_elem(f["obs"]), ad.io.read_elem(f["var"])
+        A = SimpleNamespace(obs=_obs, var=_var, var_names=_var.index, n_obs=len(_obs), n_vars=len(_var),
+                            X=ad.io.sparse_dataset(f["layers"][a.layer]))
+    else:
+        A = ad.read_h5ad(a.h5ad, backed="r")
     obs = A.obs
     ok = np.ones(A.n_obs, bool)
     for cond in a.where:
@@ -63,7 +70,7 @@ def main():
     for j, g in enumerate(sym):
         if g in pos and g not in seen:
             col_of[j] = pos[g]; seen.add(g)
-    M = A.layers[a.layer] if a.layer else A.X
+    M = A.X
     fmt = getattr(M, "format", "csr")
     keepj = np.where(col_of >= 0)[0]
     # kept source columns (in source order) -> axis columns

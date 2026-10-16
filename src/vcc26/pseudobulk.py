@@ -133,6 +133,19 @@ def load(path: str) -> dict:
     return {k: z[k] for k in z.files}
 
 
+class _LayerView:
+    """obs/var of an h5ad with X = one of its layers, read lazily in row chunks."""
+    def __init__(self, obs, var, layer):
+        self.obs, self.var, self.X = obs, var, layer
+        self.var_names, self.obs_names = var.index, obs.index
+        self.n_obs, self.n_vars = len(obs), len(var)
+        self.isbacked = False
+
+    def __getitem__(self, idx):
+        rows = np.where(idx)[0] if np.asarray(idx).dtype == bool else idx
+        return ad.AnnData(X=self.X[rows], obs=self.obs.iloc[rows], var=self.var)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--h5ad", required=True); ap.add_argument("--out", required=True)
@@ -146,10 +159,18 @@ def main():
                     help="obs column with cells per row, when the input rows are already pseudobulks")
     ap.add_argument("--strata-col", default=None,
                     help="obs column (e.g. donor) for composition-matched controls per target")
+    ap.add_argument("--layer", default=None,
+                    help="read raw counts from this layer instead of X (read lazily, row chunks)")
     ap.add_argument("--where", action="append", default=[],
                     help="keep only rows with obs COL == VALUE (COL=VALUE, repeatable); loads the subset")
     a = ap.parse_args()
-    adata = ad.read_h5ad(a.h5ad, backed="r")
+    if a.layer:   # backed read_h5ad loads every layer into RAM; read obs/var and stream the layer instead
+        import h5py
+        from anndata.io import read_elem, sparse_dataset
+        f = h5py.File(a.h5ad, "r")
+        adata = _LayerView(read_elem(f["obs"]), read_elem(f["var"]), sparse_dataset(f["layers"][a.layer]))
+    else:
+        adata = ad.read_h5ad(a.h5ad, backed="r")
     if a.where:
         keep = np.ones(adata.n_obs, bool)
         for cond in a.where:
