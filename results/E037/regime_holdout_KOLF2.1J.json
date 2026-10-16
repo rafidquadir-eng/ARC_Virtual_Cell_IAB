@@ -1,0 +1,55 @@
+{
+ "holdout": "holdout_KOLF2.1J",
+ "targets": 258,
+ "cells_per_target_median": 236,
+ "controls": 18400,
+ "median_umi": 3817.0,
+ "N_conf": {
+  "mean": 103.2248062015504,
+  "median": 42.0,
+  "min": 4,
+  "p90": 291.20000000000016,
+  "max": 543
+ },
+ "anchors_baseline": {
+  "pds": 0.479,
+  "mse": 1.0389,
+  "fid": 0.0053,
+  "reach": 0.0582,
+  "jac": 0.0,
+  "nmae": 1.0425
+ },
+ "anchors_replicate": {
+  "pds": 0.8824,
+  "mse": -0.0257,
+  "fid": 0.6914,
+  "reach": 0.8609,
+  "jac": 0.1785,
+  "nmae": 0.7167
+ },
+ "official_valABC": {
+  "cells_per_target": 400,
+  "controls": 18400,
+  "median_umi": "~20k (our E000 inventory)",
+  "N_conf_mean_valA": 335.9,
+  "N_conf_min_valA": 4,
+  "baseline_fid": [
+   0.5056,
+   0.5227,
+   0.5094
+  ],
+  "baseline_jac_valA": 0.0333,
+  "replicate_like_jac_valA": 0.38,
+  "baseline_reach_valA": 0.0423,
+  "replicate_reach": [
+   0.965,
+   0.802,
+   0.943
+  ],
+  "baseline_pds": [
+   0.5304,
+   0.5284,
+   0.5102
+  ]
+ }
+}

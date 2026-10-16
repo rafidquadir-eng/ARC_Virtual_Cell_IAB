@@ -1,0 +1,55 @@
+{
+ "holdout": "holdout_K562_GWPS",
+ "targets": 213,
+ "cells_per_target_median": 181,
+ "controls": 18400,
+ "median_umi": 7790.0,
+ "N_conf": {
+  "mean": 13.784037558685446,
+  "median": 4.0,
+  "min": 0,
+  "p90": 40.80000000000001,
+  "max": 274
+ },
+ "anchors_baseline": {
+  "pds": 0.4943,
+  "mse": 1.0885,
+  "fid": 0.0252,
+  "reach": 0.2481,
+  "jac": 0.1878,
+  "nmae": 0.9793
+ },
+ "anchors_replicate": {
+  "pds": 0.8849,
+  "mse": -0.0339,
+  "fid": 0.6739,
+  "reach": 0.878,
+  "jac": 0.477,
+  "nmae": 0.4667
+ },
+ "official_valABC": {
+  "cells_per_target": 400,
+  "controls": 18400,
+  "median_umi": "~20k (our E000 inventory)",
+  "N_conf_mean_valA": 335.9,
+  "N_conf_min_valA": 4,
+  "baseline_fid": [
+   0.5056,
+   0.5227,
+   0.5094
+  ],
+  "baseline_jac_valA": 0.0333,
+  "replicate_like_jac_valA": 0.38,
+  "baseline_reach_valA": 0.0423,
+  "replicate_reach": [
+   0.965,
+   0.802,
+   0.943
+  ],
+  "baseline_pds": [
+   0.5304,
+   0.5284,
+   0.5102
+  ]
+ }
+}

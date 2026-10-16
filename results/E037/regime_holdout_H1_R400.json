@@ -1,0 +1,55 @@
+{
+ "holdout": "holdout_H1_R400",
+ "targets": 254,
+ "cells_per_target_median": 100,
+ "controls": 18400,
+ "median_umi": 20005.5,
+ "N_conf": {
+  "mean": 303.5275590551181,
+  "median": 15.5,
+  "min": 0,
+  "p90": 931.7000000000005,
+  "max": 5282
+ },
+ "anchors_baseline": {
+  "pds": 0.4967,
+  "mse": 0.9926,
+  "fid": 0.0188,
+  "reach": 0.2044,
+  "jac": 0.0827,
+  "nmae": 0.9624
+ },
+ "anchors_replicate": {
+  "pds": 0.8995,
+  "mse": 0.0376,
+  "fid": 0.7629,
+  "reach": 0.9387,
+  "jac": 0.4164,
+  "nmae": 0.403
+ },
+ "official_valABC": {
+  "cells_per_target": 400,
+  "controls": 18400,
+  "median_umi": "~20k (our E000 inventory)",
+  "N_conf_mean_valA": 335.9,
+  "N_conf_min_valA": 4,
+  "baseline_fid": [
+   0.5056,
+   0.5227,
+   0.5094
+  ],
+  "baseline_jac_valA": 0.0333,
+  "replicate_like_jac_valA": 0.38,
+  "baseline_reach_valA": 0.0423,
+  "replicate_reach": [
+   0.965,
+   0.802,
+   0.943
+  ],
+  "baseline_pds": [
+   0.5304,
+   0.5284,
+   0.5102
+  ]
+ }
+}

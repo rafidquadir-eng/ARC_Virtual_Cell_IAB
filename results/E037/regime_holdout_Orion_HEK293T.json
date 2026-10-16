@@ -1,0 +1,55 @@
+{
+ "holdout": "holdout_Orion_HEK293T",
+ "targets": 250,
+ "cells_per_target_median": 208,
+ "controls": 18400,
+ "median_umi": 14998.0,
+ "N_conf": {
+  "mean": 27.644,
+  "median": 2.0,
+  "min": 0,
+  "p90": 35.099999999999994,
+  "max": 970
+ },
+ "anchors_baseline": {
+  "pds": 0.4987,
+  "mse": 1.0539,
+  "fid": 0.0348,
+  "reach": 0.2966,
+  "jac": 0.24,
+  "nmae": 1.0058
+ },
+ "anchors_replicate": {
+  "pds": 0.772,
+  "mse": 0.0366,
+  "fid": 0.5613,
+  "reach": 0.8415,
+  "jac": 0.4904,
+  "nmae": 0.5254
+ },
+ "official_valABC": {
+  "cells_per_target": 400,
+  "controls": 18400,
+  "median_umi": "~20k (our E000 inventory)",
+  "N_conf_mean_valA": 335.9,
+  "N_conf_min_valA": 4,
+  "baseline_fid": [
+   0.5056,
+   0.5227,
+   0.5094
+  ],
+  "baseline_jac_valA": 0.0333,
+  "replicate_like_jac_valA": 0.38,
+  "baseline_reach_valA": 0.0423,
+  "replicate_reach": [
+   0.965,
+   0.802,
+   0.943
+  ],
+  "baseline_pds": [
+   0.5304,
+   0.5284,
+   0.5102
+  ]
+ }
+}

@@ -1,0 +1,55 @@
+{
+ "holdout": "holdout_CD4T_Stim48hr_R400",
+ "targets": 174,
+ "cells_per_target_median": 167,
+ "controls": 18400,
+ "median_umi": 12014.0,
+ "N_conf": {
+  "mean": 123.01724137931035,
+  "median": 22.0,
+  "min": 0,
+  "p90": 360.20000000000147,
+  "max": 1616
+ },
+ "anchors_baseline": {
+  "pds": 0.5212,
+  "mse": 0.9986,
+  "fid": 0.0051,
+  "reach": 0.1114,
+  "jac": 0.0345,
+  "nmae": 1.0253
+ },
+ "anchors_replicate": {
+  "pds": 0.9659,
+  "mse": 0.0761,
+  "fid": 0.629,
+  "reach": 0.8729,
+  "jac": 0.1916,
+  "nmae": 0.5077
+ },
+ "official_valABC": {
+  "cells_per_target": 400,
+  "controls": 18400,
+  "median_umi": "~20k (our E000 inventory)",
+  "N_conf_mean_valA": 335.9,
+  "N_conf_min_valA": 4,
+  "baseline_fid": [
+   0.5056,
+   0.5227,
+   0.5094
+  ],
+  "baseline_jac_valA": 0.0333,
+  "replicate_like_jac_valA": 0.38,
+  "baseline_reach_valA": 0.0423,
+  "replicate_reach": [
+   0.965,
+   0.802,
+   0.943
+  ],
+  "baseline_pds": [
+   0.5304,
+   0.5284,
+   0.5102
+  ]
+ }
+}
