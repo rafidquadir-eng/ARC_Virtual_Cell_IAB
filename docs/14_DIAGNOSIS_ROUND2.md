@@ -1,5 +1,7 @@
 # Diagnosis, round 2: after E025–E026 and curation batch 2
 
+> Superseded by `15_DIAGNOSIS_ROUND3.md` (16 Oct ~15:00 UTC).
+
 Written 16 Oct 2026 ~07:30 UTC. Sources: `reports/REPORTS_E025_E027.md`, `reports/DATA_DONE_batch2.md`, `results/E025*`, `results/E026`, `results/E020` (unseen). Round 1 is `12_DIAGNOSIS.md`; this file supersedes its priorities.
 
 ## 1. What we learned

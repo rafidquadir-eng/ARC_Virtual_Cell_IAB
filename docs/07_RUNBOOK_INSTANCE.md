@@ -135,6 +135,145 @@ vcc submit $DATA/preds/E012.vcc -m "E012 <spec name> with K562 GWPS" --wait
 ## ⏸ PAUSED (15 Oct ~03:30 UTC): don't start E013–E017
 Wait until the curation agent has pushed `reports/DATA_DONE.md`. If E013 is already running, let it finish and push its report, then stop. E013/E015 are folded into **E020** below; E014/E017 are replaced by **E021**. The earlier stages stay here for the record.
 
+## E037–E041 — round 3: make validation match the leaderboard, fix the DE call count and the emitter (see `docs/15_DIAGNOSIS_ROUND3.md`)
+**Why.**
+- fid = k / max(n_pred, N_conf), where k counts called genes whose direction matches the real log2FC of ANY sign. Calling ≥ N_conf genes therefore scores about chance (≈ 0.51, the official baseline). B5 under-calls and scores 0.42 (−0.29 scaled).
+- Our V\* truths are too small and shallow for the DE metrics to behave as they do on the leaderboard: baseline fid is 0.02 in V\* vs 0.51 on the LB. So V\* rewarded the wrong things.
+- `--emit balanced` (our LB emitter since E021) makes the scorer call ~2.7% of genes on a no-change prediction.
+
+**New code (pull first):**
+- `vcc26/detect.py`: per-gene detection thresholds.
+- `models.de_budget`: spec `"post": {"de_budget": {"n": 600}}`.
+- `models.predict_ensemble`: model `"ENS"`.
+- Emit modes `balanced2` / `balanced3`.
+- Options in loco/vstar/proxy:
+  - `--min-target-cells`, `--umi-target`, `--holdout-tag`: regime-matched truths;
+  - `--match-cells`;
+  - `--far`: lineage tags are now in `loco.json`.
+- Proxy changes:
+  - oracles now come from truth half A, scored against half B;
+  - new `ORACLE_HALF` and `ORACLE_MEAN` oracles;
+  - new `top50_rep` and `dirprec@k` columns.
+- New scripts: `scripts/regime_check.py`, `scripts/ccle_match.py`.
+
+```bash
+source ~/.vcc_env; cd ~/vcc; git pull
+PANEL=$(find $DATA/challenge -name pert_counts.csv | head -1)
+mkdir -p results/E037 results/E038 results/E039 logs $DATA/detect
+nvidia-smi        # GPU must be free for E037b/E038
+```
+
+**E037a — which lines can look like A/B/C?** (CPU, 1 min)
+```bash
+python -m vcc26.vstar --config loco.json --panel-file $PANEL --specs specs_B0.json --out $DATA/loco/E037 --tag E037 \
+  --min-target-cells 400 --umi-target 20000 --holdout-tag R400 --dry-run | tee results/E037/eligible_R400.txt
+```
+- The list should include **H1** (Arc 2025: ~1,000 cells/target).
+- If H1 is missing, check that `pb/H1.npz` `ncells` has ≥ 100 panel targets with ≥ 400 cells, and report what you find. Don't change thresholds.
+
+**E037b — build the R400 holdouts and anchors** (GPU; one cheap spec)
+H1 measures only 25 of the 300 challenge targets, so it is held out on **its own** targets with `loco` (no `--panel-file`). That's fine: it tests the DE-regime mechanics, not panel biology.
+```bash
+python -m vcc26.loco --config loco.json --holdout H1 --mode seen --out $DATA/loco/E037 --specs specs_B0.json --tag E037 \
+  --holdout-tag R400 --min-target-cells 400 --umi-target 20000 2>&1 | tee logs/E037_build_H1.log
+# only if E037a listed panel lines:
+python -m vcc26.vstar --config loco.json --panel-file $PANEL --specs specs_B0.json --out $DATA/loco/E037 --tag E037 \
+  --min-target-cells 400 --umi-target 20000 --holdout-tag R400 2>&1 | tee logs/E037_build.log
+```
+The logs print the thinning factor and how many H1 targets the sources cover (`n_covered`).
+
+**E037c — regime check and detection thresholds** (CPU/GPU, ~30 min)
+```bash
+for d in $DATA/loco/E037/holdout_*_R400 $DATA/loco/E020/holdout_{CD4T_Stim8hr,KOLF2.1J,K562_GWPS,Orion_HCT116,Orion_HEK293T}; do
+  python scripts/regime_check.py --holdout-dir $d > results/E037/regime_$(basename $d).json
+done
+for c in A B C; do
+  f=$(python -c "from vcc26.predict_challenge import find_ctx; print(find_ctx('$DATA/challenge/controls','$c'))")
+  python -m vcc26.detect --ctrl $f --out $DATA/detect/$c.npz | tee results/E037/detect_$c.json
+done
+python -m vcc26.detect --ctrl $DATA/loco/E037/holdout_H1_R400/ctrl.h5ad --out $DATA/detect/H1_R400.npz | tee results/E037/detect_H1_R400.json
+```
+**REPORT E037:**
+- the eligible R400 lines;
+- per holdout: targets, cells/target, median UMI, N_conf mean/median/min/p90/max, and the local baseline/replicate raw anchors next to the official values the script prints;
+- per context: detection-threshold summaries (callable genes; median threshold up/down).
+
+**Key question:** is H1-R400's baseline fid near 0.5 and its N_conf mean in the hundreds? If yes, H1-R400 is the primary validator from now on. If not, report and stop.
+
+**E038 — emitter null + call budget on H1-R400** (GPU, ~3 h; longer if E037a found panel lines)
+```bash
+R="--holdout-tag R400 --min-target-cells 400 --umi-target 20000"
+python -m vcc26.loco --config loco.json --holdout H1 --mode seen --out $DATA/loco/E037 --specs specs_E038.json --tag E038 $R 2>&1 | tee logs/E038.log
+python -m vcc26.loco --config loco.json --holdout H1 --mode seen --out $DATA/loco/E037 --specs specs_E038f.json --tag E038far --far $R 2>&1 | tee logs/E038f.log
+# only if E037a listed panel lines:
+python -m vcc26.vstar --config loco.json --panel-file $PANEL --specs specs_E038.json --out $DATA/loco/E037 --tag E038 $R 2>&1 | tee logs/E038_panel.log
+cp $DATA/loco/E037/scores_*E038* $DATA/loco/E037/vstar_*E038* results/E038/ 2>/dev/null
+B=<best spec of specs_E038.json on H1-R400 by context_score, excluding ORACLE*>
+python -m vcc26.compare --dir $DATA/loco/E037 --tag E038 --a "$B" --b "B5_z2_a0.5_cis5000" --n 1000 | tee results/E038/boot_vs_LBconfig.json
+python -m vcc26.compare --dir $DATA/loco/E037 --tag E038far --a "$B" --b "B5_z2_a0.5_cis5000" --n 1000 | tee results/E038/boot_far_vs_LBconfig.json
+```
+- The first spec that uses `de_budget` computes the context's thresholds (~3 min), and they are cached for the rest of the run.
+- The M1/ENS specs fit M1 once per source set (~40 GB RAM).
+- If `$B` isn't in `specs_E038f.json`, compare the far run with the best spec that is.
+
+**REPORT E038:**
+1. The H1-R400 table (and the panel-line summary, if any): context score, six scaled metrics, raw fid/reach/jac/mse per spec.
+2. **Emitter null:** B0 under balanced / b2 / b3. Raw fid and the number of genes called (fid ≈ 0 means nothing called).
+3. **Calibration check:** Δ(`B5_z2_a0.5_cis5000` − `B2_raw_gPL(E021)`) per metric on H1-R400, next to the leaderboard Δ: pds +0.082, mse +0.144, nmae +0.025, **fid −0.226**, reach −0.006, jac −0.008. Does H1-R400 get the signs right, especially fid?
+4. The budget sweep (n 300/600/1,200, snr ranking, per-target frac): raw fid, jac, mse per variant. MSE is the expected cost of lifting genes.
+5. Both bootstraps.
+
+**E038b — guard on the standard lines** (GPU, ~4 h; run after E038)
+```bash
+python -m vcc26.vstar --config loco.json --panel-file $PANEL --specs specs_E038b.json --out $DATA/loco/E020 --tag E038b --match-cells 2>&1 | tee logs/E038b.log
+cp $DATA/loco/E020/vstar_*E038b* results/E038/
+python -m vcc26.compare --dir $DATA/loco/E020 --tag E038b_mc --a "<best budget spec in E038b>" --b "B5_z2_a0.5_cis5000" --n 1000 | tee results/E038/boot_E038b.json
+```
+**REPORT E038b:** the summary, per-line scores and the bootstrap.
+
+**E039 — proxy diagnostics** (CPU; can run while E038 is on the GPU)
+```bash
+python -m vcc26.proxy --config loco.json --holdout H1 --holdout-dir $DATA/loco/E037/holdout_H1_R400 --panel-file $PANEL \
+  --tss $DATA/tss.csv --specs specs_E039.json --out results/E039 2>&1 | tee logs/E039_H1.log
+python -m vcc26.proxy --config loco.json --holdout H1 --holdout-dir $DATA/loco/E037/holdout_H1_R400 --panel-file $PANEL \
+  --tss $DATA/tss.csv --specs specs_E039.json --out results/E039 --far 2>&1 | tee logs/E039_H1far.log
+for h in CD4T_Stim8hr KOLF2.1J K562_GWPS Orion_HCT116 Orion_HEK293T; do
+  python -m vcc26.proxy --config loco.json --holdout $h --holdout-dir $DATA/loco/E020/holdout_$h --panel-file $PANEL \
+    --tss $DATA/tss.csv --specs specs_E039.json --out results/E039 2>&1 | tee logs/E039_$h.log
+done
+```
+**REPORT E039:** per line:
+- `dirprec@{50,100,200,400,800,1600}` for every spec. This is direction precision at k calls, i.e. the fid we'd get at n = k; 0.5 = coin flip.
+- `ORACLE_HALF`, `ORACLE_MEAN`, `ORACLE_TOPK*`: pds_sc, mse_sc_credit, dirprec.
+- `B5_common_only` vs `ORACLE_MEAN` (how much of the context-mean response other lines predict), and `B5z2_common` vs `B5_z2_a0.5_cis5000`.
+- `top50_overlap` vs `top50_rep`.
+- `genes_kept_median`, `common_genes`, `train_rows`.
+
+**E040 — leaderboard** (state the day's count first)
+- **Submit E038's best spec only if** both hold:
+  - its bootstrap CI lower bound vs `B5_z2_a0.5_cis5000` (the LB config) is > 0 on H1-R400;
+  - its E038b Δ is ≥ −0.01.
+- Command:
+  ```bash
+  python -m vcc26.predict_challenge --controls-dir $DATA/challenge/controls --contexts A,B,C --perts $PANEL --gene-names $DATA/challenge/controls/gene_axis.csv \
+    --registry loco.json --summaries <all 13 loco.json summaries> --spec-file specs_E038.json --spec "<best>" --n-control 0 --out $DATA/preds/E040.h5ad
+  ```
+  The emit mode comes from the spec. Then `vcc prep`, then `vcc submit -m "E040 <spec> (round-3 call budget)" --wait`.
+
+**REPORT E040:** the six scaled and raw metrics next to E032, plus the rank. The prediction is fid from −0.29 to about 0…+0.15 (estimate). If fid doesn't rise, say so clearly; that means H1-R400 is still not a faithful validator.
+
+**E041 — which cell lines are A/B/C?** (CPU, ~10 min; no submission)
+```bash
+python scripts/ccle_match.py --controls-dir $DATA/challenge/controls --contexts A,B,C \
+  --expr $DATA/priors/depmap/OmicsExpressionProteinCodingGenesTPMLogp1.csv --models $DATA/priors/depmap/Model.csv \
+  --out reports/E041_ccle_match.json | tee logs/E041.log
+```
+**REPORT E041:**
+- the top 15 per context (Spearman, centred Pearson, name, lineage, disease, sex);
+- the sex-marker values.
+
+Commit `results/E037–E039/*`, `reports/E041_ccle_match.json` and the REPORT file. Then stop and wait for planning.
+
 ## E034–E036 — learned translator (M1), context-programme projection, NC on/off, dress rehearsal
 Run after E031/E032 (independent of their outcome). New code: `vcc26/translator.py` (`M1_gbm`), `models.apply_post` (spec `"post": {"project": {...}}`), `vcc26/compare.py` (paired bootstrap; `loco` now writes `pertarget_*.parquet`), `--exclude-licence NC` (loco/vstar/proxy/predict_challenge), `predict_challenge --spec-file/--spec`, `scripts/final_pipeline.sh`.
 

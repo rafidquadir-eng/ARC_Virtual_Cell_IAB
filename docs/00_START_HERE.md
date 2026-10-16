@@ -57,5 +57,6 @@ Paste the runbook's report block back here after each stage and I'll decide the 
 | `11_BUILD_PLAN.md` | **the detailed build plan**: phases D/E/B/M/C/T, owners, acceptance rules, calendar |
 | `12_DIAGNOSIS.md` | **every known problem (engineering, data, biology, metric, ops) and its fix**, after E021 |
 | `14_DIAGNOSIS_ROUND2.md` | **round-2 diagnosis** after E025/E026 + batch 2: why B4 failed, B5 sparse + cis plan |
+| `15_DIAGNOSIS_ROUND3.md` | **round-3 diagnosis (current):** why we're stuck near 0.1 (fid call count, V\* regime mismatch, emitter artefact, weak transfer, data gap) and the E037–E043 plan |
 | `13_EXECUTION_PLAN.md` | **the working queue**: owners, commands, acceptance tests and dates for every fix; rclone OAuth steps |
 | `EXPERIMENT_LOG.md` | running log (also mirrored as a Google Sheet) |

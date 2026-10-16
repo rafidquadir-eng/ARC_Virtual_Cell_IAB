@@ -63,10 +63,12 @@ def main():
     ap.add_argument("--de-backend", default="auto"); ap.add_argument("--device", default="auto")
     ap.add_argument("--dry-run", action="store_true", help="only list the eligible held-out lines")
     ap.add_argument("--exclude-licence", default=None, help='drop lines/sources whose licence contains this, e.g. "NC"')
+    ap.add_argument("--far", action="store_true", help="V*-far: also drop sources of each held-out line's lineage")
+    loco.add_regime_args(ap)
     a = ap.parse_args()
     cfg = json.load(open(a.config))
     panel = loco.read_panel(a.panel_file)
-    elig = eligible(cfg, panel, a.min_panel, a.min_cells, a.exclude_licence)
+    elig = eligible(cfg, panel, a.min_panel, a.min_target_cells or a.min_cells, a.exclude_licence)
     if a.lines:
         want = set(a.lines.split(","))
         elig = [e for e in elig if e[0] in want]
@@ -76,14 +78,16 @@ def main():
     specs = json.load(open(a.specs))
     os.makedirs(a.out, exist_ok=True)
     frames = []
+    tag = a.tag + ("far" if a.far else "") + (f"_{a.holdout_tag}" if a.holdout_tag else "") + ("_mc" if a.match_cells else "")
     for name, _ in elig:
         df = loco.run(a.config, name, a.mode, a.out, 300, a.cells, a.seed, specs, a.de_backend, a.device,
-                      None, a.tag, a.panel_file, None, a.exclude_licence)
+                      None, tag, a.panel_file, None, a.exclude_licence, a.far,
+                      a.holdout_tag, a.min_target_cells, a.umi_target, a.match_cells)
         frames.append(df)
         rows = pd.concat(frames, ignore_index=True)
-        rows.to_csv(f"{a.out}/vstar_rows_{a.tag}_{a.mode}.csv", index=False)   # checkpoint after each line
+        rows.to_csv(f"{a.out}/vstar_rows_{tag}_{a.mode}.csv", index=False)   # checkpoint after each line
     summ = summarize(rows)
-    summ.to_csv(f"{a.out}/vstar_summary_{a.tag}_{a.mode}.csv", index=False)
+    summ.to_csv(f"{a.out}/vstar_summary_{tag}_{a.mode}.csv", index=False)
     with pd.option_context("display.width", 200, "display.max_columns", 30):
         print(summ.round(3).to_string(index=False))
 

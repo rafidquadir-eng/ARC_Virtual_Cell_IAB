@@ -26,12 +26,14 @@ def control_cpm(ctrl: ad.AnnData) -> np.ndarray:
     return tot / max(tot.sum(), 1.0) * 1e6
 
 
-def _choose_base(X: sp.csr_matrix, n: int, rng, n_pc: int = 20, n_genes: int = 2000) -> np.ndarray:
+def _choose_base(X: sp.csr_matrix, n: int, rng, n_pc: int = 20, n_genes: int = 2000,
+                 keep_order: bool = False) -> np.ndarray:
     """Pick n distinct control cells whose average sits close to the full control population:
     kernel herding on library size + top PCs of log-normalised expression of the top genes."""
     N = X.shape[0]
     if n >= N:
-        return np.sort(rng.choice(N, n, replace=True))
+        idx = rng.choice(N, n, replace=True)
+        return idx if keep_order else np.sort(idx)
     lib = np.asarray(X.sum(1)).ravel()
     top = np.argsort(-np.asarray(X.sum(0)).ravel())[:n_genes]
     L = np.log1p(X[:, top].toarray() / np.maximum(lib, 1)[:, None] * 1e4)
@@ -47,7 +49,7 @@ def _choose_base(X: sp.csr_matrix, n: int, rng, n_pc: int = 20, n_genes: int = 2
         cost = np.sum((run + Z[cand]) ** 2, 1)
         j = cand[np.argmin(cost)]
         chosen.append(j); free[j] = False; run += Z[j]
-    return np.sort(np.array(chosen))
+    return np.array(chosen) if keep_order else np.sort(np.array(chosen))
 
 
 def _exact_round(vals: np.ndarray, totals: np.ndarray, groups: np.ndarray, rng) -> np.ndarray:
@@ -63,46 +65,72 @@ def _exact_round(vals: np.ndarray, totals: np.ndarray, groups: np.ndarray, rng) 
     return fl + give
 
 
-def emit_balanced(ctrl: ad.AnnData, targets, lfc: np.ndarray, *, n_cells: int = 400,
+def _sizes(n_cells, T: int) -> np.ndarray:
+    """n_cells as one int for every target, or one int per target (V* --match-cells)."""
+    n = np.asarray(n_cells, dtype=np.int64)
+    return np.full(T, int(n)) if n.ndim == 0 else n
+
+
+def emit_balanced(ctrl: ad.AnnData, targets, lfc: np.ndarray, *, n_cells=400,
                   pert_col: str = "target", context: str = "X", control_label: str = "non-targeting",
-                  include_control: int = 0, seed: int = 0, **_) -> ad.AnnData:
-    """Low-noise emission. ONE base set of n_cells real control cells (herded to resemble the whole
-    control population) is shared by all targets; each gene's total count over the base cells is set
-    EXACTLY to (full-control pseudobulk proportion x predicted fold change), by scaling existing counts
-    down (or up, with the extra spread over cells in proportion to library size) and sum-exact rounding.
-    So every emitted pseudobulk equals the prediction with no sampling noise, and differences between
-    targets are only the predicted effects; cells keep realistic depth and sparsity for the Wilcoxon tests."""
+                  include_control: int = 0, seed: int = 0, base_mode: str = "herd",
+                  adjust_eps: float = 0.0, **_) -> ad.AnnData:
+    """Low-noise emission. ONE base set of real control cells (herded to resemble the whole control
+    population, or random) is shared by all targets; each gene's total count over the base cells is
+    set EXACTLY to (full-control pseudobulk proportion x predicted fold change), by scaling existing
+    counts down (or up, with the extra spread over cells in proportion to library size) and sum-exact
+    rounding. So every emitted pseudobulk equals the prediction with no sampling noise, and
+    differences between targets are only the predicted effects; cells keep realistic depth and
+    sparsity for the Wilcoxon tests.
+    n_cells: int, or one int per target (a target with n cells uses the first n base cells)."""
     rng = np.random.default_rng(seed)
     X = ctrl.X.tocsr() if sp.issparse(ctrl.X) else sp.csr_matrix(ctrl.X)
     X = X.astype(np.float64)
     G = X.shape[1]
+    sizes = _sizes(n_cells, len(targets))
+    nmax = int(sizes.max()) if len(sizes) else 0
     lib_all = np.asarray(X.sum(1)).ravel()
     ctrl_cpm = np.asarray(X.sum(0)).ravel() / lib_all.sum() * 1e6
-    base = _choose_base(X, n_cells, rng)
-    B = X[base].tocsc()
-    blib = np.asarray(B.sum(1)).ravel()
-    bsum = np.asarray(B.sum(0)).ravel()
+    # base_mode 'herd' picks cells near the population mean, which narrows each gene's distribution
+    # (fewer zeros / higher medians than the controls) and makes Wilcoxon call genes with NO predicted
+    # change; 'random' keeps the controls' own distribution shape. adjust_eps > 0 leaves every gene
+    # whose |predicted lfc| <= adjust_eps exactly as the base cells have it (no thinning/adding).
+    # The base is kept in selection order, so any prefix is itself herded / random.
+    if base_mode == "herd":
+        base_all = _choose_base(X, nmax, rng, keep_order=True)
+    else:
+        base_all = rng.permutation(X.shape[0])[:nmax] if nmax <= X.shape[0] else rng.choice(X.shape[0], nmax)
     target_cpm = np.maximum((ctrl_cpm + PC) * np.power(2.0, lfc) - PC, 0.0)     # (T, G)
-    tot_lib = blib.sum()
-    Bc = B.tocoo(); col, row, dat = Bc.col, Bc.row, Bc.data
+    cache = {}
     blocks, labels = [], []
     for r, t in enumerate(targets):
+        n = int(sizes[r])
+        if n not in cache:
+            B = X[np.sort(base_all[:n])].tocsc()
+            blib = np.asarray(B.sum(1)).ravel()
+            bsum = np.asarray(B.sum(0)).ravel()
+            Bc = B.tocoo()
+            cache[n] = (blib, bsum, Bc.col, Bc.row, Bc.data)
+        blib, bsum, col, row, dat = cache[n]
+        tot_lib = blib.sum()
         want = target_cpm[r] / 1e6 * tot_lib                  # desired total count per gene over base cells
+        if adjust_eps > 0:
+            want = np.where(np.abs(lfc[r]) <= adjust_eps, bsum, want)
         down = np.minimum(want, bsum)                         # part made by scaling existing counts
         s = np.where(bsum > 0, down / np.maximum(bsum, 1e-12), 0.0)
         v = _exact_round(dat * s[col], np.round(down), col, rng)
-        M = sp.csr_matrix((v, (row, col)), shape=(n_cells, G))
+        M = sp.csr_matrix((v, (row, col)), shape=(n, G))
         extra = np.round(want - down)                         # still missing (upregulation / absent genes)
         up = np.where(extra >= 1)[0]
         if len(up):
             share = blib / blib.sum()
             vals = (share[:, None] * extra[up][None, :]).ravel(order="F")
-            grp = np.repeat(np.arange(len(up)), n_cells)
-            add = _exact_round(vals, extra[up], grp, rng).reshape(len(up), n_cells).T
-            M = M + sp.csr_matrix(add, shape=(n_cells, len(up))) @ sp.csr_matrix(
+            grp = np.repeat(np.arange(len(up)), n)
+            add = _exact_round(vals, extra[up], grp, rng).reshape(len(up), n).T
+            M = M + sp.csr_matrix(add, shape=(n, len(up))) @ sp.csr_matrix(
                 (np.ones(len(up)), (np.arange(len(up)), up)), shape=(len(up), G))
         M = sp.csr_matrix(M); M.eliminate_zeros()
-        blocks.append(M); labels += [t] * n_cells
+        blocks.append(M); labels += [t] * n
     if include_control:
         blocks.append(X[rng.integers(0, X.shape[0], include_control)])
         labels += [control_label] * include_control
@@ -115,10 +143,22 @@ def emit_balanced(ctrl: ad.AnnData, targets, lfc: np.ndarray, *, n_cells: int = 
 
 
 def emit(mode: str, *args, **kw) -> ad.AnnData:
-    return emit_balanced(*args, **kw) if mode == "balanced" else emit_context(*args, **kw)
+    """random | balanced (herded base, every gene set exactly) | balanced2 (random base, only genes
+    with a predicted change are set exactly; no Wilcoxon artefacts on unchanged genes) | balanced2h
+    (herded base, changed genes only) | balanced3 (random base, every gene set exactly: exact
+    pseudobulk like 'balanced' without the herded base's narrowed distributions)."""
+    if mode == "balanced":
+        return emit_balanced(*args, **kw)
+    if mode == "balanced2":
+        return emit_balanced(*args, base_mode="random", adjust_eps=1e-3, **kw)
+    if mode == "balanced2h":
+        return emit_balanced(*args, base_mode="herd", adjust_eps=1e-3, **kw)
+    if mode == "balanced3":
+        return emit_balanced(*args, base_mode="random", adjust_eps=0.0, **kw)
+    return emit_context(*args, **kw)
 
 
-def emit_context(ctrl: ad.AnnData, targets, lfc: np.ndarray, *, n_cells: int = 400,
+def emit_context(ctrl: ad.AnnData, targets, lfc: np.ndarray, *, n_cells=400,
                  pert_col: str = "target", context: str = "X", control_label: str = "non-targeting",
                  include_control: int = 0, seed: int = 0, up_tol: float = 0.02) -> ad.AnnData:
     """ctrl: control cells of the target context, genes in the SAME order as lfc's columns."""
@@ -133,9 +173,11 @@ def emit_context(ctrl: ad.AnnData, targets, lfc: np.ndarray, *, n_cells: int = 4
     with np.errstate(divide="ignore", invalid="ignore"):
         fac = np.where(ctrl_cpm > 0, target_cpm / ctrl_cpm, 1.0)
 
+    sizes = _sizes(n_cells, len(targets))
     blocks, labels = [], []
     for r, t in enumerate(targets):
-        pick = rng.integers(0, X.shape[0], n_cells)
+        n_r = int(sizes[r])
+        pick = rng.integers(0, X.shape[0], n_r)
         B = X[pick].tocoo()
         f = fac[r]
         down = np.clip(f[B.col], 0.0, 1.0)
@@ -145,10 +187,10 @@ def emit_context(ctrl: ad.AnnData, targets, lfc: np.ndarray, *, n_cells: int = 4
         if len(up):
             lam = np.outer(lib[pick] / lib.mean(), mu[up] * lib.mean() * (f[up] - 1.0))
             add = rng.poisson(lam)
-            Bn = Bn + sp.csr_matrix((add.ravel(), (np.repeat(np.arange(n_cells), len(up)),
-                                                   np.tile(up, n_cells))), shape=B.shape)
+            Bn = Bn + sp.csr_matrix((add.ravel(), (np.repeat(np.arange(n_r), len(up)),
+                                                   np.tile(up, n_r))), shape=B.shape)
         Bn.eliminate_zeros()
-        blocks.append(Bn); labels += [t] * n_cells
+        blocks.append(Bn); labels += [t] * n_r
     if include_control:
         blocks.append(X[rng.integers(0, X.shape[0], include_control)])
         labels += [control_label] * include_control

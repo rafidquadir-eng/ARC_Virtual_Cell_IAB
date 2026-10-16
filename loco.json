@@ -9,7 +9,9 @@
    "symbol_col": "gene_name",
    "summary": "/lambda/nfs/LambdaFilesystem/vcc-data/pb/K562.npz",
    "line": "K562",
-   "library": "essential"
+   "library": "essential",
+   "lineage": "myeloid_leukemia",
+   "platform": "10x_3p"
   },
   {
    "name": "RPE1",
@@ -19,7 +21,9 @@
    "symbol_col": "gene_name",
    "summary": "/lambda/nfs/LambdaFilesystem/vcc-data/pb/RPE1.npz",
    "line": "RPE1",
-   "library": "essential"
+   "library": "essential",
+   "lineage": "epithelial",
+   "platform": "10x_3p"
   },
   {
    "name": "HepG2",
@@ -29,7 +33,9 @@
    "symbol_col": "gene_name",
    "summary": "/lambda/nfs/LambdaFilesystem/vcc-data/pb/HepG2.npz",
    "line": "HepG2",
-   "library": "essential"
+   "library": "essential",
+   "lineage": "epithelial",
+   "platform": "10x_3p"
   },
   {
    "name": "Jurkat",
@@ -39,7 +45,9 @@
    "symbol_col": "gene_name",
    "summary": "/lambda/nfs/LambdaFilesystem/vcc-data/pb/Jurkat.npz",
    "line": "Jurkat",
-   "library": "essential"
+   "library": "essential",
+   "lineage": "T_lymphoid",
+   "platform": "10x_3p"
   },
   {
    "name": "H1",
@@ -49,7 +57,9 @@
    "symbol_col": null,
    "summary": "/lambda/nfs/LambdaFilesystem/vcc-data/pb/H1.npz",
    "line": "H1",
-   "library": "targeted"
+   "library": "targeted",
+   "lineage": "pluripotent",
+   "platform": "10x_flex"
   },
   {
    "name": "K562_GWPS",
@@ -59,7 +69,9 @@
    "control": "non-targeting",
    "symbol_col": "gene_name",
    "summary": "/lambda/nfs/LambdaFilesystem/vcc-data/pb/K562_GWPS.npz",
-   "library": "genome_wide"
+   "library": "genome_wide",
+   "lineage": "myeloid_leukemia",
+   "platform": "10x_3p"
   },
   {
    "name": "HipSci_iPSC",
@@ -69,7 +81,8 @@
    "pert_col": "target",
    "control": "non-targeting",
    "symbol_col": null,
-   "summary": "/lambda/nfs/LambdaFilesystem/vcc-data/pb/HipSci_iPSC.npz"
+   "summary": "/lambda/nfs/LambdaFilesystem/vcc-data/pb/HipSci_iPSC.npz",
+   "lineage": "pluripotent"
   },
   {
    "name": "KOLF2.1J",
@@ -79,7 +92,8 @@
    "pert_col": "target",
    "control": "NTC",
    "symbol_col": null,
-   "summary": "/lambda/nfs/LambdaFilesystem/vcc-data/pb/KOLF2.1J.npz"
+   "summary": "/lambda/nfs/LambdaFilesystem/vcc-data/pb/KOLF2.1J.npz",
+   "lineage": "pluripotent"
   },
   {
    "name": "CD4T_Rest",
@@ -89,7 +103,9 @@
    "pert_col": "target",
    "control": "non-targeting",
    "symbol_col": null,
-   "summary": "/lambda/nfs/LambdaFilesystem/vcc-data/pb/CD4T_Rest.npz"
+   "summary": "/lambda/nfs/LambdaFilesystem/vcc-data/pb/CD4T_Rest.npz",
+   "lineage": "T_lymphoid",
+   "platform": "10x_flex"
   },
   {
    "name": "CD4T_Stim8hr",
@@ -99,7 +115,9 @@
    "pert_col": "target",
    "control": "non-targeting",
    "symbol_col": null,
-   "summary": "/lambda/nfs/LambdaFilesystem/vcc-data/pb/CD4T_Stim8hr.npz"
+   "summary": "/lambda/nfs/LambdaFilesystem/vcc-data/pb/CD4T_Stim8hr.npz",
+   "lineage": "T_lymphoid",
+   "platform": "10x_flex"
   },
   {
    "name": "CD4T_Stim48hr",
@@ -109,7 +127,9 @@
    "pert_col": "target",
    "control": "non-targeting",
    "symbol_col": null,
-   "summary": "/lambda/nfs/LambdaFilesystem/vcc-data/pb/CD4T_Stim48hr.npz"
+   "summary": "/lambda/nfs/LambdaFilesystem/vcc-data/pb/CD4T_Stim48hr.npz",
+   "lineage": "T_lymphoid",
+   "platform": "10x_flex"
   },
   {
    "name": "Orion_HCT116",
@@ -121,7 +141,8 @@
    "pert_col": "target",
    "control": "Non-Targeting",
    "symbol_col": null,
-   "summary": "/lambda/nfs/LambdaFilesystem/vcc-data/pb/Orion_HCT116.npz"
+   "summary": "/lambda/nfs/LambdaFilesystem/vcc-data/pb/Orion_HCT116.npz",
+   "platform": "10x_5p_gemx"
   },
   {
    "name": "Orion_HEK293T",
@@ -133,7 +154,8 @@
    "pert_col": "target",
    "control": "Non-Targeting",
    "symbol_col": null,
-   "summary": "/lambda/nfs/LambdaFilesystem/vcc-data/pb/Orion_HEK293T.npz"
+   "summary": "/lambda/nfs/LambdaFilesystem/vcc-data/pb/Orion_HEK293T.npz",
+   "platform": "10x_5p_gemx"
   }
  ]
 }

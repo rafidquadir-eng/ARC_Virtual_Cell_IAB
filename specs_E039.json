@@ -1,0 +1,141 @@
+[
+ {
+  "name": "ORACLE_HALF",
+  "model": "ORACLE_HALF"
+ },
+ {
+  "name": "ORACLE_MEAN",
+  "model": "ORACLE_MEAN"
+ },
+ {
+  "name": "ORACLE_TOPK50",
+  "model": "ORACLE_TOPK",
+  "kw": {
+   "k": 50
+  }
+ },
+ {
+  "name": "ORACLE_TOPK400",
+  "model": "ORACLE_TOPK",
+  "kw": {
+   "k": 400
+  }
+ },
+ {
+  "name": "B0_control",
+  "model": "B0_control"
+ },
+ {
+  "name": "B2_raw_gPL(E021)",
+  "model": "B2_transfer",
+  "kw": {
+   "alpha": 1.0,
+   "raw": true,
+   "generic_from": [
+    "@genome_wide",
+    "@targeted"
+   ]
+  }
+ },
+ {
+  "name": "B5_z2_a0.5_cis5000",
+  "model": "B5_sparse",
+  "kw": {
+   "z_thr": 2,
+   "agree": 0.5,
+   "cis_bp": 5000,
+   "tss": "/lambda/nfs/LambdaFilesystem/vcc-data/tss.csv"
+  }
+ },
+ {
+  "name": "B5z2_tl0.05",
+  "model": "B5_sparse",
+  "kw": {
+   "z_thr": 2,
+   "agree": 0.5,
+   "cis_bp": 5000,
+   "tss": "/lambda/nfs/LambdaFilesystem/vcc-data/tss.csv",
+   "trans_lambda": 0.05
+  }
+ },
+ {
+  "name": "B5x_tl0.05",
+  "model": "B5_sparse",
+  "kw": {
+   "z_thr": 3,
+   "agree": 0.75,
+   "cis_bp": 5000,
+   "tss": "/lambda/nfs/LambdaFilesystem/vcc-data/tss.csv",
+   "trans_lambda": 0.05
+  }
+ },
+ {
+  "name": "B5z2_common",
+  "model": "B5_sparse",
+  "kw": {
+   "z_thr": 2,
+   "agree": 0.5,
+   "cis_bp": 5000,
+   "tss": "/lambda/nfs/LambdaFilesystem/vcc-data/tss.csv",
+   "common": "panel"
+  }
+ },
+ {
+  "name": "B5z2_common_half",
+  "model": "B5_sparse",
+  "kw": {
+   "z_thr": 2,
+   "agree": 0.5,
+   "cis_bp": 5000,
+   "tss": "/lambda/nfs/LambdaFilesystem/vcc-data/tss.csv",
+   "common": "panel",
+   "common_scale": 0.5
+  }
+ },
+ {
+  "name": "B5_common_only",
+  "model": "B5_sparse",
+  "kw": {
+   "z_thr": 2,
+   "agree": 0.5,
+   "cis_bp": 5000,
+   "tss": "/lambda/nfs/LambdaFilesystem/vcc-data/tss.csv",
+   "common": "panel_only"
+  }
+ },
+ {
+  "name": "M1_b1.3",
+  "model": "M1_gbm",
+  "kw": {
+   "tss": "/lambda/nfs/LambdaFilesystem/vcc-data/tss.csv",
+   "beta": 1.3
+  }
+ },
+ {
+  "name": "ENS_B5M1",
+  "model": "ENS",
+  "kw": {
+   "members": [
+    {
+     "model": "B5_sparse",
+     "kw": {
+      "z_thr": 2,
+      "agree": 0.5,
+      "cis_bp": 5000,
+      "tss": "/lambda/nfs/LambdaFilesystem/vcc-data/tss.csv",
+      "trans_lambda": 0.05
+     },
+     "w": 0.5
+    },
+    {
+     "model": "M1_gbm",
+     "kw": {
+      "tss": "/lambda/nfs/LambdaFilesystem/vcc-data/tss.csv",
+      "beta": 1.3
+     },
+     "w": 0.5
+    }
+   ]
+  }
+ }
+]

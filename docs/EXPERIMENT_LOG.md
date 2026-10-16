@@ -30,6 +30,12 @@ Scores are scaled vcc2026 metrics (0 = context mean-response baseline, 1 = repli
 | E034 | 16–17 Oct | Learned translator (M1) and context-programme projection beat B5/E021 | proxy + V* + bootstrap, specs_E034 | seen | 0.703 | 0.159 | 0.653 | 0.229 | −0.454 | 0.152 | M1_b1.3 0.240 vs B5 0.263 (Δ −0.023, CI −0.036..−0.005) | | CPU+GPU 5 h | done: M1 proxy winner (0.435) but below B5 on V*; best on HEK293T; top spec stays B5 | E035 |
 | E035 | 17 Oct | NC (Orion) sources help non-NC lines | V* with/without NC | seen | 0.446 | 0.090 | 0.661 | 0.096 | −0.298 | 0.179 | 0.196 with NC vs 0.181 without | | GPU 45 min | done: +0.015 with NC (CD4T +0.016, GWPS +0.060, KOLF −0.031); R decides | |
 | E036 | 17 Oct | Final pipeline runs end to end in time | dress rehearsal A/B/C, NC on/off | – | | | | | | | | | – | done: both prep OK; 27 / 25 min wall, 73 / 66 GB RAM; .vcc 3.3 GB | |
+| E037 | 16–17 Oct | A held-out truth can look like A/B/C to the DE metrics (400 cells, 20k UMI, baseline fid ≈ 0.5) | H1-R400 on its own targets (loco), panel lines at R400 if eligible; `regime_check.py`; `vcc26.detect` for A/B/C | – | | | | | | | | | CPU+GPU ~1.5 h | planned | E038 |
+| E038 | 17 Oct | Call budget lifts fid above the baseline; balanced3 removes the emitter artefact; H1-R400 reproduces the LB's E021 → E032 changes | specs_E038 (17) on H1-R400 + far; bootstrap vs LB config | seen | | | | | | | | | GPU ~3 h | planned | E038b, E040 |
+| E038b | 17 Oct | The winner doesn't lose on the standard lines | specs_E038b, 5 lines, --match-cells | seen | | | | | | | | | GPU ~4 h | planned | E040 |
+| E039 | 17 Oct | Direction precision at k; is the context-mean response conserved across lines? | proxy specs_E039: half-split oracles, dirprec@k, B5 common variants, ENS | seen | | | | | | | | | CPU | planned | E042 |
+| E040 | 17–18 Oct | Call budget lifts the leaderboard (fid −0.29 → ≥ 0) | E038 winner, if CI lower bound > 0 on H1-R400 and E038b Δ ≥ −0.01 | LB | | | | | | | | | 1 submission | planned | |
+| E041 | 17 Oct | A/B/C match specific CCLE lines | `scripts/ccle_match.py` (DepMap 24Q4 expression) | – | | | | | | | | | CPU 10 min | planned | CUR batch 3, E042 |
 | E006 | 17–19 Oct | iMEMORY gene vectors add signal | kNN on iMEMORY vs shuffle vs public prior | unseen | | | | | | | | | | blocked (EC2 files) | |
 | E007 | 17 Oct | A1: source weighting + target-expression gating | | both | | | | | | | | | | planned | |
 | E008 | 18 Oct | A1: per-target shrinkage + β and DE-count calibration | | both | | | | | | | | | | planned | |
@@ -95,3 +101,13 @@ Full diagnosis in `docs/12_DIAGNOSIS.md`. The headline: raw MSE 4.66 on the lead
 
 ## Planning note, 16 Oct ~07:30 UTC (after E025–E026, batch 2)
 B4 retired: its shrinkage was mis-scaled, so it fixed MSE but lost PDS. The E025 anatomy shows dense transfer is noise per gene (cos 0.003–0.08). New: B5 sparse cross-line-consistent consensus + CRISPRi cis effects; proxy ORACLE_TOPK/ORACLE_CIS ceilings and cis-share anatomy; `top50_overlap`; `scripts/pick_specs.py`. V* now has 5 lines (Orion HCT116/HEK293T). See `docs/14_DIAGNOSIS_ROUND2.md`.
+
+## Planning note, 16 Oct ~15:00 UTC (round 3; full text `docs/15_DIAGNOSIS_ROUND3.md`)
+- **Why we're stuck near 0.1:**
+  1. fid = k/max(n_pred, N_conf), with k counting direction matches on ANY gene, so chance ≈ 0.51 = the official baseline. B5 under-calls (0.42 → −0.29 scaled).
+  2. V\* can't see this: its baseline fid is 0.02, against 0.51 on the LB. B0 scores +0.4–0.8 fid in V\*, and V\* forecast fid −0.04 where the LB gave −0.23.
+  3. The `balanced` emitter makes the scorer call ~2.7% of genes on a no-change prediction (synthetic null).
+  4. Directional transfer is at chance.
+  5. The test lines are far from our data (Flex platform; T-ALL/carcinoma/squamous); the leaders have proprietary atlases.
+- **Built:** `de_budget` + `vcc26.detect` (n_pred = n exactly through the scorer's DE engine); `balanced3`/`balanced2` emitters; regime-matched holdouts (`--min-target-cells/--umi-target/--holdout-tag`, `--match-cells`); lineage/platform tags + `--far`; half-split proxy oracles, `ORACLE_MEAN`, `dirprec@k`, `top50_rep`; B5 `common`; ENS; info logging; `regime_check.py`; `ccle_match.py`; final-pipeline naming fix.
+- **Correction:** H1 measures only 25 of the 300 challenge targets (`DATA_DONE.md`), so H1-R400 is held out on its own targets. CD4T is also 10x Flex.

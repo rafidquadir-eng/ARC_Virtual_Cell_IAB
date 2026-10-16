@@ -64,9 +64,26 @@ def read_panel(path: str | None) -> set[str] | None:
     return set(vals.astype(str)) - {CTRL}
 
 
+def thin_umis(X: sp.csr_matrix, umi_target: float | None, rng) -> tuple[sp.csr_matrix, float]:
+    """Binomially thin every cell by one global factor so the median UMI/cell drops to umi_target
+    (A/B/C have ~20k UMI/cell; Arc's 2025 H1 data has >50k). Returns (X, factor); factor 1 = no-op."""
+    if not umi_target:
+        return X, 1.0
+    lib = np.asarray(X.sum(1)).ravel()
+    f = float(umi_target) / float(np.median(lib))
+    if f >= 1:
+        return X, 1.0
+    X = X.copy()
+    X.data = rng.binomial(X.data.astype(np.int64), f).astype(np.float32)
+    X.eliminate_zeros()
+    return X, f
+
+
 def prepare_holdout(ctx: dict, axis_all: np.ndarray, outdir: str, n_panel: int, n_cells: int,
                     seed: int, max_kd: float = 0.7, panel_set: set[str] | None = None,
-                    max_ctrl: int = 18400):
+                    max_ctrl: int = 18400, min_cells: int | None = None, umi_target: float | None = None):
+    """Challenge-shaped truth for one held-out context. Regime matching (round 3): min_cells=400 keeps
+    only targets with >= 400 cells (A/B/C have exactly 400 per target), umi_target thins to their depth."""
     os.makedirs(outdir, exist_ok=True)
     real_p, ctrl_p = f"{outdir}/real.h5ad", f"{outdir}/ctrl.h5ad"
     if os.path.exists(real_p) and os.path.exists(ctrl_p):
@@ -82,7 +99,8 @@ def prepare_holdout(ctx: dict, axis_all: np.ndarray, outdir: str, n_panel: int, 
     axis = sym[gcols]
     lab = a.obs[ctx["pert_col"]].astype(str).values
     summ = load_summary(ctx["summary"])
-    ok = set(summ["perts"][(summ["ncells"] >= min(n_cells, 50)) & ~(summ["kd"] > max_kd)])
+    mc = min(n_cells, 50) if min_cells is None else min_cells
+    ok = set(summ["perts"][(summ["ncells"] >= mc) & ~(summ["kd"] > max_kd)])
     cand = sorted(p for p in ok if p in set(axis) and (panel_set is None or p in panel_set))
     panel = sorted(rng.choice(cand, min(n_panel, len(cand)), replace=False))
     rows = []
@@ -97,6 +115,10 @@ def prepare_holdout(ctx: dict, axis_all: np.ndarray, outdir: str, n_panel: int, 
     X = a.X[rows]
     X = sp.csr_matrix((X if sp.issparse(X) else sp.csr_matrix(X))[:, gcols].astype(np.float32))
     X.sum_duplicates()                            # canonical CSR (sorted indices); cell-eval2 requires it
+    X, f = thin_umis(X, umi_target, rng)
+    if f < 1:
+        print(f"thinned UMIs by {f:.3f} to median {umi_target:.0f}/cell")
+        X.sum_duplicates()
     t = np.where(lab[rows] == ctx["control"], CTRL, lab[rows])
     real = ad.AnnData(X, obs=pd.DataFrame({"target": t}, index=[f"c{i}" for i in range(len(rows))]),
                       var=pd.DataFrame(index=axis))
@@ -108,14 +130,17 @@ def prepare_holdout(ctx: dict, axis_all: np.ndarray, outdir: str, n_panel: int, 
 def run(cfg_path: str, holdout: str, mode: str, out: str, n_panel: int, n_cells: int, seed: int,
         model_specs: list[dict], de_backend: str = "auto", device: str = "auto",
         extra_emb: dict | None = None, tag: str = "default", panel_file: str | None = None,
-        only_sources: list[str] | None = None, exclude_licence: str | None = None):
+        only_sources: list[str] | None = None, exclude_licence: str | None = None, far: bool = False,
+        holdout_tag: str | None = None, min_target_cells: int | None = None, umi_target: float | None = None,
+        match_cells: bool = False):
     cfg = json.load(open(cfg_path))
     axis_all = pd.read_csv(cfg["gene_axis"], header=None).iloc[:, 0].astype(str).values
     ctxs = {c["name"]: c for c in cfg["contexts"]}
     hold = ctxs[holdout]
-    hdir = f"{out}/holdout_{holdout}"
+    hdir = f"{out}/holdout_{holdout}" + (f"_{holdout_tag}" if holdout_tag else "")
     real_p, ctrl_p, axis, panel = prepare_holdout(hold, axis_all, hdir, n_panel, n_cells, seed,
-                                                  panel_set=read_panel(panel_file))
+                                                  panel_set=read_panel(panel_file),
+                                                  min_cells=min_target_cells, umi_target=umi_target)
     ecfg = local_eval.make_config("target", CTRL, device, de_backend)
     anc_p = f"{hdir}/anchors.json"
     if not os.path.exists(anc_p):
@@ -126,7 +151,8 @@ def run(cfg_path: str, holdout: str, mode: str, out: str, n_panel: int, n_cells:
     line = hold.get("line", holdout)
     src_names = [n for n, c in ctxs.items() if n != holdout and c.get("line", n) != line
                  and (not only_sources or n in only_sources)
-                 and not (exclude_licence and exclude_licence in str(c.get("licence", "")))]
+                 and not (exclude_licence and exclude_licence in str(c.get("licence", "")))
+                 and not (far and hold.get("lineage") and c.get("lineage") == hold.get("lineage"))]
     if not src_names:
         raise ValueError("no source contexts left after line/--sources filtering")
     sources = [dict(subset_summary(load_summary(ctxs[n]["summary"]), axis, drop), name=n,
@@ -136,6 +162,12 @@ def run(cfg_path: str, holdout: str, mode: str, out: str, n_panel: int, n_cells:
           f"{cover} panel targets measured in >=1 source")
     ctrl = ad.read_h5ad(ctrl_p)
     tgt_cpm = control_cpm(ctrl)            # target context's control profile (all a model may see)
+    sizes = n_cells
+    if match_cells:   # emit as many cells per target as the truth has, so prediction, truth and the
+        # baseline (built at truth group sizes) have the same Wilcoxon power, as on the leaderboard
+        vc = ad.read_h5ad(real_p, backed="r").obs["target"].astype(str).value_counts()
+        sizes = np.array([int(vc.get(p, n_cells)) for p in panel])
+        print(f"match-cells: per-target cells median {int(np.median(sizes))}, min {sizes.min()}, max {sizes.max()}")
     rows, frames = [], []
     for spec in model_specs:
         t0 = time.time()
@@ -163,21 +195,24 @@ def run(cfg_path: str, holdout: str, mode: str, out: str, n_panel: int, n_cells:
                      "n_multi_source": int(sum(x[1] > 1 for x in pt)),
                      "n_unmeasured": int(sum(x[1] == 0 for x in pt)),
                      "n_neighbor_targets": info.get("n_neighbor_targets", 0)}
+        elif spec["model"] in ("B5_sparse", "M1_gbm", "ENS"):
+            lfc, info = models.MODELS[spec["model"]](panel, sources, return_info=True, **kw)
+            extra = {k: v for k, v in info.items() if isinstance(v, (int, float, str))}
         else:
             lfc = models.MODELS[spec["model"]](panel, sources, **kw)
-        lfc = models.apply_post(lfc, spec.get("post"), ctrl)
-        pred = emit(spec.get("emit", "random"), ctrl, panel, lfc, n_cells=n_cells, context=holdout,
+        lfc = models.apply_post(lfc, spec.get("post"), ctrl, n_cells=sizes)
+        pred = emit(spec.get("emit", "random"), ctrl, panel, lfc, n_cells=sizes, context=holdout,
                     seed=seed, include_control=n_cells)   # scorer requires the control label
         res, pframe = local_eval.score(pred, real_p, anchors, ecfg, return_frame=True)
         frames.append(pframe.with_columns(pl.lit(name).alias("spec"), pl.lit(spec.get("emit", "random")).alias("emit")))
-        row = {"model": name, "emit": spec.get("emit", "random"), "holdout": holdout, "mode": mode,
+        row = {"model": name, "emit": spec.get("emit", "random"), "holdout": holdout + (f"_{holdout_tag}" if holdout_tag else ""), "mode": mode,
                "sources": "+".join(src_names),
                "n_panel": len(panel), "n_covered": cover, **{k: v for k, v in res.items() if k != "raw"},
                **{f"raw_{k}": v for k, v in res["raw"].items()}, **{k: json.dumps(v) if isinstance(v, list) else v for k, v in extra.items()},
                "secs": round(time.time() - t0, 1)}
         rows.append(row); print(json.dumps(row))
     df = pd.DataFrame(rows)
-    path = f"{out}/scores_{holdout}_{mode}_{tag}.csv"
+    path = f"{out}/scores_{holdout}{'_' + holdout_tag if holdout_tag else ''}_{mode}_{tag}.csv"
     if os.path.exists(path):                       # never overwrite an earlier sweep
         path = path.replace(".csv", f"_{time.strftime('%Y%m%d-%H%M%S')}.csv")
     df.to_csv(path, index=False)
@@ -211,6 +246,8 @@ def main():
     ap.add_argument("--sources", default=None, help="comma-separated source context names to use (default: all)")
     ap.add_argument("--tag", default=None, help="suffix for the scores file (default: specs file name)")
     ap.add_argument("--exclude-licence", default=None, help='drop sources whose licence contains this, e.g. "NC"')
+    ap.add_argument("--far", action="store_true", help="also drop sources of the held-out line's lineage (V*-far)")
+    add_regime_args(ap)
     a = ap.parse_args()
     specs = json.load(open(a.specs)) if a.specs else DEFAULT_SPECS
     embs = {}
@@ -218,7 +255,16 @@ def main():
         n, p = e.split("=", 1); z = np.load(p, allow_pickle=True); embs[n] = {k: z[k] for k in z.files}
     tag = a.tag or (os.path.splitext(os.path.basename(a.specs))[0] if a.specs else "default")
     run(a.config, a.holdout, a.mode, a.out, a.panel, a.cells, a.seed, specs, a.de_backend, a.device, embs, tag,
-        a.panel_file, a.sources.split(",") if a.sources else None, a.exclude_licence)
+        a.panel_file, a.sources.split(",") if a.sources else None, a.exclude_licence, a.far,
+        a.holdout_tag, a.min_target_cells, a.umi_target, a.match_cells)
+
+
+def add_regime_args(ap):
+    """Round-3 options that make a held-out line look like A/B/C to the DE metrics (docs/15 P2)."""
+    ap.add_argument("--holdout-tag", default=None, help="separate holdout dir/name, e.g. R400 for a regime-matched truth")
+    ap.add_argument("--min-target-cells", type=int, default=None, help="keep only targets with >= this many truth cells (A/B/C: 400)")
+    ap.add_argument("--umi-target", type=float, default=None, help="thin the truth (and its controls) to this median UMI/cell (A/B/C: ~20000)")
+    ap.add_argument("--match-cells", action="store_true", help="emit as many cells per target as the truth has")
 
 
 if __name__ == "__main__":

@@ -54,7 +54,7 @@ def main():
     ap.add_argument("--spec-file", default=None, help="take model/kw/fallback/emit/post from this specs JSON ...")
     ap.add_argument("--spec", default=None, help="... the spec with this name")
     ap.add_argument("--post", default=None, help='post-processing JSON, e.g. {"project": {"k": 200, "lam": 0.5}}')
-    ap.add_argument("--emit", default="random", choices=["random", "balanced"],
+    ap.add_argument("--emit", default="random", choices=["random", "balanced", "balanced2", "balanced2h", "balanced3"],
                     help="balanced = shared herded base cells + exact per-gene totals (no sampling noise)")
     a = ap.parse_args()
     post = json.loads(a.post) if a.post else None
@@ -88,7 +88,7 @@ def main():
         ctrl = ctrl[:, axis].copy()                     # enforce the official gene order
         # context-specific prediction: A1 uses this context's own control profile
         lfc = models.MODELS[a.model](targets, sources, target_ctrl_cpm=control_cpm(ctrl), **kw)
-        lfc = models.apply_post(lfc, post, ctrl)
+        lfc = models.apply_post(lfc, post, ctrl, n_cells=a.cells)
         parts.append(emit(a.emit, ctrl, targets, lfc, n_cells=a.cells, pert_col=a.pert_col,
                                   context=c, include_control=a.n_control, seed=a.seed + i))
     out = ad.concat(parts, merge="same")

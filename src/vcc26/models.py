@@ -522,7 +522,8 @@ MODELS["B4_consensus"] = predict_consensus
 # ---------------------------------------------------------------------------------------------
 
 def _line_effects(sources, t, pc):
-    """{line: (effect (G,), noise var (G,))} for target t, merging datasets of a line by inverse variance."""
+    """{line: (effect (G,), noise var (G,))} for target t, merging datasets of a line by inverse variance.
+    If a source carries `_pmean` (its panel-mean response), the effect is taken relative to it."""
     G = len(sources[0]["genes"])
     acc = {}
     for s in sources:
@@ -536,7 +537,8 @@ def _line_effects(sources, t, pc):
         w = np.where(v, 1.0 / np.maximum(s["_varpc"][i], 1e-8), 0.0) * s.get("_simw", 1.0)
         L = s.get("line") or s.get("name")
         e, ww = acc.get(L, (np.zeros(G), np.zeros(G)))
-        acc[L] = (e + w * s["_lfcpc"][i], ww + w)
+        eff = s["_lfcpc"][i] - s["_pmean"] if s.get("_pmean") is not None else s["_lfcpc"][i]
+        acc[L] = (e + w * eff, ww + w)
     return {L: (np.where(ww > 0, e / np.maximum(ww, 1e-12), 0.0), np.where(ww > 0, 1.0 / np.maximum(ww, 1e-12), np.inf))
             for L, (e, ww) in acc.items()}
 
@@ -545,6 +547,7 @@ def predict_sparse(targets, sources, target_ctrl_cpm=None, pc: float = 1.0, z_th
                    agree: float = 0.75, min_lines: int = 1, trans_lambda: float = 0.0, beta: float = 1.0,
                    cis_bp: int | None = 5000, tss: str | None = None, cis_gate_cpm: float = 5.0,
                    gate_target_cpm: float | None = None, sim_tau: float | None = None,
+                   common: str = "none", common_z: float = 3.0, common_scale: float = 1.0,
                    return_info: bool = False, **_):
     """Per target: meta-analyse its measured response across LINES (fixed-effect mean with a
     Birge-ratio inflation of the standard error for between-line heterogeneity). Keep genes with
@@ -553,7 +556,12 @@ def predict_sparse(targets, sources, target_ctrl_cpm=None, pc: float = 1.0, z_th
     cis: genes whose TSS lies within cis_bp of the target's TSS get their measured consensus
     knockdown if negative, else the neighbour-prior knockdown for that distance; both gated by the
     neighbour's expression in the target context (CPM / cis_gate_cpm, capped at 1).
-    gate_target_cpm: scale the trans part by the target gene's own expression in the context."""
+    gate_target_cpm: scale the trans part by the target gene's own expression in the context.
+    common: 'panel' adds the predicted context-wide response (consensus over lines of each line's mean
+    response across the requested panel targets, kept where |z| >= common_z and sign-consistent) to
+    every target, and builds the target-specific part from deviations from each line's panel mean;
+    'panel_only' predicts the common response alone (diagnostic). The metric's baseline IS the
+    context's mean response, so DE calls shared across targets come from this component."""
     G = len(sources[0]["genes"]); genes = sources[0]["genes"]; gpos = {g: i for i, g in enumerate(genes)}
     tc = None if target_ctrl_cpm is None else np.asarray(target_ctrl_cpm, float)
     for s in sources:
@@ -567,6 +575,35 @@ def predict_sparse(targets, sources, target_ctrl_cpm=None, pc: float = 1.0, z_th
         mx = max(rL.values())
         for s in sources:
             s["_simw"] = float(np.exp((rL[s.get("line") or s.get("name")] - mx) / sim_tau))
+    cvec = np.zeros(G)
+    for s in sources:
+        s["_pmean"] = None
+    if common in ("panel", "panel_only"):
+        tset = set(targets)
+        acc = {}
+        for s in sources:
+            if "_lfcpc" not in s or s.get("_pc") != pc:
+                s["_lfcpc"] = _lfc_pc(s, pc); s["_varpc"] = _noise_var(s, s["_lfcpc"], pc); s["_pc"] = pc
+            rows = [i for i, p in enumerate(s["perts"]) if p in tset]
+            if len(rows) < 10:
+                continue
+            m = s["_lfcpc"][rows].mean(0); vm = s["_varpc"][rows].mean(0) / len(rows)
+            v = s["present"] & (s["ctrl_cpm"] > EPS_CPM)
+            s["_pmean"] = np.where(v, m, 0.0)
+            L = s.get("line") or s.get("name")
+            w = np.where(v, 1.0 / np.maximum(vm, 1e-10), 0.0)
+            e, ww = acc.get(L, (np.zeros(G), np.zeros(G)))
+            acc[L] = (e + w * m, ww + w)
+        if acc:
+            E = np.vstack([np.where(ww > 0, e / np.maximum(ww, 1e-12), 0.0) for e, ww in acc.values()])
+            W = np.vstack([ww for _, ww in acc.values()]); sw = W.sum(0)
+            mu = np.where(sw > 0, (W * E).sum(0) / np.maximum(sw, 1e-12), 0.0)
+            k = (W > 0).sum(0)
+            Q = np.where(sw > 0, (W * (E - mu) ** 2).sum(0), 0.0)
+            birge = np.where(k > 1, np.maximum(1.0, Q / np.maximum(k - 1, 1)), 1.0)
+            z = mu / np.where(sw > 0, np.sqrt(birge / np.maximum(sw, 1e-12)), np.inf)
+            same = ((np.sign(E) == np.sign(mu)[None, :]) & (W > 0)).sum(0) / np.maximum(k, 1)
+            cvec = np.where((np.abs(z) >= common_z) & (same >= agree), mu, 0.0) * common_scale
     pairs, prior = {}, None
     if cis_bp and tss:
         from .neighbors import NeighborPrior, load_pairs
@@ -577,6 +614,7 @@ def predict_sparse(targets, sources, target_ctrl_cpm=None, pc: float = 1.0, z_th
     for r, t in enumerate(targets):
         le = _line_effects(sources, t, pc)
         if not le:
+            out[r] = cvec
             kept.append(0); ncis.append(0)
             continue
         E = np.vstack([e for e, _ in le.values()]); V = np.vstack([v for _, v in le.values()])
@@ -607,14 +645,15 @@ def predict_sparse(targets, sources, target_ctrl_cpm=None, pc: float = 1.0, z_th
                 if b >= 0 and prior.bin_lfc[b] < 0:
                     pred[j] = prior.bin_lfc[b] * g
             nc += 1
-        out[r] = pred
+        out[r] = cvec + (0.0 if common == "panel_only" else pred)
         kept.append(int(keep.sum())); ncis.append(nc)
     if tc is not None:
         if pc != 1.0:
             tcpm = np.maximum((tc[None, :] + pc) * np.power(2.0, out) - pc, 0.0)
             out = np.log2((tcpm + 1.0) / (tc[None, :] + 1.0))
         out = np.where((tc[None, :] < 1.0) & (out > 0), 0.0, out)        # no induction from nothing
-    info = {"genes_kept_median": float(np.median(kept)) if kept else 0.0, "cis_genes_median": float(np.median(ncis)) if ncis else 0.0}
+    info = {"genes_kept_median": float(np.median(kept)) if kept else 0.0, "cis_genes_median": float(np.median(ncis)) if ncis else 0.0,
+            "common_genes": int((cvec != 0).sum())}
     return (out.astype(np.float32), info) if return_info else out.astype(np.float32)
 
 
@@ -659,15 +698,73 @@ def project_ctrl(lfc: np.ndarray, ctrl, k: int = 200, lam: float = 0.5, n_top: i
     return out.astype(np.float32)
 
 
-def apply_post(lfc: np.ndarray, post: dict | None, ctrl=None) -> np.ndarray:
-    """Spec-level post-processing, e.g. {"project": {"k": 200, "lam": 0.5}, "scale": 1.2}."""
+def de_budget(lfc: np.ndarray, ctrl, n: int = 400, margin: float = 1.25, n_cells: int = 400,
+              frac: float | None = None, n_max: int | None = None, rank: str = "abs",
+              cap_others: bool = False, p_thr: float = 1e-3) -> np.ndarray:
+    """Make the scorer CALL about n genes per target (round 3, docs/15 P1).
+    fid = k / max(n_pred, n_conf): under-calling scores below chance (E032: 0.42 vs the baseline's
+    0.51), over-calling decays only towards ~0.5. Per target, rank genes by the model's confidence
+    (rank='abs': |lfc|; 'snr': |lfc| / detection threshold, i.e. cheapest calls first), take the top
+    n (or max(n, frac x #genes with |lfc| > 0.05), capped at n_max), and lift each one's |lfc| to at
+    least margin x the context's detection threshold in its predicted direction (vcc26.detect).
+    cap_others: also hold every other gene below half its threshold, so n_pred ~= n."""
+    from . import detect
+    up, dn = detect.thresholds(ctrl, n_cells, p_thr=p_thr)
+    out = np.array(lfc, dtype=np.float64, copy=True)
+    for r in range(out.shape[0]):
+        x = out[r]
+        d = np.where(x >= 0, up, dn)
+        cand = np.isfinite(d) & (x != 0)
+        if not cand.any():
+            continue
+        k = n if frac is None else max(n, int(frac * np.count_nonzero(np.abs(x) > 0.05)))
+        if n_max:
+            k = min(k, n_max)
+        score = np.abs(x) if rank == "abs" else np.abs(x) / np.where(np.isfinite(d), d, np.inf)
+        idx = np.where(cand)[0]
+        top = idx[np.argsort(-score[idx])[:k]]
+        x[top] = np.sign(x[top]) * np.maximum(np.abs(x[top]), margin * d[top])
+        if cap_others:
+            rest = np.setdiff1d(idx, top)
+            x[rest] = np.sign(x[rest]) * np.minimum(np.abs(x[rest]), 0.5 * d[rest])
+    return out.astype(np.float32)
+
+
+def apply_post(lfc: np.ndarray, post: dict | None, ctrl=None, n_cells: int = 400) -> np.ndarray:
+    """Spec-level post-processing, applied in this order:
+    {"project": {"k": 200, "lam": 0.5}, "scale": 1.2, "de_budget": {"n": 400, "margin": 1.25}}"""
     if not post:
         return lfc
     if "project" in post and ctrl is not None:
         lfc = project_ctrl(lfc, ctrl, **post["project"])
     if "scale" in post:
         lfc = lfc * float(post["scale"])
+    if "de_budget" in post and ctrl is not None:
+        lfc = de_budget(lfc, ctrl, n_cells=int(np.median(n_cells)), **post["de_budget"])
     return lfc
+
+
+# ---------------------------------------------------------------------------------------------
+# ENS: weighted average of member models' log2FC (M-3, round 3). B5 wins on KOLF/HCT116 and M1 on
+# HEK293T (E034b), so an average may beat both.
+#   {"model": "ENS", "kw": {"members": [{"model": "B5_sparse", "kw": {...}, "w": 0.5},
+#                                       {"model": "M1_gbm", "kw": {"beta": 1.3}, "w": 0.5}]}}
+# ---------------------------------------------------------------------------------------------
+
+def predict_ensemble(targets, sources, members=(), return_info: bool = False, **kw):
+    acc, wsum, info = None, 0.0, {}
+    for i, m in enumerate(members):
+        mkw = {**kw, **m.get("kw", {})}
+        out = MODELS[m["model"]](targets, sources, **mkw)
+        w = float(m.get("w", 1.0))
+        acc = w * np.asarray(out, np.float64) if acc is None else acc + w * np.asarray(out, np.float64)
+        wsum += w
+        info[f"m{i}"] = m["model"]
+    out = (acc / max(wsum, 1e-12)).astype(np.float32)
+    return (out, info) if return_info else out
+
+
+MODELS["ENS"] = predict_ensemble
 
 
 try:                                # M1_gbm registers itself in MODELS

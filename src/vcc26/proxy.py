@@ -64,20 +64,25 @@ def pred_counts(lfc: np.ndarray, ctrl_cpm: np.ndarray) -> np.ndarray:
     return np.maximum((ctrl_cpm[None, :] + 1.0) * np.power(2.0, lfc) - 1.0, 0.0)
 
 
-def score(lfc: np.ndarray, T: dict, panel_genes: set, ctrl_cpm: np.ndarray) -> dict:
+def score(lfc: np.ndarray, T: dict, panel_genes: set, ctrl_cpm: np.ndarray, against: str = "full") -> dict:
+    """against='B': score against truth half B (noise terms doubled), used for half-A oracles so the
+    ceiling isn't inflated by scoring a truth against itself."""
     genes = T["genes"]; n = len(T["perts"])
     gi = {g: i for i, g in enumerate(genes)}
-    b = bspace(T["P"]); bc = bspace(T["Pc"])[0]
     bA, bB = bspace(T["A"]), bspace(T["B"]); bcA, bcB = bspace(T["Ac"])[0], bspace(T["Bc"])[0]
+    if against == "B":
+        b, bc, noise_mult = bB, bcB, 2.0
+    else:
+        b, bc, noise_mult = bspace(T["P"]), bspace(T["Pc"])[0], 1.0
     bh = bspace(pred_counts(lfc, ctrl_cpm))
     own = np.array([gi.get(p, -1) for p in T["perts"]])
     mask = np.ones_like(b, bool)
     mask[np.arange(n)[own >= 0], own[own >= 0]] = False
-    C = (((bA - bB) ** 2) / 4 * mask).sum(1)
-    Cc = (((bcA - bcB) ** 2) / 4).sum()
+    C = noise_mult * (((bA - bB) ** 2) / 4 * mask).sum(1)
+    Cc = noise_mult * (((bcA - bcB) ** 2) / 4).sum()
     D = (((b - bc) ** 2) * mask).sum(1) - C - Cc
     N = (((bh - b) ** 2) * mask).sum(1) - C
-    base = bspace(T["P"].mean(0))[0]
+    base = bspace((T["B"] if against == "B" else T["P"]).mean(0))[0]
     Nb = (((base[None, :] - b) ** 2) * mask).sum(1) - C
     mse, mse_b = N.sum() / D.sum(), Nb.sum() / D.sum()
     # the official metric also credits the prediction's own jackknife noise (rho * min(C^, C)); our
@@ -99,8 +104,9 @@ def score(lfc: np.ndarray, T: dict, panel_genes: set, ctrl_cpm: np.ndarray) -> d
     dr = 1 - EAn @ EBn.T; dro = np.diag(dr)[:, None]
     pds_r = float(np.mean(1 - ((dr < dro).sum(1) + 0.5 * ((dr == dro).sum(1) - 1)) / (n - 1)))
     # DE-direction and NMAE proxies on each target's top-50 truth genes (control > 5 CPM)
-    cpm = T["P"] / T["P"].sum(1, keepdims=True) * 1e6
-    ccpm = T["Pc"] / T["Pc"].sum() * 1e6
+    TP, TPc = (T["B"], T["Bc"]) if against == "B" else (T["P"], T["Pc"])
+    cpm = TP / TP.sum(1, keepdims=True) * 1e6
+    ccpm = TPc / TPc.sum() * 1e6
     tl = np.log2((cpm + 0.1) / (ccpm + 0.1))
     pcpm = pred_counts(lfc, ctrl_cpm); pcpm = pcpm / np.maximum(pcpm.sum(1, keepdims=True), 1e-12) * 1e6
     pl = np.log2((pcpm + 0.1) / (ccpm + 0.1))
@@ -111,11 +117,28 @@ def score(lfc: np.ndarray, T: dict, panel_genes: set, ctrl_cpm: np.ndarray) -> d
         top = cand[np.argsort(-np.abs(tl[i, cand]))[:50]]
         sgn.append(np.mean(np.sign(pl[i, top]) == np.sign(tl[i, top])))
         nm.append(np.abs(pl[i, top] - tl[i, top]).sum() / max(np.abs(tl[i, top]).sum(), 1e-9))
+    # direction precision of our top-k calls (ranked by |predicted lfc|, gated genes, own target out)
+    # against the truth's sign on ANY non-zero gene: this is what fid = k/max(n_pred, n_conf) reads
+    # once n_pred >= n_conf, and ~0.5 means coin-flip directions (the official baseline sits there)
+    prec = {}
+    for kk in (50, 100, 200, 400, 800, 1600):
+        vals = []
+        for i in range(n):
+            cand = np.where(ok[i] & (np.abs(pl[i]) > 1e-3) & (tl[i] != 0))[0]
+            if len(cand) == 0:
+                continue
+            top = cand[np.argsort(-np.abs(pl[i, cand]))[:kk]]
+            vals.append(np.mean(np.sign(pl[i, top]) == np.sign(tl[i, top])))
+        prec[f"dirprec@{kk}"] = float(np.mean(vals)) if vals else float("nan")
     # are we pointing at the right genes? overlap of each target's top-50 genes by |effect|
     te = np.abs((b - bc) * mask); pe = np.abs((bh - bc) * mask)
     tt = np.argsort(-te, axis=1)[:, :50]; pt = np.argsort(-pe, axis=1)[:, :50]
     top50 = float(np.mean([len(set(tt[i]) & set(pt[i])) / 50 for i in range(n) if pe[i].max() > 0])) if (pe.max(1) > 0).any() else 0.0
-    return {"top50_overlap": top50,
+    # replicate ceiling for that overlap: half A's top-50 vs half B's top-50 (noise limits both)
+    ea = np.abs((bA - bcA) * mask); eb = np.abs((bB - bcB) * mask)
+    ta = np.argsort(-ea, axis=1)[:, :50]; tb = np.argsort(-eb, axis=1)[:, :50]
+    top50_rep = float(np.mean([len(set(ta[i]) & set(tb[i])) / 50 for i in range(n)]))
+    return {**prec, "top50_overlap": top50, "top50_rep": top50_rep,
             "mse_raw": float(mse), "mse_raw_credit": float(mse_credit), "mse_base_raw": float(mse_b),
             "mse_sc": float(1 - mse / mse_b), "mse_sc_credit": float(min(1.0, max(0.0, 1 - mse_credit / mse_b))),
             "pds_raw": pds, "pds_rep": pds_r, "pds_sc": float((pds - 0.5) / max(pds_r - 0.5, 1e-9)),
@@ -144,14 +167,21 @@ def cis_share(res: dict, T: dict, tss: str | None) -> dict:
 
 
 def oracle_variant(kind: str, kw: dict, T: dict, ccpm: np.ndarray, tss: str | None) -> np.ndarray:
-    """Diagnostic ceilings: the held-out line's own effect kept only on (a) its top-k genes per
-    target (ORACLE_TOPK, k) or (b) genes within max_bp of the target TSS (ORACLE_CIS)."""
-    cp = T["P"] / T["P"].sum(1, keepdims=True) * 1e6
-    lfc = np.log2((cp + 1) / (ccpm[None, :] + 1))
+    """Diagnostic ceilings built from truth HALF A (scored against half B, see main):
+    ORACLE_HALF (all genes), ORACLE_TOPK (half A's top-k genes per target), ORACLE_CIS (genes within
+    max_bp of the target TSS), ORACLE_MEAN (half A's mean response over the panel, for every target:
+    the metric's own baseline)."""
+    cp = T["A"] / T["A"].sum(1, keepdims=True) * 1e6
+    cpc = T["Ac"] / T["Ac"].sum() * 1e6
+    lfc = np.log2((cp + 1) / (cpc[None, :] + 1))
+    if kind == "ORACLE_HALF":
+        return lfc
+    if kind == "ORACLE_MEAN":
+        return np.tile(lfc.mean(0), (len(lfc), 1))
     keep = np.zeros_like(lfc, bool)
     if kind == "ORACLE_TOPK":
         k = int(kw.get("k", 50))
-        b = bspace(T["P"]); bc = bspace(T["Pc"])[0]
+        b = bspace(T["A"]); bc = bspace(T["Ac"])[0]
         e = np.abs(b - bc)
         top = np.argsort(-e, axis=1)[:, :k]
         keep[np.arange(len(lfc))[:, None], top] = True
@@ -201,22 +231,27 @@ def main():
     ap.add_argument("--sources", default=None); ap.add_argument("--anatomy", default=None,
                     help="comma-separated spec names to print an error anatomy for")
     ap.add_argument("--exclude-licence", default=None, help='drop sources whose licence contains this, e.g. "NC"')
+    ap.add_argument("--far", action="store_true", help="also drop sources of the held-out line's lineage (V*-far)")
     ap.add_argument("--tss", default=None, help="TSS csv (for ORACLE_CIS, cis anatomy and B5 cis effects)")
     ap.add_argument("--panel-file", default=None,
                     help="if the holdout dir has no real.h5ad yet, build it (challenge panel targets the line measured)")
+    ap.add_argument("--min-target-cells", type=int, default=None, help="when building the holdout: A/B/C-like 400")
+    ap.add_argument("--umi-target", type=float, default=None, help="when building the holdout: thin to this median UMI")
     a = ap.parse_args()
     cfg = json.load(open(a.config)); ctxs = {c["name"]: c for c in cfg["contexts"]}
     hold = ctxs[a.holdout]; line = hold.get("line", a.holdout)
     if not os.path.exists(f"{a.holdout_dir}/real.h5ad"):
         axis_all = pd.read_csv(cfg["gene_axis"], header=None).iloc[:, 0].astype(str).values
-        loco.prepare_holdout(hold, axis_all, a.holdout_dir, 300, 400, 0, panel_set=loco.read_panel(a.panel_file))
+        loco.prepare_holdout(hold, axis_all, a.holdout_dir, 300, 400, 0, panel_set=loco.read_panel(a.panel_file),
+                             min_cells=a.min_target_cells, umi_target=a.umi_target)
     T = truth_tables(f"{a.holdout_dir}/real.h5ad")
     axis = T["genes"]; panel = T["perts"]
     ctrl = ad.read_h5ad(f"{a.holdout_dir}/ctrl.h5ad")
     ccpm = control_cpm(ctrl)
     only = a.sources.split(",") if a.sources else None
     names = [n for n, c in ctxs.items() if n != a.holdout and c.get("line", n) != line and (not only or n in only)
-             and not (a.exclude_licence and a.exclude_licence in str(c.get("licence", "")))]
+             and not (a.exclude_licence and a.exclude_licence in str(c.get("licence", "")))
+             and not (a.far and hold.get("lineage") and c.get("lineage") == hold.get("lineage"))]
     drop = set(panel) if a.mode == "unseen" else None
     sources = [dict(loco.subset_summary(load_summary(ctxs[n]["summary"]), axis, drop), name=n,
                     library=ctxs[n].get("library"), line=ctxs[n].get("line", n)) for n in names]
@@ -230,26 +265,29 @@ def main():
         if sp_["model"] == "ORACLE":
             cp = T["P"] / T["P"].sum(1, keepdims=True) * 1e6
             lfc = np.log2((cp + 1) / (ccpm[None, :] + 1))
-        elif sp_["model"] in ("ORACLE_TOPK", "ORACLE_CIS"):
+        elif sp_["model"] in ("ORACLE_TOPK", "ORACLE_CIS", "ORACLE_HALF", "ORACLE_MEAN"):
             lfc = oracle_variant(sp_["model"], kw, T, ccpm, a.tss)
         else:
             if sp_.get("fallback") == "linear":
                 kw["fallback"] = models.linear_fallback(sources)
-            if sp_["model"] == "B5_sparse":
+            if sp_["model"] in ("B5_sparse", "M1_gbm", "ENS"):
                 kw.setdefault("tss", a.tss)
-                lfc, info = models.MODELS["B5_sparse"](panel, sources, target_ctrl_cpm=ccpm, return_info=True, **kw)
+                lfc, info = models.MODELS[sp_["model"]](panel, sources, target_ctrl_cpm=ccpm, return_info=True, **kw)
+                info = {k: v for k, v in info.items() if isinstance(v, (int, float, str))}
             else:
                 lfc = models.MODELS[sp_["model"]](panel, sources, target_ctrl_cpm=ccpm, **kw)
         if not sp_["model"].startswith("ORACLE"):
             lfc = models.apply_post(np.asarray(lfc, float), sp_.get("post"), ctrl)
-        r = score(np.asarray(lfc, float), T, pset, ccpm)
+        half = sp_["model"].startswith("ORACLE_")
+        r = score(np.asarray(lfc, float), T, pset, ccpm, against="B" if half else "full")
         row = {"spec": name, "holdout": a.holdout, "mode": a.mode, **{k: v for k, v in r.items() if not k.startswith("_")}, **info}
         rows.append(row); print(json.dumps({k: (round(v, 4) if isinstance(v, float) else v) for k, v in row.items()}))
         if a.anatomy and name in a.anatomy.split(","):
             anat[name] = {**anatomy(r, T, ccpm), **cis_share(r, T, a.tss)}
     os.makedirs(a.out, exist_ok=True)
     df = pd.DataFrame(rows)
-    df.to_csv(f"{a.out}/proxy_{a.holdout}_{a.mode}.csv", index=False)
+    sfx = "_far" if a.far else ""
+    df.to_csv(f"{a.out}/proxy_{a.holdout}_{a.mode}{sfx}.csv", index=False)
     if anat:
         json.dump(anat, open(f"{a.out}/anatomy_{a.holdout}_{a.mode}.json", "w"), indent=1)
         print(json.dumps(anat, indent=1))

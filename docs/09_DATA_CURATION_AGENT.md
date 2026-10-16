@@ -187,3 +187,23 @@ Then write `reports/DATA_DONE_batch2.md` and stop.
 - the next batch you'd fetch if asked, with its size.
 
 Then stop and wait.
+
+## Batch 3 (added 16 Oct ~15:00 UTC; see `docs/15_DIAGNOSIS_ROUND3.md` P14, P18, P19)
+**Why.** The challenge lines were profiled with **10x Flex** (probe-based; Arc 2026 announcement). Among our sources only H1 (Arc 2025) and CD4T (Zhu/Dann) are Flex, and the control-profile similarities we use look platform-driven. The test lines are T-ALL-like (A), carcinoma (B) and squamous (C), and no source is close to B or C. The rules are unchanged: licence tags, read-only Box, Drive for storage, ask before > 300 GB.
+
+1. **D12: public 10x Flex CRISPR(i) Perturb-seq**, any line, ≥ 20 panel targets.
+   - Search GEO/ArrayExpress/Zenodo/figshare/HF and the Arc Virtual Cell Atlas for "Flex" / "fixed RNA profiling" plus "Perturb-seq" / "CRISPRi" (2024–2026).
+   - Report line, platform, perturbation type, targets, panel overlap, cells/target, UMI/cell, licence.
+   - Ingest the ones with ≥ 20 panel targets.
+   - Add `"platform": "10x_flex"` to their `loco.json` entries, and fill `platform` for any existing entry you can verify from the paper (KOLF2.1J, HipSci, HepG2, Jurkat). `loco.json` now has `lineage` and `platform` fields.
+2. **D13: perturbation data in the test lineages**: cervical/HeLa, ovarian, squamous (head-and-neck, oesophageal, lung, A431), keratinocyte/airway basal, and T-ALL lines (MOLT-4, CCRF-CEM, Jurkat).
+   - Report what batch 2's D8 found.
+   - If single-cell CRISPRi data in these lineages is still missing, widen to CRISPR-KO Perturb-seq and then to D9 (LINCS L1000 CRISPR signatures): report coverage of panel targets × these lineages.
+3. **D14: DepMap mutations.**
+   - Download DepMap 24Q4 `OmicsSomaticMutations.csv`, or the damaging-mutation matrix, for TP53 and other drivers, into `$DATA/priors/depmap/`.
+   - Confirm the version and licence of the `CRISPRGeneEffect` we have.
+   - Record both in `reports/priors.md`.
+4. **D15 (after the runbook's E041):** for the top 3 CCLE matches per context in `reports/E041_ccle_match.json`, search for any public perturbation data in those exact lines (Perturb-seq, CRISPR screens with RNA readout, L1000). Report before ingesting.
+5. Keep checking `Xaira-Therapeutics/X-Atlas-Pisces` daily and ingest per D10 when it appears.
+
+Then write `reports/DATA_DONE_batch3.md` (same finish list as batch 2) and stop.
