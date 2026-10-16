@@ -143,3 +143,62 @@ There are no HLA genes on the challenge axis, so the HLA half of the check can't
 - Acceptance (E025b ≥ E025 for the same spec) holds for the E021 config and B1_gPL, and is a tie for the top B4s. `pick_e025.py` picks the same 4 specs
   (`results/E025b/specs_E026_from_E025b.json`).
 - Decision: swap the D7 summaries into `pb/` after E026 (originals kept as `*_pooled.npz`), as `docs/09` D7 says. The gain is small.
+
+
+---
+
+## REPORT E026 — real-metric V\* for the E025 picks, plus V\*-far
+
+```
+python -m vcc26.vstar --config loco.json --panel-file pert_counts.csv --specs specs_E026.json --out $DATA/loco/E020 --tag E026 --mode seen
+python -m vcc26.loco ... --holdout KOLF2.1J --sources K562,RPE1,HepG2,Jurkat,K562_GWPS,CD4T_Rest,CD4T_Stim8hr,CD4T_Stim48hr --tag E026far
+python -m vcc26.loco ... --holdout CD4T_Stim8hr --sources K562,RPE1,HepG2,K562_GWPS,H1,HipSci_iPSC,KOLF2.1J --tag E026far
+```
+GPU (the E020 holdouts and anchors are reused); 01:52–04:38 UTC on 16 Oct, about 10 min per (spec, line), with B4's low-rank step dominating.
+Summaries: the E020 ones (the D7 swap and Orion were applied only after E026, so the runs stay comparable with E020/E025).
+
+### V\* summary (`vstar_summary_E026_seen.csv`)
+
+| model                                     | emit     |   pds |   mse |   fid |   reach |    jac |   nmae |   selection |   worst_line |   line_CD4T_Stim8hr |   line_K562_GWPS |   line_KOLF2.1J |
+|:------------------------------------------|:---------|------:|------:|------:|--------:|-------:|-------:|------------:|-------------:|--------------------:|-----------------:|----------------:|
+| B2_raw_gPL(E021)                          | balanced | 0.303 | 0     | 0.774 |   0.09  | -0.303 |  0.138 |       0.167 |        0.154 |               0.175 |            0.154 |           0.173 |
+| B4x_lowrankTrue_pc20_tau20.02_shrinkFalse | balanced | 0.185 | 0.026 | 0.585 |  -0.007 | -0.299 |  0.132 |       0.104 |        0.067 |               0.141 |            0.067 |           0.103 |
+| B4_lr1_pc1_t0.005_s0                      | balanced | 0.159 | 0.015 | 0.573 |   0     | -0.309 |  0.119 |       0.093 |        0.055 |               0.128 |            0.055 |           0.096 |
+| B1_gPL                                    | balanced | 0.009 | 0     | 0.468 |  -0.044 | -0.341 |  0.091 |       0.031 |       -0.04  |               0.095 |           -0.04  |           0.037 |
+
+### Raw MSE per row (baseline B0 ≈ 1.0)
+
+| model                                     |   CD4T_Stim8hr |   K562_GWPS |   KOLF2.1J |
+|:------------------------------------------|---------------:|------------:|-----------:|
+| B1_gPL                                    |           1.07 |        1.22 |       1.1  |
+| B2_raw_gPL(E021)                          |           3.22 |        3.73 |       1.37 |
+| B4_lr1_pc1_t0.005_s0                      |           1.02 |        1.05 |       1.02 |
+| B4x_lowrankTrue_pc20_tau20.02_shrinkFalse |           1.01 |        1.02 |       1.02 |
+
+### V\*-far (same lineage removed from the sources)
+
+| holdout      | model                                     |   n_covered |   context_score |   V* (all sources) |   Δ far − V* |    pds |   mse |   fid |   reach |    jac |   nmae |   raw_mse |
+|:-------------|:------------------------------------------|------------:|----------------:|-------------------:|-------------:|-------:|------:|------:|--------:|-------:|-------:|----------:|
+| CD4T_Stim8hr | B2_raw_gPL(E021)                          |         272 |           0.175 |              0.175 |       -0     |  0.225 | 0     | 0.936 |   0.053 | -0.444 |  0.279 |     3.216 |
+| CD4T_Stim8hr | B1_gPL                                    |         272 |           0.095 |              0.095 |        0     | -0.039 | 0     | 0.831 |  -0.053 | -0.453 |  0.283 |     1.074 |
+| CD4T_Stim8hr | B4x_lowrankTrue_pc20_tau20.02_shrinkFalse |         272 |           0.141 |              0.141 |        0     |  0.16  | 0     | 0.854 |  -0.03  | -0.445 |  0.306 |     1.009 |
+| CD4T_Stim8hr | B4_lr1_pc1_t0.005_s0                      |         272 |           0.128 |              0.128 |        0     |  0.104 | 0     | 0.841 |  -0.03  | -0.444 |  0.294 |     1.024 |
+| KOLF2.1J     | B2_raw_gPL(E021)                          |         257 |           0.167 |              0.173 |       -0.006 |  0.218 | 0     | 0.604 |   0.034 |  0.128 |  0.017 |     1.216 |
+| KOLF2.1J     | B1_gPL                                    |         257 |           0.038 |              0.037 |        0.002 |  0.052 | 0     | 0.088 |  -0.021 |  0.051 |  0.06  |     1.093 |
+| KOLF2.1J     | B4x_lowrankTrue_pc20_tau20.02_shrinkFalse |         257 |           0.084 |              0.103 |       -0.019 |  0.149 | 0.002 | 0.166 |   0.02  |  0.104 |  0.061 |     1.037 |
+| KOLF2.1J     | B4_lr1_pc1_t0.005_s0                      |         257 |           0.084 |              0.096 |       -0.012 |  0.155 | 0     | 0.202 |   0.022 |  0.073 |  0.053 |     1.039 |
+
+Findings:
+- **Top spec = `B2_raw_gPL(E021)`, emit balanced, 0.167 (worst line 0.154)**. That's the same config, and the same score, as E020/E021.
+  The two B4s reach 0.104/0.093: they are the first specs with scaled MSE > 0 (0.026/0.015, raw MSE 1.01–1.06 against 1.4–3.7 for E021),
+  but they lose pds (0.30 → 0.16–0.19), fid (0.77 → 0.57–0.59) and reach. B1_gPL is 0.031.
+- The proxy ranking (E025) matches the real metric for the top spec. It overrates B1_gPL (proxy #2, real #4).
+- **V\*-far:** removing Jurkat from the CD4T sources changes nothing (Jurkat measures no panel targets). Removing the pluripotent lines (H1, HipSci)
+  from KOLF2.1J costs the E021 config 0.006 (0.173 → 0.167) and the B4s 0.012–0.019. The E021 config doesn't depend on a same-lineage source.
+
+### E027 (leaderboard): not submitted
+E026's top spec is exactly the E021 configuration, which is already on the leaderboard (0.106). Resubmitting it on the same
+11 summaries would add no information, and it would be a step towards tuning on the leaderboard. A new entry would only differ through the data
+(D7 summaries + Orion HCT116/HEK293T, registered after E026), and that hasn't been validated in V\* yet. Left for the planning session.
+
+CSVs: `results/E026/`.
