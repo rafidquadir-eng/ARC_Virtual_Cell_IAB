@@ -51,6 +51,29 @@ All have 18,400 controls.
 Files: `results/E037/` (eligible list, regime JSONs, detect JSONs). E039 also uses the H1-R400 holdout, so it's on hold for the same reason.
 
 
+### E037 rerun with a 400-cell H1 truth (approved by R, 16 Oct)
+
+- **Rebuilt `subsets/H1.h5ad`** from all VCC 2025 H1 cells: local train counts plus validation/test re-downloaded from Drive (`VCC2025_H1/`), with `make_subset.py --panel-cap 400 --other-cap 400`,
+  and controls from train only (the 38,176 NTC are shared across splits). Result: 130,343 cells, 300 targets (**255 with 400 cells**, median 400), 18,400 controls, 9.1 GB.
+  The old file is kept as `subsets/H1_cap100.h5ad`, and the old holdout as `$DATA/loco/E037/holdout_H1_R400_cap100`. `loco.json` is unchanged; it still points at `subsets/H1.h5ad`.
+- E037b rerun: 254 targets, UMIs thinned by 0.371 to a median of 20,002.
+
+| holdout | targets | cells/target (median) | median UMI | N_conf mean / median / min / p90 / max | baseline raw pds / mse / **fid** / reach / jac / nmae | replicate raw pds / mse / fid / reach / jac / nmae |
+|---|---|---|---|---|---|---|
+| **H1_R400 (400-cell truth)** | 254 | 400 | 20002 | 855.2 / 135.5 / 0 / 2993 / 7358 | 0.508 / 0.976 / **0.029** / 0.096 / 0.012 / 0.959 | 0.960 / 0.006 / 0.853 / 0.977 / 0.429 / 0.346 |
+| official val A/B/C | – | 400 | ~20k | 335.9 (val A) / – / 4 / – / – | 0.53/0.53/0.51, –, **0.506/0.523/0.509**, 0.042, 0.033, – | reach 0.965/0.802/0.943, jac ~0.38 |
+
+Detection thresholds H1_R400: up 10,772 callable (median 0.4), down 10,772 (median 0.4).
+
+**Key question again: N_conf mean in the hundreds?** Yes (855; higher than val A). **Baseline fid ≈ 0.5?** **No: 0.030. Stopped here again; E038–E040 not run, nothing submitted.**
+- The truth now matches the A/B/C regime on cells, depth and N_conf, and the baseline pds/jac/reach anchors are in the official range. **Only the baseline fid differs**, by about 0.48.
+- So the gap isn't the truth any more. It's how the local mean-response baseline is built (`local_eval.build_anchors` → `cell_eval2.build_generic_baseline`).
+  By `docs/15` §0's own formula, fid = k / max(n_pred, N_conf), so a baseline only reaches ≈ 0.5 if it calls about N_conf or more genes with coin-flip directions.
+  The official baseline evidently does this (0.51 on val A/B/C); the locally built baseline calls almost nothing (raw fid 0.03).
+- Planning should check how the official val baseline prediction is emitted (emitter / cell sampling) and make `build_anchors` do the same. Then rerun `regime_check` on this holdout:
+  the holdout files and anchors are cached, and only `anchors.json` needs rebuilding. E038 can then run as written.
+
+
 ---
 
 ## REPORT E041 — which cell lines are A/B/C? (DepMap/CCLE expression match, no submission)

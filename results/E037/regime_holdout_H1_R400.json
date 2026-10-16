@@ -1,31 +1,31 @@
 {
  "holdout": "holdout_H1_R400",
  "targets": 254,
- "cells_per_target_median": 100,
+ "cells_per_target_median": 400,
  "controls": 18400,
- "median_umi": 20005.5,
+ "median_umi": 20002.0,
  "N_conf": {
-  "mean": 303.5275590551181,
-  "median": 15.5,
+  "mean": 855.1732283464567,
+  "median": 135.5,
   "min": 0,
-  "p90": 931.7000000000005,
-  "max": 5282
+  "p90": 2992.6000000000004,
+  "max": 7358
  },
  "anchors_baseline": {
-  "pds": 0.4967,
-  "mse": 0.9926,
-  "fid": 0.0188,
-  "reach": 0.2044,
-  "jac": 0.0827,
-  "nmae": 0.9624
+  "pds": 0.5078,
+  "mse": 0.9759,
+  "fid": 0.0295,
+  "reach": 0.096,
+  "jac": 0.0121,
+  "nmae": 0.9592
  },
  "anchors_replicate": {
-  "pds": 0.8995,
-  "mse": 0.0376,
-  "fid": 0.7629,
-  "reach": 0.9387,
-  "jac": 0.4164,
-  "nmae": 0.403
+  "pds": 0.9602,
+  "mse": 0.0064,
+  "fid": 0.8528,
+  "reach": 0.977,
+  "jac": 0.4291,
+  "nmae": 0.3456
  },
  "official_valABC": {
   "cells_per_target": 400,
