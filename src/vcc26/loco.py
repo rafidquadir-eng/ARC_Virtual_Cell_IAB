@@ -204,7 +204,7 @@ def run(cfg_path: str, holdout: str, mode: str, out: str, n_panel: int, n_cells:
             extra = {k: v for k, v in info.items() if isinstance(v, (int, float, str))}
         else:
             lfc = models.MODELS[spec["model"]](panel, sources, **kw)
-        lfc = models.apply_post(lfc, spec.get("post"), ctrl, n_cells=sizes)
+        lfc = models.apply_post(lfc, spec.get("post"), ctrl, n_cells=sizes, targets=panel)
         pred = emit(spec.get("emit", "random"), ctrl, panel, lfc, n_cells=sizes, context=holdout,
                     seed=seed, include_control=n_cells)   # scorer requires the control label
         res, pframe = local_eval.score(pred, real_p, anchors, ecfg, return_frame=True)

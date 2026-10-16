@@ -277,7 +277,7 @@ def main():
             else:
                 lfc = models.MODELS[sp_["model"]](panel, sources, target_ctrl_cpm=ccpm, **kw)
         if not sp_["model"].startswith("ORACLE"):
-            lfc = models.apply_post(np.asarray(lfc, float), sp_.get("post"), ctrl)
+            lfc = models.apply_post(np.asarray(lfc, float), sp_.get("post"), ctrl, targets=panel)
         half = sp_["model"].startswith("ORACLE_")
         r = score(np.asarray(lfc, float), T, pset, ccpm, against="B" if half else "full")
         row = {"spec": name, "holdout": a.holdout, "mode": a.mode, **{k: v for k, v in r.items() if not k.startswith("_")}, **info}

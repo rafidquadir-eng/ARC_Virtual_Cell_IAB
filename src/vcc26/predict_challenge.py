@@ -88,7 +88,7 @@ def main():
         ctrl = ctrl[:, axis].copy()                     # enforce the official gene order
         # context-specific prediction: A1 uses this context's own control profile
         lfc = models.MODELS[a.model](targets, sources, target_ctrl_cpm=control_cpm(ctrl), **kw)
-        lfc = models.apply_post(lfc, post, ctrl, n_cells=a.cells)
+        lfc = models.apply_post(lfc, post, ctrl, n_cells=a.cells, targets=targets)
         parts.append(emit(a.emit, ctrl, targets, lfc, n_cells=a.cells, pert_col=a.pert_col,
                                   context=c, include_control=a.n_control, seed=a.seed + i))
     out = ad.concat(parts, merge="same")

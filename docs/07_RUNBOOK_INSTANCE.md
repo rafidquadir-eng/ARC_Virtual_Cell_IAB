@@ -196,6 +196,28 @@ The seed-0 row for this spec comes from E038 (`B5_z2_a0.5_cis5000`).
 - whether E032 reproduces (if `E032.h5ad` is gone, say so);
 - context score and the six metrics for seeds 0/1/2: mean, SD, range.
 
+**E042c — are panel targets expressed in A/B/C, and does low target expression mean no response?** (cheap)
+```bash
+python scripts/target_expr.py --controls-dir $DATA/challenge/controls --contexts A,B,C --perts $PANEL --out results/E042/target_expr_ABC.csv | tee results/E042/target_expr_ABC.txt
+for d in $HOLD; do
+  python scripts/regime_check.py --holdout-dir $d --per-target-out results/E042/pertarget_nconf_$(basename $d).csv > results/E042/regime_$(basename $d).json
+done
+```
+(This re-runs the regime check with the per-target output. It replaces the files from E042, with the same numbers plus `N_conf_by_target_cpm`.)
+
+**REPORT E042c:**
+- the A/B/C table: number of panel targets per control-CPM bin per context, and how many are < 1 CPM in one context but > 20 CPM in another;
+- for each held-out line, `N_conf_by_target_cpm`: per target-CPM bin, n, the fraction with N_conf = 0, and the fraction with N_conf < 10.
+
+**E043 — null gate** (GPU; after E038b, on the 5 standard lines with `--match-cells` and on H1-R400)
+```bash
+mkdir -p results/E043
+python -m vcc26.vstar --config loco.json --panel-file $PANEL --specs specs_E043.json --out $DATA/loco/E020 --tag E043 --match-cells 2>&1 | tee logs/E043.log
+python -m vcc26.loco --config loco.json --holdout H1 --mode seen --out $DATA/loco/E037 --specs specs_E043.json --tag E043 --holdout-tag R400 --min-target-cells 400 --umi-target 20000 2>&1 | tee logs/E043_H1.log
+python -m vcc26.compare --dir $DATA/loco/E020 --tag E043_mc --a "B5x_tl0.05_bud600@b3_null1" --b "B5x_tl0.05_bud600@b3" --n 1000 | tee results/E043/boot_null1.json
+```
+**REPORT E043:** the summary, per-line scores and raw fid/jac, and the bootstrap.
+
 **After E042/E042b:**
 - If the key check passes, run **E038, E038b and E039 as written below**. They use the new anchors automatically.
 - **Do not run E040 (leaderboard) until planning confirms**; a full review is in progress (`review/`).

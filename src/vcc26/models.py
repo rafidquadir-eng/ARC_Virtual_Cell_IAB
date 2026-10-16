@@ -730,9 +730,33 @@ def de_budget(lfc: np.ndarray, ctrl, n: int = 400, margin: float = 1.25, n_cells
     return out.astype(np.float32)
 
 
-def apply_post(lfc: np.ndarray, post: dict | None, ctrl=None, n_cells: int = 400) -> np.ndarray:
+def target_ctrl_cpm(ctrl, targets) -> np.ndarray:
+    """Pseudobulk CPM of each target gene in the context's control cells (nan if not on the axis)."""
+    import scipy.sparse as sp
+    X = ctrl.X
+    tot = np.asarray(X.sum(0)).ravel().astype(np.float64)
+    cpm = tot / max(tot.sum(), 1.0) * 1e6
+    pos = {g: i for i, g in enumerate(np.asarray(ctrl.var_names, str))}
+    return np.array([cpm[pos[t]] if t in pos else np.nan for t in targets])
+
+
+def null_gate(lfc: np.ndarray, ctrl, targets, cpm: float = 1.0, keep_unknown: bool = True) -> np.ndarray:
+    """Predict NO response for targets whose own expression in the context's controls is below `cpm`
+    CPM: CRISPRi can't knock down a gene that isn't transcribed. The scorer rewards this exactly:
+    a target with N_conf = 0 gets fid = 1 and jac = 1 if nothing is called, and 0 otherwise
+    (cell_eval2 metrics/direction.py _fidelity_family; jac(empty, empty) = 1). Review C/B, 17 Oct."""
+    tc = target_ctrl_cpm(ctrl, targets)
+    off = (tc < cpm) if keep_unknown else ((tc < cpm) | ~np.isfinite(tc))
+    out = np.array(lfc, copy=True)
+    out[off] = 0.0
+    return out
+
+
+def apply_post(lfc: np.ndarray, post: dict | None, ctrl=None, n_cells: int = 400, targets=None) -> np.ndarray:
     """Spec-level post-processing, applied in this order:
-    {"project": {"k": 200, "lam": 0.5}, "scale": 1.2, "de_budget": {"n": 400, "margin": 1.25}}"""
+    {"project": {"k": 200, "lam": 0.5}, "scale": 1.2, "de_budget": {"n": 400, "margin": 1.25},
+     "null_gate": {"cpm": 1.0}}
+    null_gate runs last so gated targets stay exactly zero (and are emitted untouched)."""
     if not post:
         return lfc
     if "project" in post and ctrl is not None:
@@ -741,6 +765,8 @@ def apply_post(lfc: np.ndarray, post: dict | None, ctrl=None, n_cells: int = 400
         lfc = lfc * float(post["scale"])
     if "de_budget" in post and ctrl is not None:
         lfc = de_budget(lfc, ctrl, n_cells=int(np.median(n_cells)), **post["de_budget"])
+    if "null_gate" in post and ctrl is not None and targets is not None:
+        lfc = null_gate(lfc, ctrl, targets, **post["null_gate"])
     return lfc
 
 

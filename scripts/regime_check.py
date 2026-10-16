@@ -20,6 +20,7 @@ OFFICIAL = {  # cell_eval2 0.18.0 source notes (competition.py, metrics/de.py, m
 }
 
 ap = argparse.ArgumentParser(); ap.add_argument("--holdout-dir", required=True)
+ap.add_argument("--per-target-out", default=None, help="CSV: target, N_conf, target's own control CPM / fraction of cells")
 a = ap.parse_args()
 real = ad.read_h5ad(f"{a.holdout_dir}/real.h5ad")
 lab = real.obs["target"].astype(str)
@@ -35,6 +36,27 @@ out = {"holdout": os.path.basename(a.holdout_dir.rstrip("/")), "targets": int(le
        "median_umi": float(np.median(lib)),
        "N_conf": {"mean": float(nc.mean()), "median": float(np.median(nc)), "min": int(nc.min()),
                   "p90": float(np.percentile(nc, 90)), "max": int(nc.max())}}
+# Does the target's own expression in the controls predict a null response (N_conf = 0)? (review, 17 Oct)
+ctrl = real[(lab == "non-targeting").values]
+Xc = ctrl.X.tocsc() if hasattr(ctrl.X, "tocsc") else ctrl.X
+tot = np.asarray(Xc.sum(0)).ravel().astype(float); cpm_all = tot / tot.sum() * 1e6
+frac_all = np.asarray((Xc > 0).sum(0)).ravel() / Xc.shape[0]
+gpos = {g: i for i, g in enumerate(np.asarray(real.var_names, str))}
+nc_map = dict(zip(nconf["target"].to_list(), nconf["len"].to_list()))
+import pandas as pd
+pt = pd.DataFrame({"target": list(vc.index)})
+pt["N_conf"] = [int(nc_map.get(t, 0)) for t in pt["target"]]
+pt["target_ctrl_cpm"] = [cpm_all[gpos[t]] if t in gpos else np.nan for t in pt["target"]]
+pt["target_ctrl_frac"] = [frac_all[gpos[t]] if t in gpos else np.nan for t in pt["target"]]
+bins = [-1, 1, 5, 20, 100, 1e9]
+pt["cpm_bin"] = pd.cut(pt["target_ctrl_cpm"], bins, labels=["<1", "1-5", "5-20", "20-100", ">100"])
+by = pt.groupby("cpm_bin", observed=False).agg(n=("target", "size"), frac_null=("N_conf", lambda v: float(np.mean(np.asarray(v) == 0)) if len(v) else np.nan),
+                                                frac_lt10=("N_conf", lambda v: float(np.mean(np.asarray(v) < 10)) if len(v) else np.nan),
+                                                median_nconf=("N_conf", "median"))
+out["N_conf_by_target_cpm"] = {str(k): {kk: (None if pd.isna(vv) else float(vv)) for kk, vv in r.items()} for k, r in by.iterrows()}
+out["targets_not_on_axis"] = int(pt["target_ctrl_cpm"].isna().sum())
+if a.per_target_out:
+    pt.to_csv(a.per_target_out, index=False)
 anc = f"{a.holdout_dir}/anchors.json"
 if os.path.exists(anc):
     A = json.load(open(anc))
