@@ -82,7 +82,8 @@
    "control": "non-targeting",
    "symbol_col": null,
    "summary": "/lambda/nfs/LambdaFilesystem/vcc-data/pb/HipSci_iPSC.npz",
-   "lineage": "pluripotent"
+   "lineage": "pluripotent",
+   "platform": "10x_5p"
   },
   {
    "name": "KOLF2.1J",
@@ -93,7 +94,8 @@
    "control": "NTC",
    "symbol_col": null,
    "summary": "/lambda/nfs/LambdaFilesystem/vcc-data/pb/KOLF2.1J.npz",
-   "lineage": "pluripotent"
+   "lineage": "pluripotent",
+   "platform": "10x_3p_ht"
   },
   {
    "name": "CD4T_Rest",

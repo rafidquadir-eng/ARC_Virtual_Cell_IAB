@@ -1,0 +1,19 @@
+{
+ "_note": "Ingested but NOT registered in loco.json: every loco.json entry becomes a source in loco/vstar/predict_challenge, with no modality filter. Planning session opts in by copying an entry into loco.json. See reports/DATA_DONE_batch3.md.",
+ "contexts": [
+  {
+   "name": "A549_KO",
+   "line": "A549",
+   "library": "targeted",
+   "lineage": "epithelial",
+   "platform": "10x_3p_gemx",
+   "perturbation": "CRISPR-KO",
+   "licence": "GEO public (GSE345058), no licence stated",
+   "h5ad": "/lambda/nfs/LambdaFilesystem/vcc-data/subsets/A549_KO.h5ad",
+   "pert_col": "target",
+   "control": "Nontargeting",
+   "symbol_col": null,
+   "summary": "/lambda/nfs/LambdaFilesystem/vcc-data/pb/A549_KO.npz"
+  }
+ ]
+}
