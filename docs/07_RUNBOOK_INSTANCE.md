@@ -143,6 +143,7 @@ M1 trains itself on the sources it's given: each source line in turn plays the t
 **E034a (CPU, proxy):**
 ```bash
 source ~/.vcc_env; cd ~/vcc; git pull
+PANEL=$(find $DATA/challenge -name pert_counts.csv | head -1)
 sed "s#__DATA__#$DATA#g" specs_E034.json > specs_E034.local.json
 for h in CD4T_Stim8hr KOLF2.1J K562_GWPS Orion_HCT116 Orion_HEK293T; do
   python -m vcc26.proxy --config loco.json --holdout $h --holdout-dir $DATA/loco/E020/holdout_$h --panel-file $PANEL \
