@@ -116,7 +116,11 @@ Every auditor reads this first. Treat agent reports as **claims to verify**, not
   - **Consequence:** local scaled fid/jac/reach/mse are on the wrong scale, which explains why V\* forecast fid −0.04 for E021 → E032 while the LB gave −0.23.
 - **O-02 (VERIFIED): the per-metric scoring policies match.** Clamps in `local_eval.CLAMP` (mse [0,1], nmae ≥ −6, the others unclamped) match the scorer's catalog policies (pds/fid/reach/jac `metric_min=0`, no clamp; mse clamp [0,1]; nmae `clamp_low=-6`). Aggregation (mean of six, mean over contexts) matches the LB values backed out from E021/E032.
 - **O-03 (P0 traceability):** see §3.
-- **O-04 (VERIFIED): fid definition.** `match = in_denom & committed & sign(lfc_pred)==sign(lfc_real)`, with `in_denom = lfc_real non-zero (any significance)`, and `fid = k/max(n_pred, N_conf)`. When **N_conf = 0**, fid = 1 if n_pred = 0, else 0 (`metrics/direction.py` L735–760). jac(∅,∅) = 1 (`metrics/de.py` ~L215).
+- **O-04 (VERIFIED, corrected 17 Oct after C-01): fid definition.**
+  - `match = in_denom & committed & sign(lfc_pred)==sign(lfc_real)`, with `in_denom = lfc_real non-zero (any significance)`, and the scored `fid = k/max(n_pred, N_conf)`.
+  - **When N_conf = 0:** if n_pred = 0, the scored fid is NaN and dropped from the mean (`_safe_div`, `metrics/direction.py` L689–699, L776); the "1.0" convention belongs to the unscored `fidelity` and `fidelity_yield`. If n_pred > 0, fid = k/n_pred ≈ 0.5.
+  - jac(∅,∅) = 1 (`metrics/de.py` ~L191). So abstaining on a null target pays through **jac only**.
+  - Checked: `results/E037/pertarget_H1_R400_seen_E037.parquet` has 21 targets with fid NaN, all with jac = 1.
 - **O-05 (VERIFIED): the nmae gate** drops targets with fewer than 10 real-significant genes (`metrics/de.py` `min_gate_size=10`). It returns 272/229/218 of 300 targets on val A/B/C, so **28/71/82 targets have N_conf < 10**: B and C have many weak or no-response targets. Val A's minimum N_conf is 4.
 - **O-06 (VERIFIED by agent artefacts):** the H1-R400 truth now matches A/B/C on cells (400), depth (20k UMI) and controls (18,400). Its N_conf mean is 855 (val A 336) and median 135.5.
 
@@ -141,7 +145,7 @@ Every auditor reads this first. Treat agent reports as **claims to verify**, not
   - whether **target-expression gating** is applied anywhere in the LB config.
 - **C, biology and modelling assumptions:**
   - A = Jurkat, B = HeLa, C = CAL-33 (TP53/HPV status, what they express);
-  - **CRISPRi of a target not expressed in the context does nothing.** Are panel targets expressed in A/B/C controls (we have those cells)? N_conf = 0 targets reward predicting nothing (fid = jac = 1);
+  - **CRISPRi of a target not expressed in the context does nothing.** Are panel targets expressed in A/B/C controls (we have those cells)? N_conf = 0 targets reward predicting nothing through jac (jac = 1; fid is NaN and dropped, see O-04);
   - platform (Flex probes vs 3′/5′);
   - common versus target-specific response;
   - knockdown strength;

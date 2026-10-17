@@ -742,9 +742,11 @@ def target_ctrl_cpm(ctrl, targets) -> np.ndarray:
 
 def null_gate(lfc: np.ndarray, ctrl, targets, cpm: float = 1.0, keep_unknown: bool = True) -> np.ndarray:
     """Predict NO response for targets whose own expression in the context's controls is below `cpm`
-    CPM: CRISPRi can't knock down a gene that isn't transcribed. The scorer rewards this exactly:
-    a target with N_conf = 0 gets fid = 1 and jac = 1 if nothing is called, and 0 otherwise
-    (cell_eval2 metrics/direction.py _fidelity_family; jac(empty, empty) = 1). Review C/B, 17 Oct."""
+    CPM: CRISPRi can't knock down a gene that isn't transcribed. On a target with N_conf = 0, calling
+    nothing scores jac = 1 (jac(empty, empty) = 1) and the scored fid is NaN, which is dropped from the
+    mean; calling anything scores jac = 0 and fid = k/n_pred ~ 0.5. So abstaining pays through jac
+    only, and costs fid on a target that does respond. Gate only where P(N_conf = 0) is high
+    (review C-01/C-04, 17 Oct)."""
     tc = target_ctrl_cpm(ctrl, targets)
     off = (tc < cpm) if keep_unknown else ((tc < cpm) | ~np.isfinite(tc))
     out = np.array(lfc, copy=True)

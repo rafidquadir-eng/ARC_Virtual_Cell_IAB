@@ -115,7 +115,7 @@ def emit_balanced(ctrl: ad.AnnData, targets, lfc: np.ndarray, *, n_cells=400,
         if not np.any(lfc[r]):
             # predicted "no response" (e.g. target not expressed in this context): emit the base cells
             # untouched. Pinning them to the population mean (balanced/balanced3) creates spurious DE
-            # calls, and a target with N_conf = 0 scores fid = jac = 1 only if NOTHING is called.
+            # calls, and a target with N_conf = 0 scores jac = 1 only if NOTHING is called.
             blocks.append(sp.csr_matrix((dat, (row, col)), shape=(n, G))); labels += [t] * n
             continue
         tot_lib = blib.sum()

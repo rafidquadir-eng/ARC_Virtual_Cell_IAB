@@ -1,7 +1,7 @@
 """How many panel targets are (not) expressed in each challenge context's controls? (review, 17 Oct)
 
-CRISPRi can't knock down a gene that isn't transcribed, and the scorer gives a target with no true DE
-genes fid = jac = 1 only if nothing is called. Pair with `regime_check.py --per-target-out`, which
+CRISPRi can't knock down a gene that isn't transcribed. A target with no true DE genes scores jac = 1
+only if nothing is called; its scored fid is then NaN and dropped (review C-01). Pair with `regime_check.py --per-target-out`, which
 measures, on held-out lines, how often a target at a given control CPM has N_conf = 0.
 
   python scripts/target_expr.py --controls-dir $DATA/challenge/controls --contexts A,B,C --perts $PANEL \
