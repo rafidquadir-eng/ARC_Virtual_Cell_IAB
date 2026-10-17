@@ -92,14 +92,27 @@ def build_anchors(real_path: str, cfg: EvalConfig, n_splits: int = 5, emit: str 
     base = build_generic_baseline(real, config=cfg, emit=emit)
     agg = base.agg
     b = {m: float(agg.filter(pl.col("statistic") == "mean")[m][0]) for m in SCORED if m in agg.columns}
-    reps = []
-    rep_cfg = replace(cfg, control_source="pred")       # each half uses its own control cells
-    for s in range(n_splits):
-        ha, hb = _split_halves(real, cfg.pert_col, s)
-        reps.append(raw_metrics(hb, ha, rep_cfg))
-    r = {m: float(np.mean([x[m] for x in reps])) for m in SCORED}
-    r_sd = {m: float(np.std([x[m] for x in reps])) for m in SCORED}
+    # replicate end: the scorer's own anchor leg (derived seeds, FULL_GATE_RAW estimator for lfc_nmae);
+    # the hand-rolled split-half loop differed on both (review B-05). Falls back to it on failure.
+    try:
+        from cell_eval2.anchor import compute_replicate_anchor
+        _, anc = compute_replicate_anchor(real, config=cfg, base_seed=0, n_splits=n_splits)
+        rv = dict(zip(anc["metric"].to_list(), anc["replicate"].to_list()))
+        rs = dict(zip(anc["metric"].to_list(), anc["replicate_sd"].to_list()))
+        r = {m: float(rv[m]) for m in SCORED}; r_sd = {m: float(rs[m]) for m in SCORED}
+        rep_src = "cell_eval2.anchor.compute_replicate_anchor"
+    except Exception as e:                                # pragma: no cover
+        logging.getLogger(__name__).warning("official replicate anchor failed (%s); split-half fallback", e)
+        reps = []
+        rep_cfg = replace(cfg, control_source="pred")   # each half uses its own control cells
+        for s in range(n_splits):
+            ha, hb = _split_halves(real, cfg.pert_col, s)
+            reps.append(raw_metrics(hb, ha, rep_cfg))
+        r = {m: float(np.mean([x[m] for x in reps])) for m in SCORED}
+        r_sd = {m: float(np.std([x[m] for x in reps])) for m in SCORED}
+        rep_src = "local split-half fallback"
     return {"baseline": b, "replicate": r, "replicate_sd": r_sd, "n_splits": n_splits, "baseline_emit": emit,
+            "replicate_source": rep_src,
             "n_perts": int(real.obs[cfg.pert_col].nunique() - 1)}
 
 

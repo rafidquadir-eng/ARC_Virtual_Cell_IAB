@@ -1,5 +1,11 @@
 # Diagnosis, round 3: why we're stuck near 0.1, and the plan
 
+> **Corrections, 17 Oct (full review in `review/FINAL_REPORT.md`):**
+> 1. **Problem 2's mechanism was wrong.** V\*'s baseline fid of ~0.02 came from our local baseline being emitted "dispersed", while the official arm has identical cells ("tile"). Truth size and depth were not the cause: a 400-cell, 20k-UMI H1 truth still gave 0.03 (E037). Fixed in `local_eval` (E042).
+> 2. **"Transfer is at chance / a biological limit" (§0.4, §6) is not established.** The cited cosine and top-50 numbers are noise-limited even under perfect transfer, and LB reach is above no-skill (review C-03).
+> 3. **Null targets (N_conf = 0):** calling nothing gives jac = 1, and the scored fid is NaN, so it is dropped rather than scored as 1 (C-01).
+> 4. **Not every source is non-Flex:** CD4T is Flex too.
+
 Written 16 Oct 2026, ~15:00 UTC.
 
 **Sources:**

@@ -121,12 +121,17 @@ def _sim(a, b):
 
 def fit(sources, tss=None, max_targets_per_line=800, bg_genes=300, seed=0, max_iter=300, max_notable=600):
     from sklearn.ensemble import HistGradientBoostingRegressor
-    key = hashlib.md5(("|".join(sorted(s.get("name", "") for s in sources)) + f"{tss}{max_targets_per_line}{bg_genes}{seed}{max_iter}").encode()).hexdigest()
+    for s in sources:          # always: a cache hit must not skip it (review B-07)
+        _prep(s)
+    h = hashlib.md5()
+    for s in sorted(sources, key=lambda z: z.get("name", "")):
+        h.update(s.get("name", "").encode()); h.update(np.ascontiguousarray(s["lfc"]).tobytes()[:1 << 20])
+        h.update(np.ascontiguousarray(s["ctrl_cpm"]).tobytes()); h.update("|".join(map(str, s["perts"])).encode())
+    h.update(f"{tss}{max_targets_per_line}{bg_genes}{seed}{max_iter}{len(sources[0]['genes'])}".encode())
+    key = h.hexdigest()
     if key in _CACHE:
         return _CACHE[key]
     rng = np.random.default_rng(seed)
-    for s in sources:
-        _prep(s)
     genes = sources[0]["genes"]; gpos = {g: i for i, g in enumerate(genes)}
     cis = _cis_map(tss, genes)
     by_line = _lines(sources)

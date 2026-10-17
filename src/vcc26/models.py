@@ -534,7 +534,7 @@ def _line_effects(sources, t, pc):
         if "_lfcpc" not in s or s.get("_pc") != pc:
             s["_lfcpc"] = _lfc_pc(s, pc); s["_varpc"] = _noise_var(s, s["_lfcpc"], pc); s["_pc"] = pc
         v = s["present"] & (s["ctrl_cpm"] > EPS_CPM)
-        w = np.where(v, 1.0 / np.maximum(s["_varpc"][i], 1e-8), 0.0) * s.get("_simw", 1.0)
+        w = np.where(v, 1.0 / np.maximum(s.get("_varuse", s["_varpc"])[i], 1e-8), 0.0) * s.get("_simw", 1.0)
         L = s.get("line") or s.get("name")
         e, ww = acc.get(L, (np.zeros(G), np.zeros(G)))
         eff = s["_lfcpc"][i] - s["_pmean"] if s.get("_pmean") is not None else s["_lfcpc"][i]
@@ -548,6 +548,7 @@ def predict_sparse(targets, sources, target_ctrl_cpm=None, pc: float = 1.0, z_th
                    cis_bp: int | None = 5000, tss: str | None = None, cis_gate_cpm: float = 5.0,
                    gate_target_cpm: float | None = None, sim_tau: float | None = None,
                    common: str = "none", common_z: float = 3.0, common_scale: float = 1.0,
+                   var_floor: bool = False, single_line_z: float | None = None,
                    return_info: bool = False, **_):
     """Per target: meta-analyse its measured response across LINES (fixed-effect mean with a
     Birge-ratio inflation of the standard error for between-line heterogeneity). Keep genes with
@@ -566,6 +567,19 @@ def predict_sparse(targets, sources, target_ctrl_cpm=None, pc: float = 1.0, z_th
     tc = None if target_ctrl_cpm is None else np.asarray(target_ctrl_cpm, float)
     for s in sources:
         s["_simw"] = 1.0
+        if "_lfcpc" not in s or s.get("_pc") != pc:
+            s["_lfcpc"] = _lfc_pc(s, pc); s["_varpc"] = _noise_var(s, s["_lfcpc"], pc); s["_pc"] = pc
+        s["_varuse"] = s["_varpc"]
+        if var_floor:
+            # review B-03: pseudobulk log-ratio variance has an overdispersion floor phi/n that the
+            # Poisson-like c/(n(cpm+pc)) misses, so high-CPM genes get inflated z. phi/n is estimated
+            # per target as half the median lfc^2 over the source's top CPM quintile (mostly noise
+            # there). Stored separately, so specs without var_floor are unaffected (no state leak).
+            v = s["present"] & (s["ctrl_cpm"] > EPS_CPM)
+            q = np.quantile(s["ctrl_cpm"][v], 0.8)
+            hi = v & (s["ctrl_cpm"] >= q)
+            phi_n = np.median(s["_lfcpc"][:, hi] ** 2, axis=1, keepdims=True)
+            s["_varuse"] = s["_varpc"] + 0.5 * phi_n
     if sim_tau and tc is not None:
         rs = {}
         for s in sources:
@@ -628,6 +642,8 @@ def predict_sparse(targets, sources, target_ctrl_cpm=None, pc: float = 1.0, z_th
         z = mu / se
         same = ((np.sign(E) == np.sign(mu)[None, :]) & (W > 0)).sum(0) / np.maximum(k, 1)
         keep = (np.abs(z) >= z_thr) & (same >= agree) & (k >= min_lines)
+        if single_line_z is not None:          # review B-03: one line gives no consistency check
+            keep &= (k >= 2) | (np.abs(z) >= single_line_z)
         pred = np.where(keep, mu * beta, trans_lambda * mu)
         if gate_target_cpm and tc is not None and t in gpos:
             pred *= min(1.0, tc[gpos[t]] / gate_target_cpm)

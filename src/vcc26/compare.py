@@ -41,7 +41,10 @@ def load(dirpath: str, tag: str, holdouts: list[str] | None):
     return out
 
 
-def boot(dirpath, tag, a, b, emit_a=None, emit_b=None, n=1000, holdouts=None, seed=0):
+def boot(dirpath, tag, a, b, emit_a=None, emit_b=None, n=1000, holdouts=None, seed=0, two_level=True):
+    """two_level (default, review B-04): resample held-out LINES with replacement, then targets within
+    each drawn line. Target-only resampling ignores between-line variance, which dominates with 3-5
+    lines (E031: CI +0.011..+0.039 vs LB +0.002)."""
     data = load(dirpath, tag, holdouts)
     if not data:
         raise SystemExit(f"no pertarget_*_{tag}.parquet with anchors under {dirpath}")
@@ -58,9 +61,12 @@ def boot(dirpath, tag, a, b, emit_a=None, emit_b=None, n=1000, holdouts=None, se
         sb = scale(_agg(B.filter(pl.col("perturbation").is_in(perts))), anc)["context_score"]
         per_line[h] = sa - sb
         prepared[h] = (A, B, perts, anc)
+    keys = list(prepared)
     for _ in range(n):
         ds = []
-        for h, (A, B, perts, anc) in prepared.items():
+        drawn = [keys[i] for i in rng.choice(len(keys), len(keys), replace=True)] if two_level else keys
+        for h in drawn:
+            A, B, perts, anc = prepared[h]
             pick = rng.choice(len(perts), len(perts), replace=True)
             m = pl.DataFrame({"perturbation": [perts[i] for i in pick], "_k": np.arange(len(pick))})
             def res(X):
@@ -72,7 +78,9 @@ def boot(dirpath, tag, a, b, emit_a=None, emit_b=None, n=1000, holdouts=None, se
     d = np.array(draws)
     return {"a": a, "b": b, "tag": tag, "lines": list(prepared), "delta_mean": float(np.mean(list(per_line.values()))),
             "ci90": [float(np.quantile(d, 0.05)), float(np.quantile(d, 0.95))], "p_gt0": float((d > 0).mean()),
-            "per_line": per_line, "n_boot": n}
+            "per_line": per_line, "n_boot": n, "two_level": two_level,
+            "lines_positive": f"{sum(v > 0 for v in per_line.values())}/{len(per_line)}",
+            "leave_one_line_out": {h: float(np.mean([v for k, v in per_line.items() if k != h])) for h in per_line} if len(per_line) > 1 else {}}
 
 
 def main():
@@ -81,8 +89,10 @@ def main():
     ap.add_argument("--a", required=True); ap.add_argument("--b", required=True)
     ap.add_argument("--emit-a", default=None); ap.add_argument("--emit-b", default=None)
     ap.add_argument("--n", type=int, default=1000); ap.add_argument("--holdouts", default=None)
+    ap.add_argument("--targets-only", action="store_true", help="old behaviour: resample targets within lines only")
     x = ap.parse_args()
-    r = boot(x.dir, x.tag, x.a, x.b, x.emit_a, x.emit_b, x.n, x.holdouts.split(",") if x.holdouts else None)
+    r = boot(x.dir, x.tag, x.a, x.b, x.emit_a, x.emit_b, x.n, x.holdouts.split(",") if x.holdouts else None,
+             two_level=not x.targets_only)
     print(json.dumps(r, indent=1))
 
 

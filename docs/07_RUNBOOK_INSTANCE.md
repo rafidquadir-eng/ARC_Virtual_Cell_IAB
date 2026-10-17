@@ -161,7 +161,14 @@ python scripts/rescale_rows.py --dir $DATA/loco/E020 \
   --out results/E042/rescaled_E020_E031_E034.csv | tee results/E042/rescaled_summary.txt
 python scripts/rescale_rows.py --dir $DATA/loco/E020 --rows results/E031/scores_*_seen_E031far.csv \
   --out results/E042/rescaled_E031far.csv | tee results/E042/rescaled_far_summary.txt
+# guardrails (review D-01/A-01): local anchors vs LB-implied anchors; does the rescaled V* retrodict E021 -> E032?
+python scripts/lb_check.py calib --status results/E033_E021_status.json results/E033_E032_status.json \
+  --anchors $(for d in $HOLD; do echo $d/anchors.json; done) | tee results/E042/lb_calib.txt
+python scripts/lb_check.py retro --rows results/E042/rescaled_E020_E031_E034.csv --a "B5_z2_a0.5_cis5000" --b "B2_raw_gPL(E021)" \
+  --lb-a results/E033_E032_status.json --lb-b results/E033_E021_status.json | tee results/E042/lb_retro.txt
 ```
+- **`lb_check calib`** must report "calibration OK" for fid/jac/reach/pds/nmae, i.e. every local baseline within 0.05 of the LB-implied one. jac's baseline depends on the truth's N_conf, so on lines whose N_conf differs from A/B/C it may legitimately differ; report the gap.
+- **`lb_check retro`** prints PASS/FAIL and per-line sign agreement. **A V\* configuration that FAILs retrodiction may not be used to choose an LB entry** (review A-01: the null-heavy lines K562_GWPS/Orion broke it before). If the 5-line V\* fails, rerun `retro` on KOLF2.1J/CD4T alone by filtering the rows CSV, and report both.
 The tile baseline holds a dense matrix: about 9–11 GB per holdout, which is fine.
 
 **REPORT E042:**
@@ -218,6 +225,12 @@ python -m vcc26.compare --dir $DATA/loco/E020 --tag E043_mc --a "B5x_tl0.05_bud6
 ```
 **REPORT E043:** the summary, per-line scores and raw fid/jac, and the bootstrap.
 
+**Review changes on 17 Oct (pull before E038):**
+- `specs_E038` no longer has the `@b2` specs (review B-02: a shared, unpinned base adds MSE error).
+- `specs_E038` adds `B5_z2_vfloor@b3` (B-03: overdispersion floor) and `B5x_tl0.05_budfrac0@b3` (C-02: per-target budget, abstaining where the model predicts nothing).
+- `local_eval` builds the replicate with the scorer's own `compute_replicate_anchor` (B-05).
+- `compare.py` now bootstraps lines and then targets (B-04); pass `--targets-only` for the old CI.
+
 **After E042/E042b:**
 - If the key check passes, run **E038, E038b and E039 as written below**. They use the new anchors automatically.
 - **Do not run E040 (leaderboard) until planning confirms**; a full review is in progress (`review/`).
@@ -226,7 +239,7 @@ python -m vcc26.compare --dir $DATA/loco/E020 --tag E043_mc --a "B5x_tl0.05_bud6
 ## E037–E041 — round 3: make validation match the leaderboard, fix the DE call count and the emitter (see `docs/15_DIAGNOSIS_ROUND3.md`)
 **Why.**
 - fid = k / max(n_pred, N_conf), where k counts called genes whose direction matches the real log2FC of ANY sign. Calling ≥ N_conf genes therefore scores about chance (≈ 0.51, the official baseline). B5 under-calls and scores 0.42 (−0.29 scaled).
-- Our V\* truths are too small and shallow for the DE metrics to behave as they do on the leaderboard: baseline fid is 0.02 in V\* vs 0.51 on the LB. So V\* rewarded the wrong things.
+- Our V\* truths are too small and shallow for the DE metrics to behave as they do on the leaderboard: baseline fid is 0.02 in V\* vs 0.51 on the LB. So V\* rewarded the wrong things. **[Superseded 17 Oct: E037 refuted this mechanism. The cause was the local baseline's emission (dispersed vs the official tile), fixed in E042. Truth shape still matters for N_conf.]**
 - `--emit balanced` (our LB emitter since E021) makes the scorer call ~2.7% of genes on a no-change prediction.
 
 **New code (pull first):**
