@@ -1,0 +1,13 @@
+7d2851a19280f009b943f9831afdefa9 K562 /lambda/nfs/LambdaFilesystem/vcc-data/pb/K562.npz
+9323921197af7fcd427afc41da49b875 RPE1 /lambda/nfs/LambdaFilesystem/vcc-data/pb/RPE1.npz
+9d6d50d5e05c31b0c1dc7257f59053b2 HepG2 /lambda/nfs/LambdaFilesystem/vcc-data/pb/HepG2.npz
+a9ae36ec78043332874159dde9e11a07 Jurkat /lambda/nfs/LambdaFilesystem/vcc-data/pb/Jurkat.npz
+087402025cf8b38198dca3556ca2269e H1 /lambda/nfs/LambdaFilesystem/vcc-data/pb/H1.npz
+5039ea13ecbdbbedf33af5c581037020 K562_GWPS /lambda/nfs/LambdaFilesystem/vcc-data/pb/K562_GWPS.npz
+dff3f717ebee29603ccbc19be9fd0bdf HipSci_iPSC /lambda/nfs/LambdaFilesystem/vcc-data/pb/HipSci_iPSC.npz
+a486213ff6a4d94c976dc4ff224c54ee KOLF2.1J /lambda/nfs/LambdaFilesystem/vcc-data/pb/KOLF2.1J.npz
+467e2058101681a85cc2a3bff2c7705f CD4T_Rest /lambda/nfs/LambdaFilesystem/vcc-data/pb/CD4T_Rest.npz
+7177266c782c27ba6191444bca79fc5d CD4T_Stim8hr /lambda/nfs/LambdaFilesystem/vcc-data/pb/CD4T_Stim8hr.npz
+2845a53ef1b4ecb78b5b50b1c2f27a5f CD4T_Stim48hr /lambda/nfs/LambdaFilesystem/vcc-data/pb/CD4T_Stim48hr.npz
+89b41115291dab569994b4e59ca82a82 Orion_HCT116 /lambda/nfs/LambdaFilesystem/vcc-data/pb/Orion_HCT116.npz
+b38526d2d79eb8e6a818ee420e30034f Orion_HEK293T /lambda/nfs/LambdaFilesystem/vcc-data/pb/Orion_HEK293T.npz

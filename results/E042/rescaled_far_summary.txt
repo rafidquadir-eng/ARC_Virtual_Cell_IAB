@@ -1,0 +1,8 @@
+                             old_context_score  new_context_score  new_pds  new_mse  new_fid  new_reach  new_jac  new_nmae  line_KOLF2.1J  line_Orion_HCT116  line_Orion_HEK293T
+model              emit                                                                                                                                                         
+B2_raw_gPL(E021)   balanced              0.216              0.151    0.526    0.333   -0.341      0.258    0.032     0.099         -0.136              0.439               0.151
+B5_z2_a0.5_cis5000 balanced              0.224              0.016    0.605    0.000   -0.612      0.030    0.018     0.054         -0.318              0.259               0.106
+B5x_tl0.05         balanced              0.194             -0.050    0.598    0.000   -0.926     -0.010    0.013     0.023         -0.438              0.224               0.064
+B5x_ml2            balanced              0.181             -0.091    0.631    0.000   -1.110     -0.096    0.015     0.017         -0.496              0.215               0.009
+B0_control         balanced             -0.030             -0.556    0.000    0.077   -3.080     -0.259   -0.018    -0.057         -0.645             -0.274              -0.749
+wrote results/E042/rescaled_E031far.csv

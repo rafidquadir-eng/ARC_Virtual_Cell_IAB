@@ -76,6 +76,135 @@ Detection thresholds H1_R400: up 10,772 callable (median 0.4), down 10,772 (medi
 
 ---
 
+## REPORT E042 — corrected local anchors (tile baseline, review O-01)
+
+`local_eval anchors` rebuilt on 7 holdouts (old anchors kept as `anchors_dispersed.json`), then `regime_check`, `rescale_rows` (E020/E031/E034 V\* rows and E031far),
+and `lb_check calib/retro`. 22:01–22:45 UTC, 18 Oct.
+
+### 1. Baseline anchors, old (dispersed) vs new (tile); raw fid / jac / reach / pds / mse / nmae
+
+| holdout | N_conf mean | old baseline | **new baseline** | replicate (new) |
+|---|---|---|---|---|
+| CD4T_Stim48hr_R400 | 123.0 | 0.005 / 0.035 / 0.111 / 0.521 / 0.999 / 1.025 | 0.508 / 0.013 / 0.063 / 0.500 / 0.986 / 1.008 | 0.629 / 0.197 / 0.874 / 0.964 / 0.048 / 0.534 |
+| CD4T_Stim8hr | 100.2 | 0.028 / 0.079 / 0.153 / 0.516 / 0.903 / 1.117 | 0.502 / 0.011 / 0.144 / 0.500 / 0.974 / 1.013 | 0.549 / 0.223 / 0.781 / 0.933 / 0.183 / 0.569 |
+| H1_R400 | 855.2 | 0.029 / 0.012 / 0.096 / 0.508 / 0.976 / 0.959 | 0.542 / 0.074 / 0.132 / 0.500 / 0.972 / 0.960 | 0.855 / 0.435 / 0.976 / 0.961 / 0.008 / 0.371 |
+| K562_GWPS | 13.8 | 0.025 / 0.188 / 0.248 / 0.494 / 1.089 / 0.979 | 0.525 / 0.002 / 0.249 / 0.500 / 0.954 / 0.986 | 0.646 / 0.479 / 0.881 / 0.887 / -0.089 / 0.547 |
+| KOLF2.1J | 103.2 | 0.005 / 0.000 / 0.058 / 0.479 / 1.039 / 1.042 | 0.529 / 0.008 / 0.079 / 0.500 / 0.976 / 0.992 | 0.672 / 0.180 / 0.850 / 0.883 / -0.020 / 0.427 |
+| Orion_HCT116 | 15.6 | 0.022 / 0.228 / 0.284 / 0.493 / 1.337 / 1.006 | 0.516 / 0.001 / 0.388 / 0.500 / 0.964 / 0.989 | 0.615 / 0.488 / 0.846 / 0.662 / 1.644 / 0.374 |
+| Orion_HEK293T | 27.6 | 0.035 / 0.240 / 0.297 / 0.499 / 1.054 / 1.006 | 0.502 / 0.002 / 0.426 / 0.500 / 0.949 / 0.957 | 0.564 / 0.486 / 0.848 / 0.774 / 0.116 / 0.394 |
+
+(Old values for the E020 lines come from E037's regime run. For H1_R400 the old value is from the 400-cell rerun.)
+
+### 2. Key check: **PASS**
+- **H1-R400 new baseline fid = 0.542** (official 0.506 / 0.523 / 0.509; old 0.030).
+- **jac = 0.074**, against the expected N_conf mean ÷ gated genes ≈ 855 / 10,775 ≈ 0.079.
+- Every holdout's baseline fid is now 0.50–0.54.
+
+### 3. Rescaled V\* (`rescaled_summary.txt`): new vs old selection
+
+```
+old_context_score  new_context_score  new_pds  new_mse  new_fid  new_reach  new_jac  new_nmae  line_CD4T_Stim8hr  line_K562_GWPS  line_KOLF2.1J  line_Orion_HCT116  line_Orion_HEK293T
+model                emit                                                                                                                                                                                            
+ORACLE               random                1.204              1.798    1.250    1.000    5.435      1.241    0.154     1.706              2.455           1.527          1.410                NaN                 NaN
+                     balanced              1.239              1.797    1.250    1.000    5.130      1.236    0.615     1.551              2.389           1.535          1.466                NaN                 NaN
+B2_raw_gPL(E021)     balanced              0.234              0.152    0.561    0.200   -0.288      0.280    0.037     0.122             -0.014           0.205         -0.133              0.489               0.213
+B5_z2_a0.5_cis5000   balanced              0.263              0.077    0.664    0.036   -0.501      0.141    0.035     0.087             -0.089           0.216         -0.296              0.340               0.215
+B2_transfer          random                0.164              0.042    0.220    0.000   -0.135      0.103    0.025     0.041              0.000           0.139         -0.012                NaN                 NaN
+                     balanced              0.162              0.019    0.242    0.000   -0.283      0.088    0.042     0.027              0.000           0.126         -0.068                NaN                 NaN
+B2_raw_gPL           balanced              0.167              0.019    0.295    0.000   -0.323      0.085    0.042     0.014              0.009           0.126         -0.078                NaN                 NaN
+B5x_tl0.05           balanced              0.225              0.004    0.665    0.008   -0.804      0.072    0.032     0.050             -0.129           0.134         -0.425              0.302               0.138
+M1_b1.3              balanced              0.240             -0.007    0.702    0.029   -1.040      0.164    0.064     0.038             -0.127           0.128         -0.535              0.224               0.275
+B5x_ml2              balanced              0.215             -0.021    0.690    0.006   -0.913      0.011    0.035     0.045             -0.132           0.112         -0.482              0.287               0.111
+M1                   balanced              0.230             -0.044    0.712    0.026   -1.247      0.149    0.061     0.035             -0.140           0.067         -0.554              0.159               0.249
+B2_raw_gPL_dn_b1.6   balanced              0.152             -0.045    0.248    0.000   -0.634      0.042    0.078    -0.004             -0.092           0.096         -0.140                NaN                 NaN
+M1_t1500             balanced              0.225             -0.055    0.698    0.023   -1.285      0.143    0.057     0.037             -0.144           0.061         -0.550              0.133               0.227
+M1_min0.05           balanced              0.232             -0.060    0.790    0.031   -1.389      0.117    0.062     0.028             -0.124           0.079         -0.519              0.134               0.129
+B2_raw_gPL_dn_b1.3   balanced              0.145             -0.080    0.249    0.000   -0.832      0.034    0.071    -0.001             -0.119           0.074         -0.194                NaN                 NaN
+M1_b0.7              balanced              0.209             -0.114    0.715    0.025   -1.606      0.113    0.051     0.020             -0.153          -0.004         -0.571              0.079               0.081
+B2_raw_gPL_dn        balanced              0.134             -0.129    0.249    0.000   -1.105      0.026    0.058    -0.005             -0.158           0.049         -0.279                NaN                 NaN
+B3_raw_gPL_dn_linear balanced              0.134             -0.130    0.245    0.000   -1.108      0.028    0.058    -0.005             -0.160           0.049         -0.279                NaN                 NaN
+A1_gPL_dn            balanced              0.106             -0.201    0.210    0.000   -1.449      0.004    0.044    -0.013             -0.184          -0.020         -0.398                NaN                 NaN
+B1_generic           balanced              0.046             -0.303    0.000    0.000   -1.779     -0.018    0.013    -0.037             -0.178          -0.132         -0.600                NaN                 NaN
+B1_gPL               balanced              0.031             -0.356    0.000    0.000   -2.045     -0.047    0.007    -0.050             -0.236          -0.246         -0.586                NaN                 NaN
+B0_control           balanced             -0.007             -0.435    0.000    0.046   -2.414     -0.184   -0.007    -0.051             -0.269          -0.237         -0.645             -0.274              -0.749
+wrote results/E042/rescaled_E020_E031_E034.csv
+```
+The ranking reverses: under the corrected anchors the **E021 config (0.152) beats B5 (0.077)**, and M1/B5x specs fall to about 0. Every non-oracle fid is negative.
+The old anchors made calling few genes look good; the new ones penalise under-calling as the leaderboard does.
+
+### 4. Calibration: Δ(B5_z2_a0.5_cis5000 − B2_raw_gPL(E021)) under the new anchors vs the leaderboard
+
+| | pds | mse | fid | reach | jac | nmae | context |
+|---|---|---|---|---|---|---|---|
+| local, 5-line mean | +0.103 | −0.164 | **−0.213** | −0.138 | −0.002 | −0.034 | −0.075 |
+| local, KOLF + CD4T | +0.050 | 0.000 | −0.708 | −0.041 | −0.030 | +0.015 | −0.119 |
+| **leaderboard** | +0.082 | +0.144 | **−0.226** | −0.006 | −0.007 | +0.025 | +0.002 |
+
+- fid is now right on the 5-line mean (−0.213 vs −0.226), and so is pds (+0.103 vs +0.082). mse has the wrong sign (Orion_HCT116 −1.0), and reach is overstated.
+
+**`lb_check calib`:** **CALIBRATION ALERT** (exit 2). pds and fid are within 0.05 of the leaderboard-implied baseline on every line (LB fid 0.513; local 0.502–0.542).
+The baseline reach is far too high on Orion_HCT116 (0.388), Orion_HEK293T (0.426) and K562_GWPS (0.249), against LB 0.076. jac is 0.001–0.013 on the
+low-N_conf lines and 0.074 on H1, against LB 0.031. As the runbook says, jac follows each truth's N_conf: Orion/K562_GWPS have N_conf means of 14–28, against 336 on val A.
+```
+b_LB    r_LB  b_local[holdout_H1_R400]  b_local[holdout_CD4T_Stim48hr_R400]  b_local[holdout_CD4T_Stim8hr]  b_local[holdout_KOLF2.1J]  b_local[holdout_K562_GWPS]  b_local[holdout_Orion_HCT116]  b_local[holdout_Orion_HEK293T]
+metric                                                                                                                                                                                                                                    
+pds     0.4984  0.9541                    0.5000                               0.5000                         0.5000                     0.5000                      0.5000                         0.5000                          0.5000
+mse        NaN     NaN                    0.9724                               0.9855                         0.9736                     0.9760                      0.9539                         0.9638                          0.9492
+fid     0.5126  0.8121                    0.5421                               0.5078                         0.5023                     0.5295                      0.5248                         0.5157                          0.5024
+reach   0.0763  0.9902                    0.1323                               0.0633                         0.1444                     0.0787                      0.2487                         0.3882                          0.4262
+jac     0.0309  0.3561                    0.0741                               0.0128                         0.0106                     0.0084                      0.0016                         0.0013                          0.0019
+nmae    0.9924  0.4635                    0.9603                               1.0081                         1.0126                     0.9919                      0.9864                         0.9890                          0.9565
+note: mse is clamped at 0 on the LB, so an entry scoring 0 there gives no information; fid/jac/reach/pds/nmae are reliable
+CALIBRATION ALERT: a local baseline differs from the LB-implied one by > 0.05 raw (mse excluded if NaN)
+```
+
+**`lb_check retro`:** **FAIL** on 5 lines, and **FAIL** on KOLF2.1J + CD4T alone (rerun as instructed). So **no V\* configuration passes retrodiction.**
+Per review A-01, none may be used to choose a leaderboard entry. H1-R400 (E038) is the remaining candidate validator.
+```
+per-line local deltas (a - b):
+                 pds    mse    fid  reach    jac   nmae  context
+holdout                                                         
+CD4T_Stim8hr   0.031  0.000 -0.443 -0.051 -0.010  0.024   -0.075
+CD4T_Stim8hr   0.031  0.000 -0.443 -0.051 -0.010  0.024   -0.075
+K562_GWPS      0.104  0.131 -0.035 -0.105  0.018 -0.046    0.011
+K562_GWPS      0.104  0.131 -0.035 -0.105  0.018 -0.046    0.011
+KOLF2.1J       0.069  0.000 -0.973 -0.030 -0.049  0.007   -0.163
+KOLF2.1J       0.069  0.000 -0.973 -0.030 -0.049  0.007   -0.163
+Orion_HCT116   0.182 -1.000  0.216 -0.247  0.019 -0.064   -0.149
+Orion_HCT116   0.182 -1.000  0.216 -0.247  0.019 -0.064   -0.149
+Orion_HEK293T  0.131  0.051  0.171 -0.258  0.014 -0.093    0.003
+Orion_HEK293T  0.131  0.051  0.171 -0.258  0.014 -0.093    0.003
+
+mean local delta: {'pds': 0.103, 'mse': -0.164, 'fid': -0.213, 'reach': -0.138, 'jac': -0.002, 'nmae': -0.034, 'context': -0.075}
+LB delta:         {'pds': 0.082, 'mse': 0.144, 'fid': -0.226, 'reach': -0.006, 'jac': -0.007, 'nmae': 0.025, 'context': np.float64(0.002)}
+/home/ubuntu/vcc/scripts/lb_check.py:84: Pandas4Warning: Starting with pandas version 4.0 all arguments of sum will be keyword-only.
+  per_line = (np.sign(d[list(METRICS)]) == np.sign(pd.Series({m: lbd[m] for m in METRICS}))).sum(1)
+per-line metric-sign agreement with LB (of 6): {'CD4T_Stim8hr': 5, 'K562_GWPS': 4, 'KOLF2.1J': 5, 'Orion_HCT116': 2, 'Orion_HEK293T': 3}
+context delta local -0.0747 vs LB +0.0018 (|err| 0.0765, need <= 0.015)
+local/LB ratio on metrics with |LB delta| >= 0.05 (need 1/3..3): {'pds': np.float64(1.26), 'mse': np.float64(-1.14), 'fid': np.float64(0.94)}
+RETRODICTION FAIL: context sign ok, metric signs 4/6, magnitudes OFF
+--- KOLF2.1J + CD4T_Stim8hr only ---
+per_line = (np.sign(d[list(METRICS)]) == np.sign(pd.Series({m: lbd[m] for m in METRICS}))).sum(1)
+per-line local deltas (a - b):
+                pds  mse    fid  reach    jac   nmae  context
+holdout                                                      
+CD4T_Stim8hr  0.031  0.0 -0.443 -0.051 -0.010  0.024   -0.075
+CD4T_Stim8hr  0.031  0.0 -0.443 -0.051 -0.010  0.024   -0.075
+KOLF2.1J      0.069  0.0 -0.973 -0.030 -0.049  0.007   -0.163
+KOLF2.1J      0.069  0.0 -0.973 -0.030 -0.049  0.007   -0.163
+
+mean local delta: {'pds': 0.05, 'mse': 0.0, 'fid': -0.708, 'reach': -0.041, 'jac': -0.03, 'nmae': 0.015, 'context': -0.119}
+LB delta:         {'pds': 0.082, 'mse': 0.144, 'fid': -0.226, 'reach': -0.006, 'jac': -0.007, 'nmae': 0.025, 'context': np.float64(0.002)}
+per-line metric-sign agreement with LB (of 6): {'CD4T_Stim8hr': 5, 'KOLF2.1J': 5}
+context delta local -0.1190 vs LB +0.0018 (|err| 0.1208, need <= 0.015)
+local/LB ratio on metrics with |LB delta| >= 0.05 (need 1/3..3): {'pds': np.float64(0.61), 'mse': np.float64(0.0), 'fid': np.float64(3.13)}
+RETRODICTION FAIL: context sign ok, metric signs 5/6, magnitudes OFF
+```
+Files: `results/E042/` (regime JSONs, rescaled CSVs/summaries, lb_calib/lb_retro).
+
+
+---
+
 ## REPORT E041 — which cell lines are A/B/C? (DepMap/CCLE expression match, no submission)
 
 ```

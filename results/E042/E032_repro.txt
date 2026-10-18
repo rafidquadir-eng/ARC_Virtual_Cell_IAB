@@ -1,0 +1,2 @@
+shape (360000, 18533) (360000, 18533) obs equal True
+first 20k rows identical: True

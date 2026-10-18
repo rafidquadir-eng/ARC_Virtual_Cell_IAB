@@ -1,0 +1,10 @@
+          b_LB    r_LB  b_local[holdout_H1_R400]  b_local[holdout_CD4T_Stim48hr_R400]  b_local[holdout_CD4T_Stim8hr]  b_local[holdout_KOLF2.1J]  b_local[holdout_K562_GWPS]  b_local[holdout_Orion_HCT116]  b_local[holdout_Orion_HEK293T]
+metric                                                                                                                                                                                                                                    
+pds     0.4984  0.9541                    0.5000                               0.5000                         0.5000                     0.5000                      0.5000                         0.5000                          0.5000
+mse        NaN     NaN                    0.9724                               0.9855                         0.9736                     0.9760                      0.9539                         0.9638                          0.9492
+fid     0.5126  0.8121                    0.5421                               0.5078                         0.5023                     0.5295                      0.5248                         0.5157                          0.5024
+reach   0.0763  0.9902                    0.1323                               0.0633                         0.1444                     0.0787                      0.2487                         0.3882                          0.4262
+jac     0.0309  0.3561                    0.0741                               0.0128                         0.0106                     0.0084                      0.0016                         0.0013                          0.0019
+nmae    0.9924  0.4635                    0.9603                               1.0081                         1.0126                     0.9919                      0.9864                         0.9890                          0.9565
+note: mse is clamped at 0 on the LB, so an entry scoring 0 there gives no information; fid/jac/reach/pds/nmae are reliable
+CALIBRATION ALERT: a local baseline differs from the LB-implied one by > 0.05 raw (mse excluded if NaN)
