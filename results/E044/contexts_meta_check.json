@@ -1,0 +1,24 @@
+{
+ "A": {
+  "ccle": "JURKAT (ACH-000995)",
+  "spearman": 0.884,
+  "margin": 0.124,
+  "tp53": "deficient",
+  "tp53_source": "DepMap 24Q4 damaging=1 hotspot=1"
+ },
+ "B": {
+  "ccle": "HeLa (ACH-001086)",
+  "spearman": 0.845,
+  "margin": 0.212,
+  "tp53": "deficient",
+  "tp53_source": "DepMap 24Q4 damaging=0 hotspot=0 + HPV+ line (E6)"
+ },
+ "C": {
+  "ccle": "CAL-33 (ACH-000518)",
+  "spearman": 0.823,
+  "margin": 0.062,
+  "tp53": "deficient",
+  "tp53_source": "DepMap 24Q4 damaging=2 hotspot=2"
+ },
+ "_note": "Per-context facts for context-aware models (predict_challenge --context-meta). Identity = CCLE expression match (inference)."
+}

@@ -1,0 +1,38 @@
+7 held-out lines, 534 distinct targets; computing source features ...
+  K562: 55 targets measured
+  RPE1: 69 targets measured
+  HepG2: 55 targets measured
+  Jurkat: 66 targets measured
+  H1: 259 targets measured
+  K562_GWPS: 474 targets measured
+  HipSci_iPSC: 170 targets measured
+  KOLF2.1J: 465 targets measured
+  CD4T_Rest: 480 targets measured
+  CD4T_Stim8hr: 487 targets measured
+  CD4T_Stim48hr: 479 targets measured
+  Orion_HCT116: 486 targets measured
+  Orion_HEK293T: 460 targets measured
+  DepMap model for K562_GWPS (K562): ACH-000551
+  DepMap model for Orion_HCT116 (HCT116): ACH-000971
+  DepMap model for Orion_HEK293T (HEK293T): not screened
+Spearman with log1p(N_conf), per held-out line:
+                    src_nstrong_mean  src_nstrong_max  src_kd_mean  src_n_lines  target_ctrl_cpm  depmap_mean  depmap_line
+CD4T_Stim48hr_R400             0.113            0.060       -0.021       -0.029            0.035       -0.103          NaN
+CD4T_Stim8hr                   0.109            0.117        0.018        0.016            0.113       -0.058          NaN
+H1_R400                        0.575            0.517        0.119        0.427            0.071       -0.490          NaN
+K562_GWPS                      0.391            0.284       -0.004        0.122            0.119       -0.241       -0.253
+KOLF2.1J                       0.077            0.073        0.051        0.038            0.123       -0.078          NaN
+Orion_HCT116                   0.381            0.282       -0.012        0.105            0.158       -0.225       -0.094
+Orion_HEK293T                  0.370            0.326        0.019        0.168            0.128       -0.140          NaN
+
+LOLO linear model on within-line percentiles (Spearman of prediction):
+                      all  src_only  depmap_mean_only  src+depmap
+CD4T_Stim48hr_R400  0.130     0.113             0.103       0.139
+CD4T_Stim8hr        0.112     0.109             0.058       0.111
+H1_R400             0.611     0.574             0.486       0.624
+K562_GWPS           0.429     0.391             0.241       0.435
+KOLF2.1J            0.104     0.077             0.078       0.094
+Orion_HCT116        0.411     0.381             0.225       0.416
+Orion_HEK293T       0.370     0.370             0.140       0.358
+decision: {'all_mean': 0.30962568582405287, 'src_only_mean': 0.28763967379146554, 'best_set': 'src+depmap', 'best_mean': 0.31113360008454155, 'use_per_target_strength': False, 'depmap_adds': False}
+wrote results/E044/strength_study.json

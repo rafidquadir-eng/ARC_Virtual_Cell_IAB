@@ -1,0 +1,88 @@
+{
+ "holdout": "holdout_Orion_HCT116",
+ "targets": 255,
+ "cells_per_target_median": 163,
+ "controls": 18400,
+ "median_umi": 12110.0,
+ "N_conf": {
+  "mean": 15.6,
+  "median": 2.0,
+  "min": 0,
+  "p90": 18.19999999999999,
+  "max": 739
+ },
+ "N_conf_by_target_cpm": {
+  "<1": {
+   "n": 1.0,
+   "frac_null": 0.0,
+   "frac_lt10": 1.0,
+   "median_nconf": 2.0
+  },
+  "1-5": {
+   "n": 11.0,
+   "frac_null": 0.45454545454545453,
+   "frac_lt10": 0.9090909090909091,
+   "median_nconf": 1.0
+  },
+  "5-20": {
+   "n": 64.0,
+   "frac_null": 0.3125,
+   "frac_lt10": 0.9375,
+   "median_nconf": 2.0
+  },
+  "20-100": {
+   "n": 133.0,
+   "frac_null": 0.21804511278195488,
+   "frac_lt10": 0.7744360902255639,
+   "median_nconf": 3.0
+  },
+  ">100": {
+   "n": 46.0,
+   "frac_null": 0.1956521739130435,
+   "frac_lt10": 0.7391304347826086,
+   "median_nconf": 2.0
+  }
+ },
+ "targets_not_on_axis": 0,
+ "anchors_baseline": {
+  "pds": 0.5,
+  "mse": 0.9638,
+  "fid": 0.5157,
+  "reach": 0.3882,
+  "jac": 0.0013,
+  "nmae": 0.989
+ },
+ "anchors_replicate": {
+  "pds": 0.6623,
+  "mse": 1.6437,
+  "fid": 0.6147,
+  "reach": 0.846,
+  "jac": 0.4879,
+  "nmae": 0.3743
+ },
+ "official_valABC": {
+  "cells_per_target": 400,
+  "controls": 18400,
+  "median_umi": "~20k (our E000 inventory)",
+  "N_conf_mean_valA": 335.9,
+  "N_conf_min_valA": 4,
+  "baseline_fid": [
+   0.5056,
+   0.5227,
+   0.5094
+  ],
+  "baseline_jac_valA": 0.0333,
+  "replicate_like_jac_valA": 0.38,
+  "baseline_reach_valA": 0.0423,
+  "replicate_reach": [
+   0.965,
+   0.802,
+   0.943
+  ],
+  "baseline_pds": [
+   0.5304,
+   0.5284,
+   0.5102
+  ]
+ }
+}

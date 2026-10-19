@@ -1,0 +1,119 @@
+Usage: vcc [OPTIONS] COMMAND [ARGS]...
+
+  vcc — submit predictions to the Virtual Cell Challenge.
+
+  Run `vcc version` for version details, or `vcc COMMAND --help` for a
+  command.
+
+Options:
+  --json           Emit machine-readable JSON instead of human-readable text.
+  --profile TEXT   Named credential profile [env: VCC_PROFILE].
+  --endpoint TEXT  Base URL of the VCC site to talk to [env: VCC_ENDPOINT].
+  --version        Show the vcc version and exit.
+  -h, --help       Show this message and exit.
+
+Commands:
+  cancel    Abandon an in-progress submission, freeing your team's slot.
+  datasets  List and download Virtual Cell Challenge reference data.
+  login     Authenticate with a VCC API token.
+  logout    Remove the stored credential for the active profile.
+  prep      Validate, slim, normalize, and package an .h5ad into a .vcc.
+  sample    Generate a random, valid dummy prediction for testing `vcc...
+  skill     Install the VCC agent skill into your coding agent (Claude...
+  status    Show the status (and scores, once published) of one submission.
+  submit    Upload a prediction and start scoring.
+  version   Print the vcc version.
+  whoami    Show the authenticated account, team, and whether you can...
+
+Usage: vcc submit [OPTIONS] FILE
+
+  Upload a prediction and start scoring.
+
+  FILE may be a .vcc (validated and uploaded as-is) or a raw .h5ad, which is
+  prepped first — pass -g/--genes and --perts (or --no-verify-targets to skip
+  the perturbation check).
+
+Options:
+  -m, --model-name TEXT           Name for this model on the leaderboard
+                                  (required).
+  -d, --description TEXT          Optional description (max 2000 chars).
+  -g, --genes PATH                Gene list, if FILE is a raw .h5ad that needs
+                                  prepping.
+  --perts PATH                    pert_counts.csv, if FILE is a raw .h5ad —
+                                  the official list prep checks targets
+                                  against (required by default when prepping;
+                                  see --no-verify-targets).
+  --verify-targets / --no-verify-targets
+                                  When prepping a raw .h5ad, check each
+                                  context predicts exactly its official
+                                  perturbations. Needs --perts.  [default:
+                                  verify-targets]
+  --check-cell-counts / --no-check-cell-counts
+                                  When prepping a raw .h5ad, require each
+                                  perturbation to have exactly the official
+                                  number of cells (400).  [default: check-
+                                  cell-counts]
+  --wait                          Block until scoring reaches a terminal
+                                  state.
+  --poll-interval FLOAT           Seconds between status polls with --wait.
+                                  [default: 5.0]
+  --wait-timeout FLOAT            Give up waiting after N seconds (the
+                                  submission keeps running).
+  --resume TEXT                   Resume an interrupted upload (optionally
+                                  pass its entry id).
+  --skip-limit-check              Skip the daily-allowance pre-check.
+  -f, --force                     Overwrite an existing prep output.
+  --endpoint TEXT                 Base URL to submit to.
+  --profile TEXT                  Credential profile to use.
+  --json                          Emit machine-readable JSON instead of human-
+                                  readable text.
+  -h, --help                      Show this message and exit.
+
+Usage: vcc [OPTIONS] COMMAND [ARGS]...
+Try 'vcc --help' for help.
+
+Error: No such command 'download'.
+
+Usage: vcc status [OPTIONS] ENTRY_ID
+
+  Show the status (and scores, once published) of one submission.
+
+Options:
+  --wait                 Block until the submission reaches a terminal state.
+  --poll-interval FLOAT  Seconds between polls with --wait.  [default: 5.0]
+  --wait-timeout FLOAT   Give up waiting after N seconds.
+  --endpoint TEXT        Base URL to query.
+  --profile TEXT         Credential profile to use.
+  --json                 Emit machine-readable JSON instead of human-readable
+                         text.
+  -h, --help             Show this message and exit.
+
+Usage: vcc datasets [OPTIONS] COMMAND [ARGS]...
+
+  List and download Virtual Cell Challenge reference data.
+
+Options:
+  -h, --help  Show this message and exit.
+
+Commands:
+  download  Download a dataset by id (see `vcc datasets list`).
+  list      Show which datasets you can download.
+Usage: vcc datasets download [OPTIONS] DATASET_ID
+
+  Download a dataset by id (see `vcc datasets list`).
+
+  Resumes an interrupted download, re-mints the link if it expires mid-
+  transfer, and verifies the finished file against the checksum the server
+  advertises.
+
+Options:
+  -o, --output FILE    Write to this exact path instead of <dir>/<filename>.
+  -d, --dir DIRECTORY  Directory to download into [default: $VCC_DATA_DIR or
+                       cwd].
+  -f, --force          Re-download even if the file is already present and
+                       verified.
+  --endpoint TEXT      Base URL to query.
+  --profile TEXT       Credential profile to use.
+  --json               Emit machine-readable JSON instead of human-readable
+                       text.
+  -h, --help           Show this message and exit.

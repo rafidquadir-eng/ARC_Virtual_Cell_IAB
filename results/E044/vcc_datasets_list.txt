@@ -1,0 +1,4 @@
+  ✓ controls  vcc_2026_controls.zip
+      Control (non-targeting) cells for all 3 cell contexts (A, B, C), one .h5ad each, plus gene_names.csv, pert_counts.csv and manifest.json.
+
+Download with: vcc datasets download <id>

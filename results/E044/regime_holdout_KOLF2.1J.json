@@ -1,0 +1,88 @@
+{
+ "holdout": "holdout_KOLF2.1J",
+ "targets": 258,
+ "cells_per_target_median": 236,
+ "controls": 18400,
+ "median_umi": 3817.0,
+ "N_conf": {
+  "mean": 103.2248062015504,
+  "median": 42.0,
+  "min": 4,
+  "p90": 291.20000000000016,
+  "max": 543
+ },
+ "N_conf_by_target_cpm": {
+  "<1": {
+   "n": 1.0,
+   "frac_null": 0.0,
+   "frac_lt10": 1.0,
+   "median_nconf": 9.0
+  },
+  "1-5": {
+   "n": 10.0,
+   "frac_null": 0.0,
+   "frac_lt10": 0.1,
+   "median_nconf": 23.5
+  },
+  "5-20": {
+   "n": 58.0,
+   "frac_null": 0.0,
+   "frac_lt10": 0.05172413793103448,
+   "median_nconf": 33.0
+  },
+  "20-100": {
+   "n": 127.0,
+   "frac_null": 0.0,
+   "frac_lt10": 0.047244094488188976,
+   "median_nconf": 46.0
+  },
+  ">100": {
+   "n": 62.0,
+   "frac_null": 0.0,
+   "frac_lt10": 0.016129032258064516,
+   "median_nconf": 56.5
+  }
+ },
+ "targets_not_on_axis": 0,
+ "anchors_baseline": {
+  "pds": 0.5,
+  "mse": 0.976,
+  "fid": 0.5295,
+  "reach": 0.0787,
+  "jac": 0.0084,
+  "nmae": 0.9919
+ },
+ "anchors_replicate": {
+  "pds": 0.8835,
+  "mse": -0.0201,
+  "fid": 0.6716,
+  "reach": 0.8502,
+  "jac": 0.1804,
+  "nmae": 0.4275
+ },
+ "official_valABC": {
+  "cells_per_target": 400,
+  "controls": 18400,
+  "median_umi": "~20k (our E000 inventory)",
+  "N_conf_mean_valA": 335.9,
+  "N_conf_min_valA": 4,
+  "baseline_fid": [
+   0.5056,
+   0.5227,
+   0.5094
+  ],
+  "baseline_jac_valA": 0.0333,
+  "replicate_like_jac_valA": 0.38,
+  "baseline_reach_valA": 0.0423,
+  "replicate_reach": [
+   0.965,
+   0.802,
+   0.943
+  ],
+  "baseline_pds": [
+   0.5304,
+   0.5284,
+   0.5102
+  ]
+ }
+}

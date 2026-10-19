@@ -1,0 +1,153 @@
+{
+ "per_line_spearman": {
+  "CD4T_Stim48hr_R400": {
+   "src_nstrong_mean": 0.112729749277244,
+   "src_nstrong_max": 0.059664687022119016,
+   "src_kd_mean": -0.020601973036001447,
+   "src_n_lines": -0.028595103014834936,
+   "target_ctrl_cpm": 0.03491791458067804,
+   "depmap_mean": -0.10282985568270656,
+   "depmap_line": null
+  },
+  "CD4T_Stim8hr": {
+   "src_nstrong_mean": 0.10926747424617553,
+   "src_nstrong_max": 0.11651552872417485,
+   "src_kd_mean": 0.017928119368514843,
+   "src_n_lines": 0.015695518153985646,
+   "target_ctrl_cpm": 0.11268344563317823,
+   "depmap_mean": -0.05821087817237063,
+   "depmap_line": null
+  },
+  "H1_R400": {
+   "src_nstrong_mean": 0.5746203246343254,
+   "src_nstrong_max": 0.516511192681459,
+   "src_kd_mean": 0.11869202189598599,
+   "src_n_lines": 0.427248289560819,
+   "target_ctrl_cpm": 0.0713746472035307,
+   "depmap_mean": -0.48998192576413907,
+   "depmap_line": null
+  },
+  "K562_GWPS": {
+   "src_nstrong_mean": 0.3906460498388544,
+   "src_nstrong_max": 0.2840753586720007,
+   "src_kd_mean": -0.003828022119408358,
+   "src_n_lines": 0.12248453930555728,
+   "target_ctrl_cpm": 0.11923536043028704,
+   "depmap_mean": -0.24137656889017556,
+   "depmap_line": -0.2526437627687193
+  },
+  "KOLF2.1J": {
+   "src_nstrong_mean": 0.07677579525872197,
+   "src_nstrong_max": 0.07268031768641724,
+   "src_kd_mean": 0.050575757926243546,
+   "src_n_lines": 0.03794209143489735,
+   "target_ctrl_cpm": 0.12345953643704181,
+   "depmap_mean": -0.07832456834817904,
+   "depmap_line": null
+  },
+  "Orion_HCT116": {
+   "src_nstrong_mean": 0.3805092106257268,
+   "src_nstrong_max": 0.28249187561996286,
+   "src_kd_mean": -0.011975313415835673,
+   "src_n_lines": 0.10495461246059971,
+   "target_ctrl_cpm": 0.1575238244638614,
+   "depmap_mean": -0.22487156349895654,
+   "depmap_line": -0.09351790491396966
+  },
+  "Orion_HEK293T": {
+   "src_nstrong_mean": 0.36954888190465135,
+   "src_nstrong_max": 0.3256899502406817,
+   "src_kd_mean": 0.01934359515559115,
+   "src_n_lines": 0.1684397092262527,
+   "target_ctrl_cpm": 0.12751385509610688,
+   "depmap_mean": -0.13956678916475,
+   "depmap_line": null
+  }
+ },
+ "lolo": {
+  "all": {
+   "features": [
+    "src_nstrong_mean",
+    "src_nstrong_max",
+    "src_kd_mean",
+    "src_n_lines",
+    "target_ctrl_cpm",
+    "depmap_mean"
+   ],
+   "per_line": {
+    "CD4T_Stim48hr_R400": 0.130469288622672,
+    "CD4T_Stim8hr": 0.11188002203396213,
+    "H1_R400": 0.6105247268569483,
+    "K562_GWPS": 0.4294882124060994,
+    "KOLF2.1J": 0.10386507452196707,
+    "Orion_HCT116": 0.41129504717558646,
+    "Orion_HEK293T": 0.3698574291511345
+   },
+   "mean": 0.30962568582405287
+  },
+  "src_only": {
+   "features": [
+    "src_nstrong_mean"
+   ],
+   "per_line": {
+    "CD4T_Stim48hr_R400": 0.112729749277244,
+    "CD4T_Stim8hr": 0.10926747424617553,
+    "H1_R400": 0.5740005553888843,
+    "K562_GWPS": 0.3906460498388544,
+    "KOLF2.1J": 0.07677579525872197,
+    "Orion_HCT116": 0.3805092106257268,
+    "Orion_HEK293T": 0.36954888190465135
+   },
+   "mean": 0.28763967379146554
+  },
+  "depmap_mean_only": {
+   "features": [
+    "depmap_mean"
+   ],
+   "per_line": {
+    "CD4T_Stim48hr_R400": 0.10282985568270656,
+    "CD4T_Stim8hr": 0.05821087817237063,
+    "H1_R400": 0.4861071828519392,
+    "K562_GWPS": 0.24137656889017556,
+    "KOLF2.1J": 0.07832456834817904,
+    "Orion_HCT116": 0.22487156349895654,
+    "Orion_HEK293T": 0.13956678916475
+   },
+   "mean": 0.19018391522986824
+  },
+  "src+depmap": {
+   "features": [
+    "src_nstrong_mean",
+    "src_nstrong_max",
+    "depmap_mean"
+   ],
+   "per_line": {
+    "CD4T_Stim48hr_R400": 0.1387759294126674,
+    "CD4T_Stim8hr": 0.11127402866831604,
+    "H1_R400": 0.624315368055556,
+    "K562_GWPS": 0.43488817897669624,
+    "KOLF2.1J": 0.09446860018000787,
+    "Orion_HCT116": 0.41584924580125476,
+    "Orion_HEK293T": 0.3583638494972925
+   },
+   "mean": 0.31113360008454155
+  }
+ },
+ "n_targets": {
+  "CD4T_Stim48hr_R400": 174,
+  "CD4T_Stim8hr": 278,
+  "H1_R400": 254,
+  "K562_GWPS": 213,
+  "KOLF2.1J": 258,
+  "Orion_HCT116": 255,
+  "Orion_HEK293T": 250
+ },
+ "decision": {
+  "all_mean": 0.30962568582405287,
+  "src_only_mean": 0.28763967379146554,
+  "best_set": "src+depmap",
+  "best_mean": 0.31113360008454155,
+  "use_per_target_strength": false,
+  "depmap_adds": false
+ }
+}
