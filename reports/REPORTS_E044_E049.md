@@ -234,3 +234,69 @@ The runbook expects the H1 retro may FAIL ("report it either way … it is one l
 - The rank table and the bootstrap disagree in sign for B5@b3 (+0.0012 vs −0.0030), because the rank averages over seeds (2 vs 3) and the bootstrap uses seed 0 only. Both are within noise.
 - H1-R400 has 1 seed per spec (as designed), so `seed_sd` is NaN in the H1 table.
 - The B5 per-line seed effect is largest on Orion_HCT116 and KOLF2.1J (b3 bootstrap per-line ±0.012–0.015). So a single-seed per-line Δ below about 0.015 shouldn't be read.
+
+
+---
+
+## REPORT E046 — the lever sweep on both brackets (GPU)
+
+`scripts/run_E046.sh` (no `b3`: E045 kept `balanced`): `specs_E046.json` on V\* (5 lines) and H1-R400; `specs_E046r.json` under `VCC_RENORM_AXIS=1` on both;
+`specs_E046same.json` on CD4T_Stim8hr with `--allow-same-line CD4T_Stim48hr,CD4T_Rest`.
+**Wall 13:48–16:52 UTC = 3.07 instance-h** (GPU; estimate ~3 h). No FAILED lines, no OOM. Approval to continue after the E045 stop: `docs/APPROVALS.md` (19 Oct, "Continue").
+Reference: `B5_z2_a0.5_cis5000@@balanced` (E045s0 rows). Rule-1 threshold: max(0.005, 2 × SD\* 0.0015) = 0.005.
+
+### 1. Per spec (V\* Δ vs ref, lines positive, bootstrap P(Δ > 0) [90 % CI], H1-R400 Δ, LB-span metric deltas on V\*, docs/16 §3 rules 1 / 2 / 3)
+
+| spec | V\* Δ | lines + | P(Δ>0) [CI90] | H1 Δ | Δ pds / mse / fid / reach / jac / nmae (V\*) | rules 1 2 3 | LB slot |
+|---|---|---|---|---|---|---|---|
+| ENS_E021B5_w55 | +0.0141 | 4/5 | 0.974 [+0.0028, +0.0258] | +0.0253 | -0.028 / +0.019 / +0.004 / +0.062 / -0.002 / +0.029 | ✓ ✓ ✓ | **yes** |
+| ENS_E021B5_w37 | +0.0135 | 4/5 | 0.985 [+0.0033, +0.0240] | +0.0261 | -0.011 / +0.033 / -0.012 / +0.052 / +0.001 / +0.019 | ✓ ✓ ✓ | **yes** |
+| B5_z2_p53w0.3 | -0.0047 | 2/5 | 0.271 [-0.0161, +0.0074] | -0.0013 | +0.021 / -0.024 / -0.012 / -0.010 / +0.004 / -0.007 | ✗ ✓ ✗ | no |
+| B5_z2_vfloor | -0.0073 | 0/5 | 0.033 [-0.0155, -0.0006] | -0.0128 | +0.020 / -0.015 / -0.041 / -0.009 / +0.005 / -0.004 | ✗ ✗ ✗ | no |
+| B5_z2_bud600md0.3 | +0.0074 | 4/5 | 0.945 [-0.0001, +0.0161] | +0.0209 | -0.004 / +0.003 / +0.049 / -0.004 / -0.001 / +0.002 | ✓ ✓ ✓ | **yes** |
+| B5_z2_bud1500md0.15 | +0.0004 | 2/5 | 0.580 [-0.0018, +0.0027] | +0.0073 | -0.002 / +0.001 / +0.006 / -0.001 / -0.001 / -0.000 | ✗ ✓ ✗ | no |
+| B5_z2_ALL | +0.0010 | 3/5 | 0.556 [-0.0169, +0.0171] | +0.0123 | +0.042 / -0.040 / +0.007 / -0.015 / +0.019 / -0.008 | ✗ ✓ ✗ | no |
+
+Full tables: `results/E046/rank_vstar.txt`, `rank_H1.txt`.
+
+### 2. Renorm over the Flex axis (L6, `VCC_RENORM_AXIS=1`)
+
+| spec | V\* mean (off → on) | H1-R400 (off → on) |
+|---|---|---|
+| B5_z2_a0.5_cis5000 | 0.1121 → 0.1124 (+0.0003) | 0.0624 → 0.0614 (-0.0011) |
+| B2_raw_gPL(E021) | 0.1147 → 0.1145 (-0.0003) | 0.1384 → 0.1390 (+0.0006) |
+| ENS_E021B5_w55 | 0.1262 → 0.1250 (-0.0012) | 0.0878 → 0.0883 (+0.0005) |
+
+Bootstrap renorm-B5 vs B5 (V\*): Δ +0.0003, CI90 [-0.0019, +0.0025], P = 0.59. **No effect** (all |Δ| ≤ 0.0013, below SD\*).
+
+### 3. Same-line proxy (L8): CD4T_Stim8hr with CD4T_Stim48hr/Rest allowed as sources
+```
+mean   worst   d_ref lines_pos  n_lines  n_seeds  seed_sd  CD4T_Stim8hr  lb_pds  lb_mse  lb_fid  lb_reach  lb_jac  lb_nmae
+variant            emit                                                                                                                                  
+B5_z2_sameW10      balanced  0.2523  0.2523  0.2249       1/1        1        1      NaN        0.2523  0.7811  0.3127  0.0018    0.2712 -0.0010   0.1478
+B5_z2_sameW3       balanced  0.2374  0.2374  0.2100       1/1        1        1      NaN        0.2374  0.7379  0.3473 -0.0144    0.2392 -0.0061   0.1203
+B5_z2_sameW1       balanced  0.1961  0.1961  0.1688       1/1        1        1      NaN        0.1961  0.6828  0.2577 -0.0435    0.2055 -0.0141   0.0882
+B2_raw_gPL(E021)   balanced  0.0376  0.0376  0.0103       1/1        1        1      NaN        0.0376  0.2923  0.0000 -0.1108    0.1368 -0.0458  -0.0467
+B5_z2_a0.5_cis5000 balanced  0.0273  0.0273  0.0000       0/1        1        1      NaN        0.0273  0.3215  0.0007 -0.1801    0.1011 -0.0525  -0.0267
+```
+- Allowing same-line data lifts CD4T_Stim8hr from **0.027 (B5) to 0.196 / 0.237 / 0.252** at line weight 1 / 3 / 10, i.e. **+0.17 to +0.22**. It's by far the largest effect measured in this project.
+  MSE scaled 0.26–0.35, pds 0.68–0.78, fid ≈ 0. Weight 10 is best; it hasn't plateaued between 3 and 10.
+- Caveat: these are different *conditions* of the same donors' cells (resting / 8 h / 48 h stimulation), so this is an upper-end proxy for "a D/E/F line is one of our source lines".
+
+### 4. Specs that qualify for an LB slot (docs/16 §3 rules 1–3; rule 4 = forecast pre-registration at submission time)
+- **`ENS_E021B5_w55`** (V\* +0.0141, 4/5, P 0.974, H1 +0.025) and **`ENS_E021B5_w37`** (+0.0135, 4/5, P 0.985, H1 +0.026): the E021/B5 blends (L2).
+- **`B5_z2_bud600md0.3`** (+0.0074, 4/5, P 0.945, H1 +0.021): cheap DE calls (L3).
+- Not qualifying: `B5_z2_bud1500md0.15` (+0.0004), `B5_z2_ALL` (+0.0010, P 0.56), `B5_z2_p53w0.3` (−0.0047), `B5_z2_vfloor` (−0.0073, CI excludes 0 on the negative side).
+- Two levers (L2, L3) pass rules 1–2, so **E046c is eligible** (combinations, e.g. blend + bud600md0.3). Not started: it needs Rafid's go-ahead.
+- No LB entry was made (E047 not run; stop after E046 as instructed). 0 of 2 entries used for 19 Oct UTC.
+
+### 5. GPU hours
+3.07 h. Round-4 total so far: E044 1.08 + E045 2.80 + E046 3.07 = **6.95 instance-h**, plus **≈ 5.9 h idle** (06:53–13:48 UTC) waiting for the go-ahead after the E045 stop.
+
+### Anomalies
+- **The blends beat both parents on V\* but not on H1-R400.** On H1, E021 alone (0.138) is far above the blends (0.088) and B5 (0.062). The blends pass rule 2 only because the reference is B5.
+  If H1 is trusted as the high-N_conf bracket, plain E021 dominates there. Its V\* Δ (+0.0026 in this table, +0.0041 in E045) is below the 0.005 threshold.
+- `B5_z2_ALL` (L3 + L4 + L5 combined) is worse than `bud600md0.3` alone. p53 weighting and vfloor each lose on their own (p53w0.3 −0.005; vfloor −0.007, CI fully negative), and they drag the combination down.
+- **The blends raise LB-span MSE on V\*** (+0.019 / +0.033 vs B5) while improving fid. On H1 the w55 blend's scaled MSE is 0.000, but w37's is 0.107.
+- E021's per-line pattern in the blends: the gain comes mostly from Orion_HCT116 (+0.03), K562_GWPS (+0.02) and CD4T (+0.01); KOLF2.1J stays the worst line (−0.12 to −0.14) for every spec.
+- No non-ORACLE LB-span scaled metric > 1.5. 5 V\* lines in every sweep.
