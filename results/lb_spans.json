@@ -1,0 +1,24 @@
+{
+ "baseline": {
+  "pds_cosine": 0.49839489952140653,
+  "de_wilcoxon_direction_fidelity_yield_raw": 0.5125727740327092,
+  "de_wilcoxon_direction_reach_raw": 0.07631496560037378,
+  "de_wilcoxon_sig_jaccard": 0.030851344812814534,
+  "de_wilcoxon_lfc_nmae": 0.9923936735532897,
+  "expr_mse_unbiased_capped_norm": 0.99
+ },
+ "replicate": {
+  "pds_cosine": 0.9540605275975036,
+  "de_wilcoxon_direction_fidelity_yield_raw": 0.8121130093961002,
+  "de_wilcoxon_direction_reach_raw": 0.9901594109502427,
+  "de_wilcoxon_sig_jaccard": 0.3561272770833965,
+  "de_wilcoxon_lfc_nmae": 0.4634879598363011,
+  "expr_mse_unbiased_capped_norm": 0.05
+ },
+ "baseline_emit": "LB-implied",
+ "source": [
+  "results/E033_E032_status.json",
+  "results/E033_E021_status.json"
+ ],
+ "note": "b, r backed out of two LB entries; mse (b, r) assumed because E021's scaled mse is clamped at 0"
+}

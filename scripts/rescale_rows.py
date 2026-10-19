@@ -23,14 +23,18 @@ INV = {v: k for k, v in SHORT.items()}
 ap = argparse.ArgumentParser()
 ap.add_argument("--dir", required=True, help="loco output dir holding holdout_<name>/anchors.json")
 ap.add_argument("--rows", nargs="+", required=True); ap.add_argument("--out", required=True)
+ap.add_argument("--anchors-override", default=None, help="one anchors JSON for all lines (results/lb_spans.json)")
 a = ap.parse_args()
 rows = pd.concat([pd.read_csv(f) for f in a.rows], ignore_index=True)
 out = []
 for _, r in rows.iterrows():
     anc_p = os.path.join(a.dir, f"holdout_{r['holdout']}", "anchors.json")
-    if not os.path.exists(anc_p):
+    if a.anchors_override:
+        anc = json.load(open(a.anchors_override))
+    elif not os.path.exists(anc_p):
         print(f"skip {r['holdout']}: no {anc_p}"); continue
-    anc = json.load(open(anc_p))
+    else:
+        anc = json.load(open(anc_p))
     u = {INV[m]: float(r[f"raw_{m}"]) for m in SHORT.values()}
     s = scale(u, anc)
     out.append({"model": r["model"], "emit": r.get("emit", ""), "holdout": r["holdout"],

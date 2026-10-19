@@ -1,0 +1,146 @@
+[
+ {
+  "name": "ENS_E021B5_w55",
+  "model": "ENS",
+  "emit": "balanced",
+  "kw": {
+   "members": [
+    {
+     "model": "B2_transfer",
+     "kw": {
+      "alpha": 1.0,
+      "raw": true,
+      "generic_from": [
+       "@genome_wide",
+       "@targeted"
+      ]
+     },
+     "w": 0.5
+    },
+    {
+     "model": "B5_sparse",
+     "kw": {
+      "z_thr": 2,
+      "agree": 0.5,
+      "cis_bp": 5000,
+      "tss": "/lambda/nfs/LambdaFilesystem/vcc-data/tss.csv"
+     },
+     "w": 0.5
+    }
+   ]
+  }
+ },
+ {
+  "name": "ENS_E021B5_w37",
+  "model": "ENS",
+  "emit": "balanced",
+  "kw": {
+   "members": [
+    {
+     "model": "B2_transfer",
+     "kw": {
+      "alpha": 1.0,
+      "raw": true,
+      "generic_from": [
+       "@genome_wide",
+       "@targeted"
+      ]
+     },
+     "w": 0.3
+    },
+    {
+     "model": "B5_sparse",
+     "kw": {
+      "z_thr": 2,
+      "agree": 0.5,
+      "cis_bp": 5000,
+      "tss": "/lambda/nfs/LambdaFilesystem/vcc-data/tss.csv"
+     },
+     "w": 0.7
+    }
+   ]
+  }
+ },
+ {
+  "name": "B5_z2_p53w0.3",
+  "model": "B5_sparse",
+  "emit": "balanced",
+  "kw": {
+   "z_thr": 2,
+   "agree": 0.5,
+   "cis_bp": 5000,
+   "tss": "/lambda/nfs/LambdaFilesystem/vcc-data/tss.csv",
+   "p53_mismatch_w": 0.3
+  }
+ },
+ {
+  "name": "B5_z2_vfloor",
+  "model": "B5_sparse",
+  "emit": "balanced",
+  "kw": {
+   "z_thr": 2,
+   "agree": 0.5,
+   "cis_bp": 5000,
+   "tss": "/lambda/nfs/LambdaFilesystem/vcc-data/tss.csv",
+   "var_floor": true,
+   "single_line_z": 3.0
+  }
+ },
+ {
+  "name": "B5_z2_bud600md0.3",
+  "model": "B5_sparse",
+  "emit": "balanced",
+  "kw": {
+   "z_thr": 2,
+   "agree": 0.5,
+   "cis_bp": 5000,
+   "tss": "/lambda/nfs/LambdaFilesystem/vcc-data/tss.csv"
+  },
+  "post": {
+   "de_budget": {
+    "n": 600,
+    "margin": 1.25,
+    "max_delta": 0.3
+   }
+  }
+ },
+ {
+  "name": "B5_z2_bud1500md0.15",
+  "model": "B5_sparse",
+  "emit": "balanced",
+  "kw": {
+   "z_thr": 2,
+   "agree": 0.5,
+   "cis_bp": 5000,
+   "tss": "/lambda/nfs/LambdaFilesystem/vcc-data/tss.csv"
+  },
+  "post": {
+   "de_budget": {
+    "n": 1500,
+    "margin": 1.25,
+    "max_delta": 0.15
+   }
+  }
+ },
+ {
+  "name": "B5_z2_ALL",
+  "model": "B5_sparse",
+  "emit": "balanced",
+  "kw": {
+   "z_thr": 2,
+   "agree": 0.5,
+   "cis_bp": 5000,
+   "tss": "/lambda/nfs/LambdaFilesystem/vcc-data/tss.csv",
+   "p53_mismatch_w": 0.3,
+   "var_floor": true,
+   "single_line_z": 3.0
+  },
+  "post": {
+   "de_budget": {
+    "n": 600,
+    "margin": 1.25,
+    "max_delta": 0.3
+   }
+  }
+ }
+]
