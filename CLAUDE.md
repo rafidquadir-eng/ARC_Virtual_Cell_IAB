@@ -2,6 +2,8 @@
 
 You are Claude Code running **on the Lambda GPU instance** (started over SSH from the Mac Terminal, or from a Claude Desktop SSH session). This repo, cloned at `~/vcc`, holds the code and plan. A separate planning session decides experiments; you execute them and report back.
 
+**Current plan (19 Oct): `docs/16_PLAN_ROUND4.md`, executed as runbook stages E044–E049.** Approvals: `docs/APPROVALS.md`.
+
 **Start with `docs/08_CLAUDE_CODE_WEB.md`** (how this session was connected, the challenge login the user does themselves, long-job rules). The step-by-step task list is `docs/07_RUNBOOK_INSTANCE.md`.
 
 ## Instance

@@ -207,3 +207,30 @@ Then stop and wait.
 5. Keep checking `Xaira-Therapeutics/X-Atlas-Pisces` daily and ingest per D10 when it appears.
 
 Then write `reports/DATA_DONE_batch3.md` (same finish list as batch 2) and stop.
+
+## Batch 4 (added 19 Oct ~01:30 UTC; see `docs/16_PLAN_ROUND4.md` R4-08, L9)
+**Why.** On 22 Oct the test bundle brings D, E and F with **their own perturbation list**. Two things are unknown until then:
+- how well our sources cover that list;
+- whether a D/E/F line *is* one of our source lines, which would be the largest lever available.
+
+The rules are unchanged:
+- licence tags;
+- read-only Box;
+- Drive for storage;
+- ask before anything > 300 GB;
+- no `loco.json` / `pb/` edits while runbook jobs run: coordinate through Rafid.
+
+1. **D16 (daily until 5 Nov): X-Atlas/Pisces.** Check `Xaira-Therapeutics/X-Atlas-Pisces` once per UTC day. If data appears:
+   - report its lines, size and licence first;
+   - then ingest per D10, after Rafid's go-ahead.
+2. **D17 (19–21 Oct): recheck the blocked and unverified items.**
+   - VIPerturb-seq (Bradu…Satija): is there a data accession now?
+   - Any 2026 CRISPRi/CRISPRa Perturb-seq with an RNA readout in carcinoma, squamous or T-ALL lines that batch 3 missed? Use the same searches; GEO entries since 16 Oct only.
+   - Report; don't ingest.
+3. **D18 (22 Oct, as soon as the runbook's E049 step 2–3 output is in the repo):** read `reports/E049_ccle_match.json` and `results/E049/panel_coverage_DEF.csv`.
+   - **(a)** For the top-3 CCLE matches of D, E and F: search for public perturbation data in those exact lines, as D15 did for A/B/C.
+   - **(b)** Re-screen everything catalogued so far, including `loco_candidates.json` (A549_KO) and the datasets below the 20-target cut, against the **D/E/F** perturbation list. Report the overlap per dataset.
+   - **(c)** For any D/E/F target measured in no source line: is it measured anywhere public?
+   - Report and stop. Planning decides what to ingest.
+
+Write `reports/DATA_DONE_batch4.md` (finish list as in batch 2, plus the D18 tables) and stop.

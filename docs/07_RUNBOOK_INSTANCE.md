@@ -135,7 +135,332 @@ vcc submit $DATA/preds/E012.vcc -m "E012 <spec name> with K562 GWPS" --wait
 ## ⏸ PAUSED (15 Oct ~03:30 UTC): don't start E013–E017
 Wait until the curation agent has pushed `reports/DATA_DONE.md`. If E013 is already running, let it finish and push its report, then stop. E013/E015 are folded into **E020** below; E014/E017 are replaced by **E021**. The earlier stages stay here for the record.
 
-## E042 — corrected local anchors (review O-01, 17 Oct): do this first
+## ▶ ROUND 4 (from 19 Oct, 01:00 UTC): run E044 → E049 in order. Read `docs/16_PLAN_ROUND4.md` first.
+The selection rule is in docs/16 §3; it supersedes the 17 Oct rule kept below. The standing rules in docs/16 §6 apply to every stage.
+
+**The six most important rules:**
+- no silent skips;
+- one REPORT section per stage in `reports/REPORTS_E044_E049.md`, each with an Anomalies list;
+- commit small results;
+- pre-register every LB entry;
+- stop on a FAIL;
+- no Phase B without a planning update.
+
+Common setup for every stage:
+```bash
+source ~/.vcc_env; cd ~/vcc; git pull
+PANEL=$(find $DATA/challenge -name pert_counts.csv | head -1); AXIS=$DATA/challenge/controls/gene_axis.csv
+S="--status results/E033_E021_status.json results/E033_E032_status.json"
+SUMS=$(python -c "import json;print(' '.join(c['summary'] for c in json.load(open('loco.json'))['contexts']))")
+REF="B5_z2_a0.5_cis5000@@balanced"
+```
+
+### E044 — validator on the instance, reproduction, strength study, test-day mechanics (CPU, ~1.5 h)
+```bash
+mkdir -p results/E044 results/forecasts
+# 1. the calibrated validator reproduces here (planning got: retro PASS; B5 0.112, E021 0.115)
+python scripts/lb_check.py spans $S --out results/E044/lb_spans_check.json > /dev/null
+python -c "
+import json; a=json.load(open('results/lb_spans.json')); b=json.load(open('results/E044/lb_spans_check.json'))
+d=max(abs(a[k][m]-b[k][m]) for k in ('baseline','replicate') for m in a[k]); print('max |span diff|', d); assert d < 1e-9"
+python scripts/lb_check.py retro --rows results/E031/vstar_rows_E031_seen.csv --a "B5_z2_a0.5_cis5000" --b "B2_raw_gPL(E021)" \
+  --lb-a results/E033_E032_status.json --lb-b results/E033_E021_status.json | tee results/E044/lb_retro_lbspans.txt
+python scripts/lb_check.py rank $S --rows results/E020/vstar_rows_E020_seen.csv results/E031/vstar_rows_E031_seen.csv results/E034/vstar_rows_E034_seen.csv \
+  --ref "$REF" --out results/E044/rank_E020_E031_E034.csv | tee results/E044/rank_E020_E031_E034.txt
+
+# 2. full-matrix reproduction of E032 with today's code (review R4-12; the R-01 emitter change may only touch all-zero rows)
+python -m vcc26.predict_challenge --controls-dir $DATA/challenge/controls --contexts A,B,C --perts $PANEL --gene-names $AXIS \
+  --registry loco.json --summaries $SUMS --spec-file specs_E031.json --spec "B5_z2_a0.5_cis5000" --n-control 0 \
+  --out $DATA/preds/E044_E032repro.h5ad 2>&1 | tail -3
+python - <<PY | tee results/E044/E032_full_repro.txt
+import anndata as ad, numpy as np
+a = ad.read_h5ad("$DATA/preds/E032.h5ad", backed="r"); b = ad.read_h5ad("$DATA/preds/E044_E032repro.h5ad", backed="r")
+print("shape", a.shape, b.shape, "obs index equal", bool((a.obs.index == b.obs.index).all()))
+pc = [c for c in a.obs.columns if "target" in c.lower()][0]; diff = []
+for i in range(0, a.n_obs, 20000):
+    A = a.X[i:i + 20000]; B = b.X[i:i + 20000]
+    d = np.asarray(abs(A - B).sum(1)).ravel(); diff += list(np.where(d > 0)[0] + i)
+print("rows differing:", len(diff), "of", a.n_obs)
+if diff:
+    print(a.obs.iloc[diff][pc].astype(str).value_counts().head(40).to_string())
+PY
+
+# 3. per-target N_conf tables (E042c's were not committed)
+HOLD="$DATA/loco/E037/holdout_H1_R400 $DATA/loco/E037/holdout_CD4T_Stim48hr_R400 $DATA/loco/E020/holdout_CD4T_Stim8hr $DATA/loco/E020/holdout_KOLF2.1J $DATA/loco/E020/holdout_K562_GWPS $DATA/loco/E020/holdout_Orion_HCT116 $DATA/loco/E020/holdout_Orion_HEK293T"
+for d in $HOLD; do
+  python scripts/regime_check.py --holdout-dir $d --per-target-out results/E044/pertarget_nconf_$(basename $d).csv > results/E044/regime_$(basename $d).json
+done
+
+# 4. strength study (docs/16 R4-05): can zero-shot features rank the held-out N_conf?
+python scripts/strength_study.py --config loco.json --pertarget "results/E044/pertarget_nconf_holdout_*.csv" \
+  --depmap $DATA/priors/depmap/CRISPRGeneEffect.csv --models $DATA/priors/depmap/Model.csv \
+  --line-names K562_GWPS=K562,Orion_HCT116=HCT116,Orion_HEK293T=HEK293T \
+  --out results/E044/strength_study.json | tee results/E044/strength_study.txt
+python -c "
+import pandas as pd; ids=set(pd.read_csv('$DATA/priors/depmap/CRISPRGeneEffect.csv', usecols=[0]).iloc[:,0])
+[print(c, m, 'screened' if m in ids else 'NOT screened') for c,m in [('A','ACH-000995'),('B','ACH-001086'),('C','ACH-000518')]]" | tee results/E044/depmap_ABC.txt
+
+# 5. TP53 from DepMap for A/B/C (check the hand-written contexts_meta.json; do NOT overwrite it)
+python scripts/context_meta.py --match reports/E041_ccle_match.json \
+  --damaging $DATA/priors/depmap/OmicsSomaticMutationsMatrixDamaging.csv --hotspot $DATA/priors/depmap/OmicsSomaticMutationsMatrixHotspot.csv \
+  --out results/E044/contexts_meta_check.json
+
+# 6. test-day mechanics: how is a FINAL entry made, and how is the test bundle fetched?
+(vcc --help; echo; vcc submit --help; echo; vcc download --help 2>&1; echo; vcc status --help 2>&1) > reports/vcc_help_round4.txt 2>&1
+grep -n -i "final\|test\|phase\|bundle\|context" reports/vcc_help_round4.txt | head -40
+```
+7. Create `results/submissions.csv` from the reports, one row per past entry (E001, E012, E021, E032, and any other). Columns:
+   `entry,utc,spec,emit,nc,git,vcc_md5,forecast,overall,pds,mse,fid,reach,jac,nmae,rank`.
+   Fill `vcc_md5` where the `.vcc` still exists; otherwise write `unknown`.
+
+**REPORT E044:**
+1. The retro verdict and the rank table. Both should match planning's numbers: PASS; E021 0.115, B5 0.112.
+2. Rows differing in the E032 reproduction, and their targets. Expected 0, or only targets whose predicted lfc is all zero.
+3. The strength study: the per-line Spearman table, the LOLO table, and the `decision` block.
+4. Is DepMap screened for A/B/C? Does `contexts_meta_check.json` agree with `contexts_meta.json`?
+5. What the CLI says about final entries and the test bundle: exact flags, or "nothing about final" if the help is silent.
+6. The submissions ledger.
+7. Anomalies.
+
+### E045 — seed variance, emitter choice, the H1-R400 bracket (GPU, ~2.5–3 h)
+Seed 0 of `specs_E045ref.json` reruns the E031 rows: the raw metrics must match those rows. The only exception is a target whose prediction is all zero (R-01 random base).
+
+`scripts/run_E045.sh` runs the V\* jobs (`vstar_par.sh`, 2 holdouts at a time) and the H1-R400 job concurrently: 3 GPU processes. If a line OOMs, its log is `logs/<tag>_<line>.log`, and `vstar_par.sh` prints FAILED. Rerun that line alone with `VSTAR_LINES=<line> VSTAR_PAR=1 bash scripts/vstar_par.sh <specs> <tag> <seed> results/E045`, then rebuild that tag's rows file the same way.
+```bash
+tmux new -d -s E045 "bash scripts/run_E045.sh 2>&1 | tee logs/E045.log"     # ~2.5-3 h; poll logs/E045.log
+```
+Then:
+```bash
+python scripts/lb_check.py rank $S --rows results/E045/vstar_rows_E045s*.csv results/E045/vstar_rows_E045b3s*.csv --ref "$REF" \
+  --out results/E045/rank_vstar.csv | tee results/E045/rank_vstar.txt
+python scripts/lb_check.py rank $S --rows results/E045/scores_H1_R400_seen_E045*h.csv --ref "$REF" | tee results/E045/rank_H1.txt
+for s in 0 1 2; do echo "== seed $s"; python scripts/lb_check.py retro --rows results/E045/vstar_rows_E045s$s.csv --a "B5_z2_a0.5_cis5000" \
+  --b "B2_raw_gPL(E021)" --lb-a results/E033_E032_status.json --lb-b results/E033_E021_status.json | tail -3; done | tee results/E045/retro_by_seed.txt
+python scripts/lb_check.py retro --rows results/E045/scores_H1_R400_seen_E045refh.csv --a "B5_z2_a0.5_cis5000" --b "B2_raw_gPL(E021)" \
+  --lb-a results/E033_E032_status.json --lb-b results/E033_E021_status.json | tee results/E045/retro_H1.txt
+python - <<'PY' | tee results/E045/repro_vs_E031.txt
+import pandas as pd
+o = pd.read_csv("results/E031/vstar_rows_E031_seen.csv").drop_duplicates(["model", "holdout"]); n = pd.read_csv("results/E045/vstar_rows_E045s0.csv")
+m = o.merge(n, on=["model", "holdout"], suffixes=("_old", "_new"))
+for k in ["pds", "mse", "fid", "reach", "jac", "nmae"]:
+    m["d_" + k] = (m[f"raw_{k}_new"] - m[f"raw_{k}_old"]).abs()
+print(m[["model", "holdout"] + [c for c in m.columns if c.startswith("d_")]].round(6).to_string())
+PY
+for x in "B5_z2_a0.5_cis5000" "B2_raw_gPL(E021)"; do
+  python -m vcc26.compare --dir $DATA/loco/E020 --tag E045b3s0 --a "$x@b3" --tag-b E045s0 --b "$x" --n 1000 \
+    --anchors-override results/lb_spans.json > "results/E045/boot_b3_vs_balanced_$x.json"
+done
+```
+**Decisions (write them in the REPORT):**
+- **seed SD\*** = the larger `seed_sd` of the two balanced references. This is the noise floor used in docs/16 §3.
+- **Emitter.** Adopt `balanced3` for everything later only if all of these hold:
+  - Δ(B5@b3 − B5) ≥ 2·SD\* on V\*;
+  - Δ ≥ −0.005 on H1-R400;
+  - the E021 pair moves in the same direction.
+
+  Otherwise keep `balanced`. If adopted, make b3 copies of the E046 spec files:
+  ```bash
+  for f in specs_E046 specs_E046r specs_E046same; do python -c "import json,sys;s=json.load(open('$f.json'));[x.update(emit='balanced3',name=x['name']+'@b3') for x in s];json.dump(s,open('${f}b3.json','w'),indent=1)"; done
+  ```
+  Use those in E046, with `REF="B5_z2_a0.5_cis5000@b3@@balanced3"`.
+- **Validator stability.** Retro must PASS on all 3 seeds. H1-R400 retro is the second bracket: report it either way (it may FAIL on magnitudes; it is one line).
+
+**REPORT E045:**
+1. Both rank tables, including `seed_sd`.
+2. Retro by seed, and retro on H1.
+3. The E031 reproduction diffs.
+4. The two bootstraps.
+5. The two decisions above.
+6. GPU hours.
+7. Anomalies.
+
+### E046 — the lever sweep on both brackets (GPU, ~3 h)
+Specs (docs/16 §4):
+
+| Spec | Lever | What it does |
+|---|---|---|
+| `ENS_E021B5_w55`, `ENS_E021B5_w37` | L2 | Blends E021 and B5 |
+| `B5_z2_p53w0.3` | L4 | Down-weights p53-mismatched sources |
+| `B5_z2_vfloor` | L5 | Overdispersion floor |
+| `B5_z2_bud600md0.3`, `B5_z2_bud1500md0.15` | L3 | Cheap DE calls |
+| `B5_z2_ALL` | L3+L4+L5 | All three combined |
+
+Also:
+- `specs_E046r.json` runs under `VCC_RENORM_AXIS=1` (L6);
+- `specs_E046same.json` runs on CD4T_Stim8hr with its same-line datasets allowed as sources (L8 proxy).
+
+```bash
+tmux new -d -s E046 "bash scripts/run_E046.sh 2>&1 | tee logs/E046.log"      # add the argument b3 if E045 adopted balanced3; ~3 h
+```
+Then:
+```bash
+python scripts/lb_check.py rank $S --rows results/E045/vstar_rows_E045s0.csv results/E045/vstar_rows_E045b3s0.csv results/E046/vstar_rows_E046.csv \
+  results/E046/vstar_rows_E046r.csv --ref "$REF" --out results/E046/rank_vstar.csv | tee results/E046/rank_vstar.txt
+python scripts/lb_check.py rank $S --rows results/E045/scores_H1_R400_seen_E045*h.csv results/E046/scores_H1_R400_seen_E046h*.csv --ref "$REF" \
+  --out results/E046/rank_H1.csv | tee results/E046/rank_H1.txt
+python scripts/lb_check.py rank $S --rows results/E045/vstar_rows_E045s0.csv results/E046/vstar_rows_E046same.csv --holdouts CD4T_Stim8hr \
+  --ref "$REF" | tee results/E046/rank_sameline.txt      # B5_z2_sameW1/3/10 = same-line sources allowed, line weight 1/3/10
+for x in $(python -c "import json;print(' '.join(s['name'] for s in json.load(open('specs_E046.json'))))"); do
+  python -m vcc26.compare --dir $DATA/loco/E020 --tag E046 --a "$x" --tag-b E045s0 --b "B5_z2_a0.5_cis5000" --n 1000 \
+    --anchors-override results/lb_spans.json > results/E046/boot_$x.json
+done
+python -m vcc26.compare --dir $DATA/loco/E020 --tag E046r --a "B5_z2_a0.5_cis5000" --tag-b E045s0 --b "B5_z2_a0.5_cis5000" --n 1000 \
+  --anchors-override results/lb_spans.json > results/E046/boot_renorm_B5.json
+```
+(If balanced3 was adopted, the spec names carry `@b3`. Pass `--tag-b E045b3s0 --b "B5_z2_a0.5_cis5000@b3"`.)
+
+**REPORT E046:**
+1. A table, one row per spec, with:
+   - V\* Δ vs the reference, lines positive, and P(Δ > 0) from the bootstrap;
+   - H1-R400 Δ;
+   - the six LB-span metric deltas;
+   - which docs/16 §3 rules pass.
+2. The renorm effect: V\* and H1.
+3. The same-line proxy: B5 with CD4T_Stim48hr/Rest allowed, at line weight 1 / 3 / 10, against B5 without them.
+4. Which specs qualify for an LB slot.
+5. GPU hours.
+6. Anomalies.
+
+**E046c (20 Oct, only if ≥ 2 levers each pass rules 1–2):**
+1. Write `specs_E046c.json`: at most 4 combinations of the qualifying levers.
+2. Run them exactly like E046, with tag `E046c` (V\*) and `E046ch` (H1).
+3. Report in the same format.
+
+### E047 — leaderboard entries (19–21 Oct; max 2 per UTC day; docs/16 §3)
+For each entry `<x>` (E047a, b, …):
+```bash
+# 0. state the UTC day's entry count. Pick the candidate per docs/16 §3 (or a calibration entry) and write down why.
+# 1. build the predictions (NC on unless Rafid has said otherwise)
+python -m vcc26.predict_challenge --controls-dir $DATA/challenge/controls --contexts A,B,C --perts $PANEL --gene-names $AXIS \
+  --registry loco.json --summaries $SUMS --spec-file <specs file> --spec "<spec>" --n-control 0 --out $DATA/preds/E047<x>.h5ad
+vcc prep $DATA/preds/E047<x>.h5ad -g $AXIS --perts $PANEL --contexts A,B,C -o $DATA/preds/E047<x>.vcc
+# 2. pre-register: forecast from the V* rows that hold both the candidate and the reference; commit + push BEFORE submitting
+python scripts/lb_check.py forecast $S --rows <V* rows CSVs> --cand "<spec>@@<emit>" --ref "$REF" \
+  --out results/forecasts/E047<x>.json --note "<why this entry>"
+git add results/forecasts/E047<x>.json && git commit -m "E047<x> forecast (pre-registration)" && git push
+# 3. submit, save the official status JSON (same command as for E033), verify
+vcc submit $DATA/preds/E047<x>.vcc -m "E047<x> <spec> (forecast <overall>)" --wait
+vcc --json status <submission id printed by vcc submit> > results/E047<x>_status.json   # as for E033
+python scripts/lb_check.py verify --forecast results/forecasts/E047<x>.json --status results/E047<x>_status.json | tee results/E047<x>_verify.txt
+md5sum $DATA/preds/E047<x>.vcc      # -> results/submissions.csv row
+```
+If `verify` FAILs: no further LB entries. Report, and wait for planning.
+
+If the new entry's scaled MSE lies strictly between 0 and 1, and differs from E032's by more than 0.05, report its raw and scaled MSE. Planning will then solve the MSE span, which today is assumed.
+
+**Calibration entries**, only if nothing qualifies that day:
+- **19/20 Oct:** `B5_z2_a0.5_cis5000@b3`, if E045 found balanced3 V\*-neutral (|Δ| < 2·SD\*). Only the real Flex controls can settle the emitter question.
+- **21 Oct:** the frozen candidate with NC off (E048).
+
+**REPORT E047\<x\>:** the candidate and why; the forecast; the LB result; verify; md5; the day's entry count.
+
+### E048 — freeze, NC decision data, dress rehearsal (21 Oct)
+1. **Freeze.** Write `results/E048/FROZEN.json`:
+   - the chosen spec, copied in full;
+   - the emitter;
+   - `git rev-parse HEAD`;
+   - the md5 of every `loco.json` summary;
+   - the md5 of `contexts_meta.json`;
+   - the NC choice (pending Rafid).
+
+   Also write `specs_FROZEN.json` (one spec) and commit both.
+2. **NC on/off on V\*** (the three non-NC lines):
+   ```bash
+   VSTAR_LINES="CD4T_Stim8hr KOLF2.1J K562_GWPS" bash scripts/vstar_par.sh specs_FROZEN.json E048nc0 0 results/E048 --exclude-licence NC
+   VSTAR_LINES="CD4T_Stim8hr KOLF2.1J K562_GWPS" bash scripts/vstar_par.sh specs_FROZEN.json E048nc1 0 results/E048
+   python scripts/lb_check.py rank $S --rows results/E048/vstar_rows_E048nc0.csv results/E048/vstar_rows_E048nc1.csv --label-files | tee results/E048/rank_nc.txt
+   python -m vcc26.compare --dir $DATA/loco/E020 --tag E048nc0 --a "<spec>" --tag-b E048nc1 --b "<spec>" --n 1000 --anchors-override results/lb_spans.json > results/E048/boot_nc_off_vs_on.json
+   ```
+   (Both runs use the same spec name, so `--label-files` keeps them apart.)
+3. **Dress rehearsal** on A/B/C with NC on and off:
+   ```bash
+   bash scripts/final_pipeline.sh $DATA/challenge/controls A,B,C specs_FROZEN.json "<spec>" E048reh on
+   bash scripts/final_pipeline.sh $DATA/challenge/controls A,B,C specs_FROZEN.json "<spec>" E048reh off
+   ```
+   Report the timings. If the frozen spec was an LB entry, check that `E048reh_ncon.h5ad` is identical to that entry's `.h5ad`.
+4. **Test-day script.** From `reports/vcc_help_round4.txt` (E044), write the exact commands for E049 steps 1 and 8 into the report: download the test bundle, make a final entry, check which entry counts. If the CLI doesn't say, write "unverified" and ask Rafid to check the challenge page.
+5. **NC-off LB entry** (calibration, pre-registered): the frozen spec with `--exclude-licence NC`. Rafid uses its result together with step 2 to make the NC decision.
+
+**REPORT E048:**
+1. `FROZEN.json`.
+2. NC on/off on V\*, and the NC-off LB result.
+3. Rehearsal timings and the identity check.
+4. The E049 command script.
+5. Anomalies.
+
+### E049 — test day (22 Oct): identify, check, predict, insurance entry
+```bash
+TEST=$DATA/challenge_test; mkdir -p $TEST results/E049     # never write into $DATA/challenge
+# 1. download the test bundle into $TEST with the command found in E048, then inventory it
+#    (unpack so that the D/E/F control files sit in $TEST/controls, as the validation ones sit in $DATA/challenge/controls)
+python -m vcc26.inspect_controls --dir $TEST/controls --out reports/controls_inventory_test.json | head -120   # the five E000 items
+TPANEL=$(find $TEST -name pert_counts.csv | head -1); echo "D/E/F perturbation list: $TPANEL"
+md5sum $AXIS $(find $TEST \( -name gene_axis.csv -o -name gene_names.csv \) | head -2)   # must match validation (after header handling)
+# 2. identity + TP53 (merge D/E/F into contexts_meta.json; the A/B/C entries are kept)
+python scripts/ccle_match.py --controls-dir $TEST/controls --contexts D,E,F --expr $DATA/priors/depmap/OmicsExpressionProteinCodingGenesTPMLogp1.csv \
+  --models $DATA/priors/depmap/Model.csv --out reports/E049_ccle_match.json
+python scripts/context_meta.py --match reports/E049_ccle_match.json --damaging $DATA/priors/depmap/OmicsSomaticMutationsMatrixDamaging.csv \
+  --hotspot $DATA/priors/depmap/OmicsSomaticMutationsMatrixHotspot.csv --out contexts_meta.json --merge
+# 3. coverage of the D/E/F perturbation list by our sources, and target expression
+python scripts/panel_coverage.py --config loco.json --perts $TPANEL --out results/E049/panel_coverage_DEF.csv | tee results/E049/panel_coverage_DEF.txt
+python scripts/panel_coverage.py --config loco.json --perts $TPANEL --out results/E049/panel_coverage_DEF_noNC.csv --exclude-licence NC | tail -6
+python scripts/target_expr.py --controls-dir $TEST/controls --contexts D,E,F --perts $TPANEL --out results/E049/target_expr_DEF.csv | tee results/E049/target_expr_DEF.txt
+```
+4. **Same-line check.** Does any D/E/F top CCLE match name one of our source lines? Our source lines:
+   - K562, RPE1, HepG2, Jurkat;
+   - H1, HipSci, KOLF2.1J;
+   - CD4T (primary cells, so not in CCLE);
+   - HCT116, HEK293T.
+
+   If one does, with margin ≥ 0.05:
+   - add `"same_line": "<line as in loco.json>"` to that context's entry in `contexts_meta.json`;
+   - **stop and report** before any prediction. Planning decides `same_line_w` from the E046 proxy.
+5. **Stop-and-report triggers:**
+   - fewer than 80% of D/E/F targets are measured in ≥ 2 source lines;
+   - the gene axis differs from validation;
+   - any context is unexpressed for more than 10% of its targets (< 1 CPM).
+6. **Predict with the frozen config:**
+   ```bash
+   bash scripts/final_pipeline.sh $TEST/controls D,E,F specs_FROZEN.json "<spec>" F1 <on|off per Rafid>
+   ```
+7. **Sanity checks**, before submitting:
+   - cells per target and context;
+   - the `non-targeting` label is present;
+   - counts are non-negative integers, with every cell total ≤ 1e6;
+   - the targets match the D/E/F list exactly;
+   - the distribution of predicted DE-gene counts per target is similar to the frozen config's A/B/C run.
+8. **Insurance final entry F1**, with the exact command from E048. State the UTC day's count.
+   - Record the md5 and argv in `results/submissions.csv`.
+   - Confirm with the CLI that it registered as a final entry.
+
+**REPORT E049:**
+1. The test inventory.
+2. D/E/F identities, margins and TP53.
+3. Coverage and expression tables.
+4. The same-line verdict.
+5. Sanity checks.
+6. The F1 confirmation.
+7. Anomalies.
+
+Then **stop**: Phase B is planned from this report.
+
+---
+
+## Selection rule from 17 Oct (review R-02) — SUPERSEDED on 19 Oct by docs/16 §3; kept for the record
+- **Scale local raw metrics with the official LB spans, not per-line anchors.**
+  - `results/lb_spans.json` holds the (b, r) values backed out of the LB entries E021/E032 (`scripts/lb_check.py spans`).
+  - Per-line tile anchors are degenerate on small truths: fid spans are 0.012–0.18, against the official 0.30.
+  - With LB spans, the committed 5-line E031 V\* **retrodicts** the LB: E032 − E021 forecast −0.003 vs LB +0.002, and levels 0.112/0.115 vs LB 0.108/0.106 (`lb_check retro`: PASS).
+- **Rank** with `python scripts/lb_check.py rank --status results/E033_E021_status.json results/E033_E032_status.json --rows <scores or vstar_rows CSVs>`.
+- **Compare** with `python -m vcc26.compare ... --anchors-override results/lb_spans.json`. The bootstrap now resamples lines, then targets.
+- **LB entry** only when both hold:
+  - the two-level CI lower bound vs the current LB config is > 0 under LB spans;
+  - the 5-line V\* (LB spans) Δ is ≥ −0.01.
+- After every new LB entry:
+  - re-run `lb_check spans` with the two most informative entries;
+  - run `lb_check retro` on the new pair. If retrodiction FAILs, stop and report.
+
+## E042 — corrected local anchors (review O-01, 17 Oct) — DONE 18 Oct (fdca9e2); E042b step 3 (seeds) moved to E045
 **Why.** The official baseline arm emits **identical cells** (`emit="tile"`: every cell = the context mean profile). `cell_eval2` 0.18.0 `competition.py` L304–305 says "the baseline arm's cells are identical so its `jk_pred` is exactly 0".
 
 Our `local_eval.build_anchors` used the library default `emit="dispersed"`, which calls almost no DE genes. That is why H1-R400's baseline fid was 0.03 instead of ~0.5, and why V\* misjudged fid (−0.04 vs −0.23 on the LB).
@@ -164,7 +489,7 @@ python scripts/rescale_rows.py --dir $DATA/loco/E020 --rows results/E031/scores_
 # guardrails (review D-01/A-01): local anchors vs LB-implied anchors; does the rescaled V* retrodict E021 -> E032?
 python scripts/lb_check.py calib --status results/E033_E021_status.json results/E033_E032_status.json \
   --anchors $(for d in $HOLD; do echo $d/anchors.json; done) | tee results/E042/lb_calib.txt
-python scripts/lb_check.py retro --rows results/E042/rescaled_E020_E031_E034.csv --a "B5_z2_a0.5_cis5000" --b "B2_raw_gPL(E021)" \
+python scripts/lb_check.py retro --rows results/E031/vstar_rows_E031_seen.csv --a "B5_z2_a0.5_cis5000" --b "B2_raw_gPL(E021)" \
   --lb-a results/E033_E032_status.json --lb-b results/E033_E021_status.json | tee results/E042/lb_retro.txt
 ```
 - **`lb_check calib`** must report "calibration OK" for fid/jac/reach/pds/nmae, i.e. every local baseline within 0.05 of the LB-implied one. jac's baseline depends on the truth's N_conf, so on lines whose N_conf differs from A/B/C it may legitimately differ; report the gap.
@@ -221,7 +546,7 @@ done
 mkdir -p results/E043
 python -m vcc26.vstar --config loco.json --panel-file $PANEL --specs specs_E043.json --out $DATA/loco/E020 --tag E043 --match-cells 2>&1 | tee logs/E043.log
 python -m vcc26.loco --config loco.json --holdout H1 --mode seen --out $DATA/loco/E037 --specs specs_E043.json --tag E043 --holdout-tag R400 --min-target-cells 400 --umi-target 20000 2>&1 | tee logs/E043_H1.log
-python -m vcc26.compare --dir $DATA/loco/E020 --tag E043_mc --a "B5x_tl0.05_bud600@b3_null1" --b "B5x_tl0.05_bud600@b3" --n 1000 | tee results/E043/boot_null1.json
+python -m vcc26.compare --dir $DATA/loco/E020 --tag E043_mc --a "B5x_tl0.05_bud600@b3_null1" --b "B5x_tl0.05_bud600@b3" --n 1000 --anchors-override results/lb_spans.json | tee results/E043/boot_null1.json
 ```
 **REPORT E043:** the summary, per-line scores and raw fid/jac, and the bootstrap.
 
@@ -231,7 +556,7 @@ python -m vcc26.compare --dir $DATA/loco/E020 --tag E043_mc --a "B5x_tl0.05_bud6
 - `local_eval` builds the replicate with the scorer's own `compute_replicate_anchor` (B-05).
 - `compare.py` now bootstraps lines and then targets (B-04); pass `--targets-only` for the old CI.
 
-**After E042/E042b:**
+**After E042/E042b:** *(superseded 19 Oct: E038/E038b/E039/E040/E043 are not run. Their useful specs are folded into E045/E046; the null gate is retired, docs/16 §2.)*
 - If the key check passes, run **E038, E038b and E039 as written below**. They use the new anchors automatically.
 - **Do not run E040 (leaderboard) until planning confirms**; a full review is in progress (`review/`).
 - If the key check fails, report and stop.
@@ -310,8 +635,8 @@ python -m vcc26.loco --config loco.json --holdout H1 --mode seen --out $DATA/loc
 python -m vcc26.vstar --config loco.json --panel-file $PANEL --specs specs_E038.json --out $DATA/loco/E037 --tag E038 $R 2>&1 | tee logs/E038_panel.log
 cp $DATA/loco/E037/scores_*E038* $DATA/loco/E037/vstar_*E038* results/E038/ 2>/dev/null
 B=<best spec of specs_E038.json on H1-R400 by context_score, excluding ORACLE*>
-python -m vcc26.compare --dir $DATA/loco/E037 --tag E038 --a "$B" --b "B5_z2_a0.5_cis5000" --n 1000 | tee results/E038/boot_vs_LBconfig.json
-python -m vcc26.compare --dir $DATA/loco/E037 --tag E038far --a "$B" --b "B5_z2_a0.5_cis5000" --n 1000 | tee results/E038/boot_far_vs_LBconfig.json
+python -m vcc26.compare --dir $DATA/loco/E037 --tag E038 --a "$B" --b "B5_z2_a0.5_cis5000" --n 1000 --anchors-override results/lb_spans.json | tee results/E038/boot_vs_LBconfig.json
+python -m vcc26.compare --dir $DATA/loco/E037 --tag E038far --a "$B" --b "B5_z2_a0.5_cis5000" --n 1000 --anchors-override results/lb_spans.json | tee results/E038/boot_far_vs_LBconfig.json
 ```
 - The first spec that uses `de_budget` computes the context's thresholds (~3 min), and they are cached for the rest of the run.
 - The M1/ENS specs fit M1 once per source set (~40 GB RAM).
@@ -328,7 +653,7 @@ python -m vcc26.compare --dir $DATA/loco/E037 --tag E038far --a "$B" --b "B5_z2_
 ```bash
 python -m vcc26.vstar --config loco.json --panel-file $PANEL --specs specs_E038b.json --out $DATA/loco/E020 --tag E038b --match-cells 2>&1 | tee logs/E038b.log
 cp $DATA/loco/E020/vstar_*E038b* results/E038/
-python -m vcc26.compare --dir $DATA/loco/E020 --tag E038b_mc --a "<best budget spec in E038b>" --b "B5_z2_a0.5_cis5000" --n 1000 | tee results/E038/boot_E038b.json
+python -m vcc26.compare --dir $DATA/loco/E020 --tag E038b_mc --a "<best budget spec in E038b>" --b "B5_z2_a0.5_cis5000" --n 1000 --anchors-override results/lb_spans.json | tee results/E038/boot_E038b.json
 ```
 **REPORT E038b:** the summary, per-line scores and the bootstrap.
 
@@ -352,7 +677,7 @@ done
 
 **E040 — leaderboard** (state the day's count first)
 - **Submit E038's best spec only if** both hold:
-  - its bootstrap CI lower bound vs `B5_z2_a0.5_cis5000` (the LB config) is > 0 on H1-R400;
+  - its two-level bootstrap CI lower bound vs `B5_z2_a0.5_cis5000` (the LB config), **scaled with LB spans** (`--anchors-override results/lb_spans.json`), is > 0 on H1-R400;
   - its E038b Δ is ≥ −0.01.
 - Command:
   ```bash
