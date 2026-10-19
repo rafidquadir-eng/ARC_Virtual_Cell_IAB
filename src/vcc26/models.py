@@ -549,7 +549,8 @@ def predict_sparse(targets, sources, target_ctrl_cpm=None, pc: float = 1.0, z_th
                    gate_target_cpm: float | None = None, sim_tau: float | None = None,
                    common: str = "none", common_z: float = 3.0, common_scale: float = 1.0,
                    var_floor: bool = False, single_line_z: float | None = None,
-                   return_info: bool = False, **_):
+                   line_weights: dict | None = None, p53_mismatch_w: float | None = None,
+                   target_tp53: str | None = None, return_info: bool = False, **_):
     """Per target: meta-analyse its measured response across LINES (fixed-effect mean with a
     Birge-ratio inflation of the standard error for between-line heterogeneity). Keep genes with
     |z| >= z_thr whose sign agrees in >= `agree` of the lines measuring them; predict their consensus
@@ -567,6 +568,13 @@ def predict_sparse(targets, sources, target_ctrl_cpm=None, pc: float = 1.0, z_th
     tc = None if target_ctrl_cpm is None else np.asarray(target_ctrl_cpm, float)
     for s in sources:
         s["_simw"] = 1.0
+        L = s.get("line") or s.get("name")
+        if line_weights and L in line_weights:
+            s["_simw"] *= float(line_weights[L])
+        # review C-05: p53-WT sources mount p53/RB programmes that a p53-deficient context can't (and vice
+        # versa); down-weight sources whose TP53 status differs from the target context's
+        if p53_mismatch_w is not None and target_tp53 and s.get("tp53") and s["tp53"] != target_tp53:
+            s["_simw"] *= float(p53_mismatch_w)
         if "_lfcpc" not in s or s.get("_pc") != pc:
             s["_lfcpc"] = _lfc_pc(s, pc); s["_varpc"] = _noise_var(s, s["_lfcpc"], pc); s["_pc"] = pc
         s["_varuse"] = s["_varpc"]
@@ -588,7 +596,7 @@ def predict_sparse(targets, sources, target_ctrl_cpm=None, pc: float = 1.0, z_th
         rL = {L: np.nanmean(v) for L, v in rs.items()}
         mx = max(rL.values())
         for s in sources:
-            s["_simw"] = float(np.exp((rL[s.get("line") or s.get("name")] - mx) / sim_tau))
+            s["_simw"] *= float(np.exp((rL[s.get("line") or s.get("name")] - mx) / sim_tau))
     cvec = np.zeros(G)
     for s in sources:
         s["_pmean"] = None
@@ -716,14 +724,16 @@ def project_ctrl(lfc: np.ndarray, ctrl, k: int = 200, lam: float = 0.5, n_top: i
 
 def de_budget(lfc: np.ndarray, ctrl, n: int = 400, margin: float = 1.25, n_cells: int = 400,
               frac: float | None = None, n_max: int | None = None, rank: str = "abs",
-              cap_others: bool = False, p_thr: float = 1e-3) -> np.ndarray:
+              cap_others: bool = False, p_thr: float = 1e-3, max_delta: float | None = None) -> np.ndarray:
     """Make the scorer CALL about n genes per target (round 3, docs/15 P1).
     fid = k / max(n_pred, n_conf): under-calling scores below chance (E032: 0.42 vs the baseline's
     0.51), over-calling decays only towards ~0.5. Per target, rank genes by the model's confidence
     (rank='abs': |lfc|; 'snr': |lfc| / detection threshold, i.e. cheapest calls first), take the top
     n (or max(n, frac x #genes with |lfc| > 0.05), capped at n_max), and lift each one's |lfc| to at
     least margin x the context's detection threshold in its predicted direction (vcc26.detect).
-    cap_others: also hold every other gene below half its threshold, so n_pred ~= n."""
+    cap_others: also hold every other gene below half its threshold, so n_pred ~= n (red team R-2: it
+    also suppresses true-signal genes; avoid). max_delta: never lift a gene above this |log2FC| (cheap
+    calls only; red team R-04 found uniform lifting pushes MSE past no-skill even at 20k UMI)."""
     from . import detect
     up, dn = detect.thresholds(ctrl, n_cells, p_thr=p_thr)
     out = np.array(lfc, dtype=np.float64, copy=True)
@@ -731,6 +741,8 @@ def de_budget(lfc: np.ndarray, ctrl, n: int = 400, margin: float = 1.25, n_cells
         x = out[r]
         d = np.where(x >= 0, up, dn)
         cand = np.isfinite(d) & (x != 0)
+        if max_delta is not None:   # review R-04: lifting costs MSE; only lift genes that are cheap to call
+            cand &= (margin * d <= max_delta) | (np.abs(x) >= margin * d)
         if not cand.any():
             continue
         k = n if frac is None else max(n, int(frac * np.count_nonzero(np.abs(x) > 0.05)))

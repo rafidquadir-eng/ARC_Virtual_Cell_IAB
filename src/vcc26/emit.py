@@ -112,9 +112,18 @@ def emit_balanced(ctrl: ad.AnnData, targets, lfc: np.ndarray, *, n_cells=400,
             Bc = B.tocoo()
             cache[n] = (blib, bsum, Bc.col, Bc.row, Bc.data)
         blib, bsum, col, row, dat = cache[n]
+        if not np.any(lfc[r]) and base_mode == "herd":
+            # review R-01: a herded base untouched still yields >= 1 spurious Wilcoxon call per row
+            # (narrowed distributions), which zeroes jac on N_conf = 0 targets. Use a random base.
+            if ("rnd", n) not in cache:
+                rb = np.sort(np.random.default_rng(seed + 7919).permutation(X.shape[0])[:n])
+                Rc = X[rb].tocoo(); cache[("rnd", n)] = (Rc.col, Rc.row, Rc.data)
+            rc, rr, rd = cache[("rnd", n)]
+            blocks.append(sp.csr_matrix((rd, (rr, rc)), shape=(n, G))); labels += [t] * n
+            continue
         if not np.any(lfc[r]):
-            # predicted "no response" (e.g. target not expressed in this context): emit the base cells
-            # untouched. Pinning them to the population mean (balanced/balanced3) creates spurious DE
+            # predicted "no response" (e.g. target not expressed in this context): emit the (random)
+            # base cells untouched. Pinning them to the population mean (balanced/balanced3) creates spurious DE
             # calls, and a target with N_conf = 0 scores jac = 1 only if NOTHING is called.
             blocks.append(sp.csr_matrix((dat, (row, col)), shape=(n, G))); labels += [t] * n
             continue

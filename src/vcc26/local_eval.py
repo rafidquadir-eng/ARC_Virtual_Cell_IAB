@@ -120,10 +120,12 @@ def scale(u: dict, anchors: dict) -> dict:
     out = {}
     for m in SCORED:
         b, r = anchors["baseline"][m], anchors["replicate"][m]
-        s = (u[m] - b) / (r - b) if r != b else float("nan")
+        v = u.get(m, float("nan"))
+        s = (v - b) / (r - b) if r != b else float("nan")
         lo, hi = CLAMP.get(m, (None, None))
-        if lo is not None: s = max(lo, s)
-        if hi is not None: s = min(hi, s)
+        if np.isfinite(s):          # a metric missing from a (resampled) panel stays NaN; max/min would clamp it
+            if lo is not None: s = max(lo, s)
+            if hi is not None: s = min(hi, s)
         out[SHORT[m]] = s
     out["context_score"] = float(np.nanmean([out[SHORT[m]] for m in SCORED]))
     return out

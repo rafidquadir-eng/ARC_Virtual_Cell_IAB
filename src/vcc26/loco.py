@@ -41,7 +41,17 @@ from .pseudobulk import load as load_summary
 CTRL = "non-targeting"
 
 
-def subset_summary(s: dict, axis: np.ndarray, drop: set[str] | None = None) -> dict:
+RENORM_AXIS = os.environ.get("VCC_RENORM_AXIS", "0") == "1"
+
+
+def subset_summary(s: dict, axis: np.ndarray, drop: set[str] | None = None, renorm_axis: bool | None = None) -> dict:
+    """Source summary on the challenge axis. renorm_axis (review C-06; default from env VCC_RENORM_AXIS=1):
+    re-express every CPM over the challenge-axis genes only, as the Flex truth is. Source CPM was
+    normalised by a library that includes genes the Flex probe set lacks (ribosomal proteins, ncRNA,
+    ...), which adds composition shifts the truth can't have. The stored lfc is against a possibly
+    composition-matched control, so that reference is recovered per row, renormalised the same way,
+    and lfc is recomputed (pc = 1 CPM)."""
+    renorm_axis = RENORM_AXIS if renorm_axis is None else renorm_axis
     pos = {g: i for i, g in enumerate(s["genes"])}
     cols = np.array([pos.get(g, -1) for g in axis])
     def take(M):
@@ -50,8 +60,17 @@ def subset_summary(s: dict, axis: np.ndarray, drop: set[str] | None = None) -> d
         return out
     keep = np.ones(len(s["perts"]), bool) if not drop else ~np.isin(s["perts"], list(drop))
     pres = np.zeros(len(axis), bool); pres[cols >= 0] = s["present"][cols[cols >= 0]]
-    return dict(genes=axis, perts=s["perts"][keep], lfc=take(s["lfc"][keep]), cpm=take(s["cpm"][keep]),
-                ctrl_cpm=take(s["ctrl_cpm"]), present=pres, ncells=s["ncells"][keep], kd=s["kd"][keep])
+    lfc, cpm, ctrl = take(s["lfc"][keep]), take(s["cpm"][keep]), take(s["ctrl_cpm"])
+    if renorm_axis:
+        cpm64 = cpm.astype(np.float64); lfc64 = lfc.astype(np.float64)
+        cref = np.maximum((cpm64 + 1.0) / np.power(2.0, lfc64) - 1.0, 0.0)
+        cpm64 = cpm64 / np.maximum(cpm64.sum(1, keepdims=True), 1e-9) * 1e6
+        cref = cref / np.maximum(cref.sum(1, keepdims=True), 1e-9) * 1e6
+        lfc = np.log2((cpm64 + 1.0) / (cref + 1.0)).astype(s["lfc"].dtype)
+        cpm = cpm64.astype(s["cpm"].dtype)
+        c64 = ctrl.astype(np.float64); ctrl = (c64 / max(c64.sum(), 1e-9) * 1e6).astype(s["ctrl_cpm"].dtype)
+    return dict(genes=axis, perts=s["perts"][keep], lfc=lfc, cpm=cpm,
+                ctrl_cpm=ctrl, present=pres, ncells=s["ncells"][keep], kd=s["kd"][keep], renorm_axis=renorm_axis)
 
 
 def read_panel(path: str | None) -> set[str] | None:
@@ -132,7 +151,7 @@ def run(cfg_path: str, holdout: str, mode: str, out: str, n_panel: int, n_cells:
         extra_emb: dict | None = None, tag: str = "default", panel_file: str | None = None,
         only_sources: list[str] | None = None, exclude_licence: str | None = None, far: bool = False,
         holdout_tag: str | None = None, min_target_cells: int | None = None, umi_target: float | None = None,
-        match_cells: bool = False):
+        match_cells: bool = False, allow_same_line: list[str] | None = None):
     cfg = json.load(open(cfg_path))
     axis_all = pd.read_csv(cfg["gene_axis"], header=None).iloc[:, 0].astype(str).values
     ctxs = {c["name"]: c for c in cfg["contexts"]}
@@ -153,14 +172,18 @@ def run(cfg_path: str, holdout: str, mode: str, out: str, n_panel: int, n_cells:
     drop = set(panel) if mode == "unseen" else None
     # never use a source from the same cell line as the held-out context (e.g. K562 essential vs K562 GWPS)
     line = hold.get("line", holdout)
-    src_names = [n for n, c in ctxs.items() if n != holdout and c.get("line", n) != line
+    # allow_same_line (round 4): named same-line datasets may be sources, to measure what a test line that
+    # matches one of our source lines gains (e.g. hold out CD4T_Stim8hr, allow CD4T_Stim48hr)
+    src_names = [n for n, c in ctxs.items() if n != holdout
+                 and (c.get("line", n) != line or (allow_same_line and n in allow_same_line))
                  and (not only_sources or n in only_sources)
                  and not (exclude_licence and exclude_licence in str(c.get("licence", "")))
                  and not (far and hold.get("lineage") and c.get("lineage") == hold.get("lineage"))]
     if not src_names:
         raise ValueError("no source contexts left after line/--sources filtering")
     sources = [dict(subset_summary(load_summary(ctxs[n]["summary"]), axis, drop), name=n,
-                    library=ctxs[n].get("library"), line=ctxs[n].get("line", n)) for n in src_names]
+                    library=ctxs[n].get("library"), line=ctxs[n].get("line", n), tp53=ctxs[n].get("tp53"))
+               for n in src_names]
     cover = sum(any(p in set(s_["perts"]) for s_ in sources) for p in panel)
     print(f"holdout {holdout} (line {line}): {len(panel)} panel targets, sources {src_names}, "
           f"{cover} panel targets measured in >=1 source")
@@ -183,6 +206,7 @@ def run(cfg_path: str, holdout: str, mode: str, out: str, n_panel: int, n_cells:
             emb = (extra_emb or {})[fb[4:]]
             kw["fallback"] = models.knn_fallback(sources, emb, **spec.get("fb_kw", {}))
         kw["target_ctrl_cpm"] = tgt_cpm
+        kw.setdefault("target_tp53", hold.get("tp53"))
         extra = {}
         if spec["model"] == "ORACLE":                # diagnostic ceiling: the held-out line's own lfc
             real_ad = ad.read_h5ad(real_p)
@@ -210,6 +234,7 @@ def run(cfg_path: str, holdout: str, mode: str, out: str, n_panel: int, n_cells:
         res, pframe = local_eval.score(pred, real_p, anchors, ecfg, return_frame=True)
         frames.append(pframe.with_columns(pl.lit(name).alias("spec"), pl.lit(spec.get("emit", "random")).alias("emit")))
         row = {"model": name, "emit": spec.get("emit", "random"), "holdout": holdout + (f"_{holdout_tag}" if holdout_tag else ""), "mode": mode,
+               "renorm_axis": RENORM_AXIS, "seed": seed,
                "sources": "+".join(src_names),
                "n_panel": len(panel), "n_covered": cover, **{k: v for k, v in res.items() if k != "raw"},
                **{f"raw_{k}": v for k, v in res["raw"].items()}, **{k: json.dumps(v) if isinstance(v, list) else v for k, v in extra.items()},
@@ -252,6 +277,8 @@ def main():
     ap.add_argument("--exclude-licence", default=None, help='drop sources whose licence contains this, e.g. "NC"')
     ap.add_argument("--far", action="store_true", help="also drop sources of the held-out line's lineage (V*-far)")
     add_regime_args(ap)
+    ap.add_argument("--allow-same-line", default=None,
+                    help="comma-separated same-line source contexts to allow (round 4 same-line test), e.g. CD4T_Stim48hr")
     a = ap.parse_args()
     specs = json.load(open(a.specs)) if a.specs else DEFAULT_SPECS
     embs = {}
@@ -260,7 +287,8 @@ def main():
     tag = a.tag or (os.path.splitext(os.path.basename(a.specs))[0] if a.specs else "default")
     run(a.config, a.holdout, a.mode, a.out, a.panel, a.cells, a.seed, specs, a.de_backend, a.device, embs, tag,
         a.panel_file, a.sources.split(",") if a.sources else None, a.exclude_licence, a.far,
-        a.holdout_tag, a.min_target_cells, a.umi_target, a.match_cells)
+        a.holdout_tag, a.min_target_cells, a.umi_target, a.match_cells,
+        a.allow_same_line.split(",") if a.allow_same_line else None)
 
 
 def add_regime_args(ap):

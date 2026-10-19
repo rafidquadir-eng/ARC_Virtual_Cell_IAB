@@ -1,0 +1,18 @@
+{
+ "_note": "Per-context facts for context-aware models (predict_challenge --context-meta). Identity from E041 CCLE match (inference, not confirmed by Arc). TP53 sources: review C-05.",
+ "A": {
+  "ccle": "JURKAT (ACH-000995)",
+  "tp53": "deficient",
+  "tp53_source": "Jurkat TP53 mutant (Cytion datasheet)"
+ },
+ "B": {
+  "ccle": "HeLa (ACH-001086)",
+  "tp53": "deficient",
+  "tp53_source": "HPV18 E6-mediated p53 degradation (Oncogene 1998, nature.com/articles/1201001)"
+ },
+ "C": {
+  "ccle": "CAL-33 (ACH-000518)",
+  "tp53": "deficient",
+  "tp53_source": "TP53 R175H (Cytion 305496)"
+ }
+}

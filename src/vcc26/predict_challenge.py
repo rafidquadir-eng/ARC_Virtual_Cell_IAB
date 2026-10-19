@@ -54,6 +54,8 @@ def main():
     ap.add_argument("--spec-file", default=None, help="take model/kw/fallback/emit/post from this specs JSON ...")
     ap.add_argument("--spec", default=None, help="... the spec with this name")
     ap.add_argument("--post", default=None, help='post-processing JSON, e.g. {"project": {"k": 200, "lam": 0.5}}')
+    ap.add_argument("--context-meta", default="contexts_meta.json",
+                    help="per-context facts (e.g. tp53) for context-aware models; missing file = none")
     ap.add_argument("--emit", default="random", choices=["random", "balanced", "balanced2", "balanced2h", "balanced3"],
                     help="balanced = shared herded base cells + exact per-gene totals (no sampling noise)")
     a = ap.parse_args()
@@ -78,7 +80,7 @@ def main():
             print(f"skip {p} (licence {c.get('licence')})"); continue
         sources.append(dict(subset_summary(load_summary(p), axis),
                             name=c.get("name", os.path.splitext(os.path.basename(p))[0]),
-                            library=c.get("library"), line=c.get("line")))
+                            library=c.get("library"), line=c.get("line"), tp53=c.get("tp53")))
     kw = {"alpha": a.alpha, "beta": a.beta, **json.loads(a.kw)}
     if a.model in ("B2_transfer", "A1_transfer") and a.fallback == "linear":
         kw["fallback"] = models.linear_fallback(sources)
@@ -87,7 +89,16 @@ def main():
         ctrl = ad.read_h5ad(find_ctx(a.controls_dir, c))
         ctrl = ctrl[:, axis].copy()                     # enforce the official gene order
         # context-specific prediction: A1 uses this context's own control profile
-        lfc = models.MODELS[a.model](targets, sources, target_ctrl_cpm=control_cpm(ctrl), **kw)
+        cmeta = (json.load(open(a.context_meta)) if a.context_meta and os.path.exists(a.context_meta) else {}).get(c, {})
+        ckw = dict(kw)
+        slw = ckw.pop("same_line_w", None)
+        if slw is not None and cmeta.get("same_line"):
+            # round 4: the context matched one of our source lines (contexts_meta "same_line"), so up-weight
+            # that line's datasets for this context only (B5/ENS line_weights)
+            lw = dict(ckw.get("line_weights") or {}); lw[cmeta["same_line"]] = float(slw); ckw["line_weights"] = lw
+            print(f"context {c}: same-line source line {cmeta['same_line']} weighted x{slw}")
+        lfc = models.MODELS[a.model](targets, sources, target_ctrl_cpm=control_cpm(ctrl),
+                                     **{"target_tp53": cmeta.get("tp53"), **ckw})
         lfc = models.apply_post(lfc, post, ctrl, n_cells=a.cells, targets=targets)
         parts.append(emit(a.emit, ctrl, targets, lfc, n_cells=a.cells, pert_col=a.pert_col,
                                   context=c, include_control=a.n_control, seed=a.seed + i))

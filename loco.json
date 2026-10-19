@@ -11,7 +11,9 @@
    "line": "K562",
    "library": "essential",
    "lineage": "myeloid_leukemia",
-   "platform": "10x_3p"
+   "platform": "10x_3p",
+   "tp53": "deficient",
+   "tp53_source": "Replogle 2022 (p53-deficient)"
   },
   {
    "name": "RPE1",
@@ -23,7 +25,9 @@
    "line": "RPE1",
    "library": "essential",
    "lineage": "epithelial",
-   "platform": "10x_3p"
+   "platform": "10x_3p",
+   "tp53": "wt",
+   "tp53_source": "Replogle 2022 (p53-positive)"
   },
   {
    "name": "HepG2",
@@ -35,7 +39,9 @@
    "line": "HepG2",
    "library": "essential",
    "lineage": "epithelial",
-   "platform": "10x_3p"
+   "platform": "10x_3p",
+   "tp53": "wt",
+   "tp53_source": "inferred (HepG2 is TP53 WT; verify DepMap)"
   },
   {
    "name": "Jurkat",
@@ -47,7 +53,9 @@
    "line": "Jurkat",
    "library": "essential",
    "lineage": "T_lymphoid",
-   "platform": "10x_3p"
+   "platform": "10x_3p",
+   "tp53": "deficient",
+   "tp53_source": "DepMap/Cytion (TP53 mutant)"
   },
   {
    "name": "H1",
@@ -59,7 +67,9 @@
    "line": "H1",
    "library": "targeted",
    "lineage": "pluripotent",
-   "platform": "10x_flex"
+   "platform": "10x_flex",
+   "tp53": "wt",
+   "tp53_source": "inferred (hESC WT)"
   },
   {
    "name": "K562_GWPS",
@@ -71,7 +81,9 @@
    "summary": "/lambda/nfs/LambdaFilesystem/vcc-data/pb/K562_GWPS.npz",
    "library": "genome_wide",
    "lineage": "myeloid_leukemia",
-   "platform": "10x_3p"
+   "platform": "10x_3p",
+   "tp53": "deficient",
+   "tp53_source": "Replogle 2022"
   },
   {
    "name": "HipSci_iPSC",
@@ -83,7 +95,9 @@
    "symbol_col": null,
    "summary": "/lambda/nfs/LambdaFilesystem/vcc-data/pb/HipSci_iPSC.npz",
    "lineage": "pluripotent",
-   "platform": "10x_5p"
+   "platform": "10x_5p",
+   "tp53": "wt",
+   "tp53_source": "inferred (iPSC WT; unverified)"
   },
   {
    "name": "KOLF2.1J",
@@ -95,7 +109,9 @@
    "symbol_col": null,
    "summary": "/lambda/nfs/LambdaFilesystem/vcc-data/pb/KOLF2.1J.npz",
    "lineage": "pluripotent",
-   "platform": "10x_3p_ht"
+   "platform": "10x_3p_ht",
+   "tp53": "wt",
+   "tp53_source": "inferred (WT; unverified)"
   },
   {
    "name": "CD4T_Rest",
@@ -107,7 +123,9 @@
    "symbol_col": null,
    "summary": "/lambda/nfs/LambdaFilesystem/vcc-data/pb/CD4T_Rest.npz",
    "lineage": "T_lymphoid",
-   "platform": "10x_flex"
+   "platform": "10x_flex",
+   "tp53": "wt",
+   "tp53_source": "inferred (primary cells WT)"
   },
   {
    "name": "CD4T_Stim8hr",
@@ -119,7 +137,9 @@
    "symbol_col": null,
    "summary": "/lambda/nfs/LambdaFilesystem/vcc-data/pb/CD4T_Stim8hr.npz",
    "lineage": "T_lymphoid",
-   "platform": "10x_flex"
+   "platform": "10x_flex",
+   "tp53": "wt",
+   "tp53_source": "inferred (primary cells WT)"
   },
   {
    "name": "CD4T_Stim48hr",
@@ -131,7 +151,9 @@
    "symbol_col": null,
    "summary": "/lambda/nfs/LambdaFilesystem/vcc-data/pb/CD4T_Stim48hr.npz",
    "lineage": "T_lymphoid",
-   "platform": "10x_flex"
+   "platform": "10x_flex",
+   "tp53": "wt",
+   "tp53_source": "inferred (primary cells WT)"
   },
   {
    "name": "Orion_HCT116",
@@ -144,7 +166,9 @@
    "control": "Non-Targeting",
    "symbol_col": null,
    "summary": "/lambda/nfs/LambdaFilesystem/vcc-data/pb/Orion_HCT116.npz",
-   "platform": "10x_5p_gemx"
+   "platform": "10x_5p_gemx",
+   "tp53": "wt",
+   "tp53_source": "BPS Bioscience reporter line (WT p53)"
   },
   {
    "name": "Orion_HEK293T",
@@ -157,7 +181,9 @@
    "control": "Non-Targeting",
    "symbol_col": null,
    "summary": "/lambda/nfs/LambdaFilesystem/vcc-data/pb/Orion_HEK293T.npz",
-   "platform": "10x_5p_gemx"
+   "platform": "10x_5p_gemx",
+   "tp53": "deficient",
+   "tp53_source": "inferred (SV40 large T / Ad5 E1B inactivate p53; verify)"
   }
  ]
 }

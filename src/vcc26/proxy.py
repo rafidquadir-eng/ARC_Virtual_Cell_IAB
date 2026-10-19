@@ -254,13 +254,13 @@ def main():
              and not (a.far and hold.get("lineage") and c.get("lineage") == hold.get("lineage"))]
     drop = set(panel) if a.mode == "unseen" else None
     sources = [dict(loco.subset_summary(load_summary(ctxs[n]["summary"]), axis, drop), name=n,
-                    library=ctxs[n].get("library"), line=ctxs[n].get("line", n)) for n in names]
+                    library=ctxs[n].get("library"), line=ctxs[n].get("line", n), tp53=ctxs[n].get("tp53")) for n in names]
     print(f"holdout {a.holdout}: {len(panel)} targets; sources {names}")
     specs = json.load(open(a.specs))
     pset = set(panel)
     rows, anat = [], {}
     for sp_ in specs:
-        name = sp_["name"]; kw = dict(sp_.get("kw", {}))
+        name = sp_["name"]; kw = dict(sp_.get("kw", {})); kw.setdefault("target_tp53", hold.get("tp53"))
         info = {}
         if sp_["model"] == "ORACLE":
             cp = T["P"] / T["P"].sum(1, keepdims=True) * 1e6

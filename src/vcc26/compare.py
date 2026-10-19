@@ -25,35 +25,46 @@ from .local_eval import SCORED, scale
 
 
 def _agg(df: pl.DataFrame) -> dict:
+    """Panel aggregates; a metric absent from the frame (e.g. nmae when no drawn target has DE genes) is NaN."""
     a = aggregate_metrics(df)
-    return {m: float(v) for m, v in zip(a["metric"], a["mean"]) if m in SCORED}
+    got = {m: float(v) for m, v in zip(a["metric"], a["mean"]) if m in SCORED}
+    return {m: got.get(m, float("nan")) for m in SCORED}
 
 
-def load(dirpath: str, tag: str, holdouts: list[str] | None):
+def load(dirpath: str, tag: str, holdouts: list[str] | None, anchors_override: dict | None = None):
+    """anchors_override: one anchors dict for every line, e.g. the LB-implied spans from
+    `scripts/lb_check.py spans` (review R-02: per-line local anchors are degenerate on small truths)."""
     out = {}
     for f in glob.glob(f"{dirpath}/pertarget_*_{tag}.parquet"):
         h = os.path.basename(f)[len("pertarget_"):].rsplit(f"_{tag}", 1)[0].rsplit("_", 1)[0]
         if holdouts and h not in holdouts:
             continue
         anc = f"{dirpath}/holdout_{h}/anchors.json"
-        if os.path.exists(anc):
+        if anchors_override is not None:
+            out[h] = (pl.read_parquet(f), anchors_override)
+        elif os.path.exists(anc):
             out[h] = (pl.read_parquet(f), json.load(open(anc)))
     return out
 
 
-def boot(dirpath, tag, a, b, emit_a=None, emit_b=None, n=1000, holdouts=None, seed=0, two_level=True):
+def boot(dirpath, tag, a, b, emit_a=None, emit_b=None, n=1000, holdouts=None, seed=0, two_level=True,
+         anchors_override=None, tag_b=None):
     """two_level (default, review B-04): resample held-out LINES with replacement, then targets within
     each drawn line. Target-only resampling ignores between-line variance, which dominates with 3-5
-    lines (E031: CI +0.011..+0.039 vs LB +0.002)."""
-    data = load(dirpath, tag, holdouts)
-    if not data:
-        raise SystemExit(f"no pertarget_*_{tag}.parquet with anchors under {dirpath}")
+    lines (E031: CI +0.011..+0.039 vs LB +0.002).
+    tag_b (round 4): take spec b from another sweep's files (e.g. the E045 reference run), on the same lines."""
+    data = load(dirpath, tag, holdouts, anchors_override)
+    data_b = load(dirpath, tag_b, holdouts, anchors_override) if tag_b else data
+    if not data or not data_b:
+        raise SystemExit(f"no pertarget_*_{tag}.parquet (or _{tag_b}) with anchors under {dirpath}")
     rng = np.random.default_rng(seed)
     per_line, draws = {}, []
     sel = lambda df, s, e: df.filter((pl.col("spec") == s) & ((pl.col("emit") == e) if e else pl.lit(True)))
     prepared = {}
     for h, (df, anc) in data.items():
-        A, B = sel(df, a, emit_a), sel(df, b, emit_b)
+        if h not in data_b:
+            continue
+        A, B = sel(df, a, emit_a), sel(data_b[h][0], b, emit_b)
         perts = sorted(set(A["perturbation"].to_list()) & set(B["perturbation"].to_list()))
         if not perts:
             continue
@@ -90,9 +101,13 @@ def main():
     ap.add_argument("--emit-a", default=None); ap.add_argument("--emit-b", default=None)
     ap.add_argument("--n", type=int, default=1000); ap.add_argument("--holdouts", default=None)
     ap.add_argument("--targets-only", action="store_true", help="old behaviour: resample targets within lines only")
+    ap.add_argument("--anchors-override", default=None, help="one anchors JSON for all lines (e.g. results/lb_spans.json)")
+    ap.add_argument("--tag-b", default=None, help="sweep tag holding spec b, if not --tag")
     x = ap.parse_args()
+    ov = json.load(open(x.anchors_override)) if x.anchors_override else None
     r = boot(x.dir, x.tag, x.a, x.b, x.emit_a, x.emit_b, x.n, x.holdouts.split(",") if x.holdouts else None,
-             two_level=not x.targets_only)
+             two_level=not x.targets_only, anchors_override=ov, tag_b=x.tag_b)
+    r["tag_b"] = x.tag_b or x.tag
     print(json.dumps(r, indent=1))
 
 
