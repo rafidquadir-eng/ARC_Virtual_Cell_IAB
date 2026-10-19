@@ -1,0 +1,6 @@
+                                   mean   worst   d_ref lines_pos  n_lines  n_seeds  seed_sd  H1_R400  lb_pds  lb_mse  lb_fid  lb_reach  lb_jac  lb_nmae
+variant               emit                                                                                                                              
+B2_raw_gPL(E021)      balanced   0.1384  0.1384  0.0760       1/1        1        1      NaN   0.1384  0.7524  0.0000 -0.2422    0.1416  0.0749   0.1039
+B2_raw_gPL(E021)@b3   balanced3  0.1289  0.1289  0.0664       1/1        1        1      NaN   0.1289  0.7526  0.0000 -0.2937    0.1537  0.0617   0.0989
+B5_z2_a0.5_cis5000@b3 balanced3  0.0634  0.0634  0.0010       1/1        1        1      NaN   0.0634  0.6938  0.1418 -0.6070    0.1133 -0.0013   0.0401
+B5_z2_a0.5_cis5000    balanced   0.0624  0.0624  0.0000       0/1        1        1      NaN   0.0624  0.7010  0.1221 -0.5605    0.0663  0.0046   0.0412

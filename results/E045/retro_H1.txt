@@ -1,0 +1,12 @@
+scaling: raw metrics with official LB spans {'pds': (0.498, 0.954), 'fid': (0.513, 0.812), 'reach': (0.076, 0.99), 'jac': (0.031, 0.356), 'nmae': (0.992, 0.463), 'mse': (0.99, 0.05)}
+per-line local deltas (a - b):
+           pds    mse    fid  reach   jac   nmae  context
+holdout                                                  
+H1_R400 -0.051  0.122 -0.318 -0.075 -0.07 -0.063   -0.076
+
+mean local delta: {'pds': -0.051, 'mse': 0.122, 'fid': -0.318, 'reach': -0.075, 'jac': -0.07, 'nmae': -0.063, 'context': -0.076}
+LB delta:         {'pds': 0.082, 'mse': 0.144, 'fid': -0.226, 'reach': -0.006, 'jac': -0.007, 'nmae': 0.025, 'context': np.float64(0.002)}
+per-line metric-sign agreement with LB (of 6): {'H1_R400': 4}
+context delta local -0.0760 vs LB +0.0018 (|err| 0.0778, need <= 0.015)
+local/LB ratio on metrics with |LB delta| >= 0.05 (need 1/3..3): {'pds': np.float64(-0.63), 'mse': np.float64(0.85), 'fid': np.float64(1.41)}
+RETRODICTION FAIL: context sign ok, metric signs 4/6, magnitudes OFF

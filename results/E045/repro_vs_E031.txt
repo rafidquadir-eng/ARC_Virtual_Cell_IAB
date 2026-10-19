@@ -1,0 +1,11 @@
+                model        holdout  d_pds  d_mse  d_fid  d_reach  d_jac  d_nmae
+0    B2_raw_gPL(E021)   CD4T_Stim8hr    0.0    0.0    0.0      0.0    0.0     0.0
+1  B5_z2_a0.5_cis5000   CD4T_Stim8hr    0.0    0.0    0.0      0.0    0.0     0.0
+2    B2_raw_gPL(E021)       KOLF2.1J    0.0    0.0    0.0      0.0    0.0     0.0
+3  B5_z2_a0.5_cis5000       KOLF2.1J    0.0    0.0    0.0      0.0    0.0     0.0
+4    B2_raw_gPL(E021)      K562_GWPS    0.0    0.0    0.0      0.0    0.0     0.0
+5  B5_z2_a0.5_cis5000      K562_GWPS    0.0    0.0    0.0      0.0    0.0     0.0
+6    B2_raw_gPL(E021)   Orion_HCT116    0.0    0.0    0.0      0.0    0.0     0.0
+7  B5_z2_a0.5_cis5000   Orion_HCT116    0.0    0.0    0.0      0.0    0.0     0.0
+8    B2_raw_gPL(E021)  Orion_HEK293T    0.0    0.0    0.0      0.0    0.0     0.0
+9  B5_z2_a0.5_cis5000  Orion_HEK293T    0.0    0.0    0.0      0.0    0.0     0.0

@@ -132,3 +132,105 @@ Where it works: H1-R400 0.62, K562_GWPS 0.43, Orion 0.37–0.42. It fails on CD4
 - HEK293T has no DepMap CRISPR model, so the strength study's `depmap_line` feature is missing for Orion_HEK293T (and CD4T/KOLF/H1: not cancer lines).
 - The rank table's `seed_sd` is NaN everywhere: one seed per row until E045.
 - `results/E042/pertarget_nconf_*.csv` (E042c) were left uncommitted (R4-10). They're superseded by `results/E044/pertarget_nconf_*.csv`, now committed.
+
+
+---
+
+## REPORT E045 — seed variance, emitter choice, the H1-R400 bracket (GPU)
+
+`scripts/run_E045.sh`: V\* 5 lines (`vstar_par.sh`, 2 holdouts at a time) for `specs_E045ref.json` seeds 0/1/2 and `specs_E045b3.json` seeds 0/1, plus H1-R400 for both spec files.
+**Wall 04:05–06:53 UTC = 2.80 instance-h** (GPU; estimate 2.5–3 h, within 1.5×). No FAILED lines, no OOM.
+
+### 1. Rank tables (LB-span scaling, ref = `B5_z2_a0.5_cis5000@@balanced`)
+V\* (5 lines):
+```
+mean   worst   d_ref lines_pos  n_lines  n_seeds  seed_sd  CD4T_Stim8hr  K562_GWPS  KOLF2.1J  Orion_HCT116  Orion_HEK293T  lb_pds  lb_mse  lb_fid  lb_reach  lb_jac  lb_nmae
+variant               emit                                                                                                                                                                                     
+B2_raw_gPL(E021)@b3   balanced3  0.1156 -0.0568  0.0047       3/5        5        2   0.0023        0.0339     0.1973   -0.0568        0.2191         0.1846  0.3467  0.0005 -0.1069    0.3568 -0.0438   0.1403
+B2_raw_gPL(E021)      balanced   0.1150 -0.0515  0.0041       3/5        5        3   0.0004        0.0362     0.1896   -0.0515        0.2167         0.1841  0.3462  0.0000 -0.1006    0.3527 -0.0457   0.1376
+B5_z2_a0.5_cis5000@b3 balanced3  0.1121 -0.1379  0.0011       3/5        5        2   0.0042        0.0300     0.2194   -0.1379        0.2655         0.1834  0.4095  0.1119 -0.2050    0.2811 -0.0317   0.1066
+B5_z2_a0.5_cis5000    balanced   0.1109 -0.1312  0.0000       0/5        5        3   0.0015        0.0283     0.2142   -0.1312        0.2599         0.1837  0.4103  0.1121 -0.1951    0.2743 -0.0370   0.1010
+wrote results/E045/rank_vstar.csv
+```
+H1-R400:
+```
+mean   worst   d_ref lines_pos  n_lines  n_seeds  seed_sd  H1_R400  lb_pds  lb_mse  lb_fid  lb_reach  lb_jac  lb_nmae
+variant               emit                                                                                                                              
+B2_raw_gPL(E021)      balanced   0.1384  0.1384  0.0760       1/1        1        1      NaN   0.1384  0.7524  0.0000 -0.2422    0.1416  0.0749   0.1039
+B2_raw_gPL(E021)@b3   balanced3  0.1289  0.1289  0.0664       1/1        1        1      NaN   0.1289  0.7526  0.0000 -0.2937    0.1537  0.0617   0.0989
+B5_z2_a0.5_cis5000@b3 balanced3  0.0634  0.0634  0.0010       1/1        1        1      NaN   0.0634  0.6938  0.1418 -0.6070    0.1133 -0.0013   0.0401
+B5_z2_a0.5_cis5000    balanced   0.0624  0.0624  0.0000       0/1        1        1      NaN   0.0624  0.7010  0.1221 -0.5605    0.0663  0.0046   0.0412
+```
+
+### 2. Retro by seed, and on H1
+```
+== seed 0
+context delta local -0.0026 vs LB +0.0018 (|err| 0.0044, need <= 0.015)
+local/LB ratio on metrics with |LB delta| >= 0.05 (need 1/3..3): {'pds': np.float64(0.78), 'mse': np.float64(0.78), 'fid': np.float64(0.39)}
+RETRODICTION PASS: context sign ok, metric signs 5/6, magnitudes ok
+== seed 1
+context delta local -0.0056 vs LB +0.0018 (|err| 0.0074, need <= 0.015)
+local/LB ratio on metrics with |LB delta| >= 0.05 (need 1/3..3): {'pds': np.float64(0.79), 'mse': np.float64(0.78), 'fid': np.float64(0.47)}
+RETRODICTION PASS: context sign ok, metric signs 5/6, magnitudes ok
+== seed 2
+context delta local -0.0040 vs LB +0.0018 (|err| 0.0058, need <= 0.015)
+local/LB ratio on metrics with |LB delta| >= 0.05 (need 1/3..3): {'pds': np.float64(0.79), 'mse': np.float64(0.78), 'fid': np.float64(0.39)}
+RETRODICTION PASS: context sign ok, metric signs 5/6, magnitudes ok
+```
+H1-R400:
+```
+scaling: raw metrics with official LB spans {'pds': (0.498, 0.954), 'fid': (0.513, 0.812), 'reach': (0.076, 0.99), 'jac': (0.031, 0.356), 'nmae': (0.992, 0.463), 'mse': (0.99, 0.05)}
+per-line local deltas (a - b):
+           pds    mse    fid  reach   jac   nmae  context
+holdout                                                  
+H1_R400 -0.051  0.122 -0.318 -0.075 -0.07 -0.063   -0.076
+
+mean local delta: {'pds': -0.051, 'mse': 0.122, 'fid': -0.318, 'reach': -0.075, 'jac': -0.07, 'nmae': -0.063, 'context': -0.076}
+LB delta:         {'pds': 0.082, 'mse': 0.144, 'fid': -0.226, 'reach': -0.006, 'jac': -0.007, 'nmae': 0.025, 'context': np.float64(0.002)}
+per-line metric-sign agreement with LB (of 6): {'H1_R400': 4}
+context delta local -0.0760 vs LB +0.0018 (|err| 0.0778, need <= 0.015)
+local/LB ratio on metrics with |LB delta| >= 0.05 (need 1/3..3): {'pds': np.float64(-0.63), 'mse': np.float64(0.85), 'fid': np.float64(1.41)}
+RETRODICTION FAIL: context sign ok, metric signs 4/6, magnitudes OFF
+```
+
+### 3. E031 reproduction (seed 0 vs the E031 rows, raw metrics)
+```
+model        holdout  d_pds  d_mse  d_fid  d_reach  d_jac  d_nmae
+0    B2_raw_gPL(E021)   CD4T_Stim8hr    0.0    0.0    0.0      0.0    0.0     0.0
+1  B5_z2_a0.5_cis5000   CD4T_Stim8hr    0.0    0.0    0.0      0.0    0.0     0.0
+2    B2_raw_gPL(E021)       KOLF2.1J    0.0    0.0    0.0      0.0    0.0     0.0
+3  B5_z2_a0.5_cis5000       KOLF2.1J    0.0    0.0    0.0      0.0    0.0     0.0
+4    B2_raw_gPL(E021)      K562_GWPS    0.0    0.0    0.0      0.0    0.0     0.0
+5  B5_z2_a0.5_cis5000      K562_GWPS    0.0    0.0    0.0      0.0    0.0     0.0
+6    B2_raw_gPL(E021)   Orion_HCT116    0.0    0.0    0.0      0.0    0.0     0.0
+7  B5_z2_a0.5_cis5000   Orion_HCT116    0.0    0.0    0.0      0.0    0.0     0.0
+8    B2_raw_gPL(E021)  Orion_HEK293T    0.0    0.0    0.0      0.0    0.0     0.0
+9  B5_z2_a0.5_cis5000  Orion_HEK293T    0.0    0.0    0.0      0.0    0.0     0.0
+```
+Exact: all differences are 0.0 for both specs on all 5 lines.
+
+### 4. Bootstraps: balanced3 vs balanced (`compare --anchors-override results/lb_spans.json`, two-level, 1,000)
+
+| comparison | Δ mean | 90 % CI | P(Δ > 0) | per line |
+|---|---|---|---|---|
+| B5_z2_a0.5_cis5000@b3 − B5_z2_a0.5_cis5000 | -0.0030 | [-0.0111, +0.0058] | 0.270 | KOLF2.1J -0.0155, CD4T_Stim8hr -0.0034, Orion_HCT116 +0.0124, Orion_HEK293T +0.0028, K562_GWPS -0.0114 |
+| B2_raw_gPL(E021)@b3 − B2_raw_gPL(E021) | -0.0008 | [-0.0056, +0.0060] | 0.483 | KOLF2.1J -0.0047, CD4T_Stim8hr -0.0092, Orion_HCT116 +0.0053, Orion_HEK293T +0.0013, K562_GWPS +0.0034 |
+
+### 5. Decisions
+- **seed SD\* = 0.0015** (the larger of B5 0.0015 and E021 0.0004, over 3 seeds). The §3 rule-1 threshold is therefore max(0.005, 2 × 0.0015) = **0.005**.
+- **Emitter: keep `balanced`.** Δ(B5@b3 − B5) on V\* is +0.0012 in the rank table (2 b3 seeds vs 3 balanced seeds) and −0.0030 in the seed-0 bootstrap (P = 0.27). Both are below 2·SD\* = 0.003.
+  H1-R400 Δ +0.0010 is OK, and the E021 pair moves the same way (+0.0006), but the V\* rule fails. E046 runs without the b3 spec copies, with `REF="B5_z2_a0.5_cis5000@@balanced"`.
+- **Validator stability:** V\* retro **PASSes on all 3 seeds** (|err| 0.0044 / 0.0074 / 0.0058). **H1-R400 retro FAILs.** Context Δ is −0.076 vs LB +0.002, metric signs 4/6, and the pds ratio is −0.63:
+  H1 says B5 is far worse than E021 (H1 E021 0.138 vs B5 0.062). B5's DE calls cost a lot more fid on H1 (lb_fid −0.56 vs −0.24) because H1's N_conf is 855, above A/B/C's 336.
+
+### 6. GPU hours
+2.80 h (V\* 2 processes plus the H1 job in parallel throughout).
+
+### **STOP (standing rule: "any retro or verify FAIL").** E046 not started.
+The runbook expects the H1 retro may FAIL ("report it either way … it is one line"), but Rafid's instruction for this round lists *any* retro FAIL as a stop. **Waiting for Rafid's go-ahead to run E046.**
+
+### Anomalies
+- **The E021 config beats the reference on both brackets:** V\* +0.0041 (3/5 lines positive; just below the 0.005 rule-1 threshold) and H1-R400 +0.076. Since E046's reference is still B5, an E021-heavy blend (`ENS_E021B5_w37`/`w55`) has a head start.
+- The rank table and the bootstrap disagree in sign for B5@b3 (+0.0012 vs −0.0030), because the rank averages over seeds (2 vs 3) and the bootstrap uses seed 0 only. Both are within noise.
+- H1-R400 has 1 seed per spec (as designed), so `seed_sd` is NaN in the H1 table.
+- The B5 per-line seed effect is largest on Orion_HCT116 and KOLF2.1J (b3 bootstrap per-line ±0.012–0.015). So a single-seed per-line Δ below about 0.015 shouldn't be read.
