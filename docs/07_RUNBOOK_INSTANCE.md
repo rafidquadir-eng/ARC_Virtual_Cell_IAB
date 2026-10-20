@@ -143,7 +143,7 @@ The selection rule is in docs/16 §3; it supersedes the 17 Oct rule kept below. 
 - one REPORT section per stage in `reports/REPORTS_E044_E049.md`, each with an Anomalies list;
 - commit small results;
 - pre-register every LB entry;
-- stop on a FAIL;
+- stop on a V\* retro or verify FAIL (an H1-R400 retro FAIL is informational, clarified 20 Oct);
 - no Phase B without a planning update.
 
 Common setup for every stage:
@@ -325,6 +325,76 @@ python -m vcc26.compare --dir $DATA/loco/E020 --tag E046r --a "B5_z2_a0.5_cis500
 1. Write `specs_E046c.json`: at most 4 combinations of the qualifying levers.
 2. Run them exactly like E046, with tag `E046c` (V\*) and `E046ch` (H1).
 3. Report in the same format.
+
+### ▶ 20 Oct batch: E047a → E050 → E047b (docs/16 §9). Run these in order without waiting between them; stop after E047b.
+**Clarified stop rule:** stop only on a **V\*** retro FAIL or a `verify` FAIL. An H1-R400 retro FAIL is reported, never a stop.
+
+**E047a (LB, first slot of 20 Oct UTC): `ENS_E021B5_w55` from `specs_E046.json`.** It already qualifies under docs/16 §3; planning's forecast is 0.122.
+Follow the E047 procedure below exactly: build, forecast with `--rows results/E045/vstar_rows_E045s0.csv results/E046/vstar_rows_E046.csv`, commit and push the forecast, submit, save the status JSON, verify, and log it in the ledger.
+Read the result against E032 (0.1077):
+- **confirmed** if LB Δ ≥ +0.005;
+- **unconfirmed** if Δ is within ±0.005;
+- **vetoed** if Δ < −0.005.
+
+**E050 (GPU, ~2.5 h). Start it after E047a's `.vcc` is built**, so the 73 GB prediction build doesn't share RAM with the sweep.
+```bash
+tmux new -d -s E050 "bash scripts/run_E050.sh 2>&1 | tee logs/E050.log"
+```
+It runs:
+- **(a)** `specs_E050.json` on V\* and H1-R400: the blends with `bud600md0.3`, and the E021 0.7 / B5 0.3 blend with and without it;
+- **(b)** `specs_E045ref.json` on V\* with `--exclude-licence NC` (tag `E050nc0`);
+- **(c)** same-line proxies:
+  - K562_GWPS held out, with the K562 essential screen allowed, at line weight 1 / 3 / 10 / 30;
+  - CD4T_Stim8hr at line weight 30 / 100.
+
+Then:
+```bash
+S="--status results/E033_E021_status.json results/E033_E032_status.json"; REF="B5_z2_a0.5_cis5000@@balanced"
+python scripts/lb_check.py rank $S --rows results/E045/vstar_rows_E045s0.csv results/E046/vstar_rows_E046.csv results/E050/vstar_rows_E050.csv \
+  --ref "$REF" --out results/E050/rank_vstar.csv | tee results/E050/rank_vstar.txt
+python scripts/lb_check.py rank $S --rows results/E045/scores_H1_R400_seen_E045refh.csv results/E046/scores_H1_R400_seen_E046h.csv \
+  results/E050/scores_H1_R400_seen_E050h.csv --ref "$REF" | tee results/E050/rank_H1.txt
+for x in $(python -c "import json;print(' '.join(s['name'] for s in json.load(open('specs_E050.json'))))"); do
+  python -m vcc26.compare --dir $DATA/loco/E020 --tag E050 --a "$x" --tag-b E046 --b "ENS_E021B5_w55" --n 1000 \
+    --anchors-override results/lb_spans.json > results/E050/boot_${x}_vs_w55.json
+done
+# (b) like-for-like retro: E021 WITHOUT NC (as submitted) vs B5 WITH NC (as submitted)
+python - <<'PY'
+import pandas as pd
+b5 = pd.read_csv("results/E045/vstar_rows_E045s0.csv"); b5 = b5[b5.model == "B5_z2_a0.5_cis5000"]
+e21 = pd.read_csv("results/E050/vstar_rows_E050nc0.csv"); e21 = e21[e21.model == "B2_raw_gPL(E021)"]
+pd.concat([b5, e21]).to_csv("results/E050/retro_rows_E021noNC_B5NC.csv", index=False)
+PY
+python scripts/lb_check.py retro --rows results/E050/retro_rows_E021noNC_B5NC.csv --a "B5_z2_a0.5_cis5000" --b "B2_raw_gPL(E021)" \
+  --lb-a results/E033_E032_status.json --lb-b results/E033_E021_status.json | tee results/E050/retro_like_for_like.txt
+python scripts/lb_check.py rank $S --rows results/E045/vstar_rows_E045s0.csv results/E050/vstar_rows_E050nc0.csv --label-files \
+  | tee results/E050/rank_nc_on_off.txt
+# (c) same-line proxies vs B5 without same-line sources
+python scripts/lb_check.py rank $S --rows results/E045/vstar_rows_E045s0.csv results/E050/vstar_rows_E050sameK562.csv --holdouts K562_GWPS \
+  --ref "$REF" | tee results/E050/rank_sameline_K562.txt
+python scripts/lb_check.py rank $S --rows results/E045/vstar_rows_E045s0.csv results/E046/vstar_rows_E046same.csv results/E050/vstar_rows_E050sameCD4T.csv \
+  --holdouts CD4T_Stim8hr --ref "$REF" | tee results/E050/rank_sameline_CD4T.txt
+```
+- If the like-for-like retro FAILs, that **is** a stop: report it and don't run E047b.
+- For the K562 proxy, also report how many K562_GWPS panel targets the K562 essential screen measures. The gain only applies to those, so give the per-target means for that subset if you can (`pertarget_K562_GWPS_seen_E050sameK562.parquet`).
+
+**E047b (LB, second slot of 20 Oct UTC, after E047a is scored and E050 is done).** Pick by this rule:
+1. **E047a confirmed**, and the best `specs_E050.json` combination has V\* Δ vs `ENS_E021B5_w55` ≥ +0.005, bootstrap P ≥ 0.8 and H1 Δ vs w55 ≥ −0.005: submit **that combination**.
+2. **E047a confirmed**, otherwise: submit **`B5_z2_bud600md0.3`**. This tests L3 on its own; if L3 is confirmed, the frozen config is the blend plus the budget.
+3. **E047a unconfirmed or vetoed:** submit **`B5_z2_bud600md0.3`**.
+
+Pre-register the forecast as usual. Use the V\* rows that contain the candidate and the reference.
+
+**REPORT E047a / E050 / E047b**, in `reports/REPORTS_E044_E049.md`:
+1. Both LB results: forecast, actual, verify, and confirmed / unconfirmed / vetoed.
+2. The E050 rank tables and bootstraps vs w55.
+3. The like-for-like retro.
+4. NC on/off for B5 and E021 on V\*.
+5. The same-line tables, and the K562 target overlap.
+6. Instance hours.
+7. Anomalies.
+
+Then **stop**. E048 needs Rafid's NC decision.
 
 ### E047 — leaderboard entries (19–21 Oct; max 2 per UTC day; docs/16 §3)
 For each entry `<x>` (E047a, b, …):

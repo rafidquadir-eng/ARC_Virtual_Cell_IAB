@@ -1,0 +1,58 @@
+[
+ {
+  "name": "B5_z2_sameK562W1",
+  "model": "B5_sparse",
+  "emit": "balanced",
+  "kw": {
+   "z_thr": 2,
+   "agree": 0.5,
+   "cis_bp": 5000,
+   "tss": "/lambda/nfs/LambdaFilesystem/vcc-data/tss.csv",
+   "line_weights": {
+    "K562": 1.0
+   }
+  }
+ },
+ {
+  "name": "B5_z2_sameK562W3",
+  "model": "B5_sparse",
+  "emit": "balanced",
+  "kw": {
+   "z_thr": 2,
+   "agree": 0.5,
+   "cis_bp": 5000,
+   "tss": "/lambda/nfs/LambdaFilesystem/vcc-data/tss.csv",
+   "line_weights": {
+    "K562": 3.0
+   }
+  }
+ },
+ {
+  "name": "B5_z2_sameK562W10",
+  "model": "B5_sparse",
+  "emit": "balanced",
+  "kw": {
+   "z_thr": 2,
+   "agree": 0.5,
+   "cis_bp": 5000,
+   "tss": "/lambda/nfs/LambdaFilesystem/vcc-data/tss.csv",
+   "line_weights": {
+    "K562": 10.0
+   }
+  }
+ },
+ {
+  "name": "B5_z2_sameK562W30",
+  "model": "B5_sparse",
+  "emit": "balanced",
+  "kw": {
+   "z_thr": 2,
+   "agree": 0.5,
+   "cis_bp": 5000,
+   "tss": "/lambda/nfs/LambdaFilesystem/vcc-data/tss.csv",
+   "line_weights": {
+    "K562": 30.0
+   }
+  }
+ }
+]

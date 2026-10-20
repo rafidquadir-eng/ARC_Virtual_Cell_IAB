@@ -152,7 +152,7 @@ The ranges are honest ones: they come from the red team's corrections, not from 
 3. **Commit small results** (CSV/JSON < 5 MB, including per-target tables) under `results/E0xx/`. Never commit data, predictions, `.vcc` files or tokens.
 4. **Pre-register LB entries** (forecast JSON committed and pushed first). State how many entries the UTC day has used before each `vcc submit`. Log each entry in `results/submissions.csv`: entry, UTC time, spec, emitter, NC, git hash, `.vcc` md5, forecast file, then the overall score and the six metrics.
 5. **Stop and report** on any of these:
-   - a retro or verify FAIL;
+   - a **V\*** retro FAIL or a verify FAIL (H1-R400 retro is informational only, never a stop; clarified 20 Oct, §9.2 item 4);
    - a reproduction mismatch outside predicted-null rows;
    - an OOM twice on the same job;
    - any non-ORACLE LB-span scaled metric > 1.5;
@@ -180,3 +180,76 @@ The ranges are honest ones: they come from the red team's corrections, not from 
 1. **NC licence for the final** (R4-09). Decide on 21 Oct from E048's numbers. The default is to keep NC on, per your 15 Oct approval.
 2. **Spend.** Please confirm the actual Lambda spend on the console, and stop the instance between stages when nobody is running anything.
 3. **22 Oct timing.** When does the test bundle appear (UTC)? Can you be online about 2 h after, for the insurance entry and the same-line decision?
+
+---
+
+## 9. Update 20 Oct, 01:30 UTC: review of E044–E046 and the plan to 21 Oct
+
+### 9.1 What the agent found
+
+Planning re-checked these from the committed rows: the forecasts below were recomputed with `lb_check forecast`.
+
+| Item | Result |
+|---|---|
+| Validator on the instance | Retro PASS; ranks identical to planning's (E021 0.115, B5 0.112) |
+| E032 reproduction | **0 of 360,000 rows differ**, so the R-01 emitter change touches nothing in the LB config. E031 V\* rows reproduce exactly (Δ = 0 on all raw metrics). |
+| Seed SD\* | **0.0015** (B5; E021 0.0004). V\* retro PASSes on all 3 seeds. |
+| L1 emitter (balanced3) | Null (+0.001 / −0.003). **Closed; keep `balanced`.** |
+| L2 blend E021 + B5 | **w55 +0.0141 (4/5 lines, P 0.97); w37 +0.0135 (4/5, P 0.99).** H1 +0.025. Qualifies. |
+| L3 cheap calls | **bud600md0.3 +0.0074 (4/5, P 0.95)**, H1 +0.021. Qualifies. bud1500md0.15 is null. |
+| L4 TP53 weighting | −0.005. **Closed.** |
+| L5 variance floor | −0.007, CI fully negative. **Closed.** |
+| L6 Flex-axis renorm | ±0.001. **Closed.** |
+| L7 per-target strength | LOLO Spearman 0.31 < 0.45. **Not built.** It works where truths are deep (H1 0.62, K562 0.43) and fails on thin ones (CD4T, KOLF 0.10). |
+| L8 same-line data | **CD4T_Stim8hr with Stim48hr/Rest allowed: +0.17 / +0.21 / +0.22 at line weight 1 / 3 / 10, not plateaued.** By far the largest effect in the project. Caveat: same donors, different stimulation state, so this is an upper-end proxy. |
+| Final-entry mechanics | No CLI flag. `vcc status --json` carries `is_final` and `partition` (`val`), so the final flag seems to be set server-side or on the website (**unverified**). The test data should appear in `vcc datasets list` (unverified). |
+| DepMap | HeLa (B) is not in CRISPRGeneEffect 24Q4. Irrelevant now that L7 isn't built. |
+
+Pre-registered forecasts. These are LB overall scores: E032 (0.1077) plus the V\* Δ.
+
+| Candidate | Forecast | Lines positive |
+|---|---|---|
+| ENS_E021B5_w55 | **0.122** | 4/5 |
+| ENS_E021B5_w37 | 0.121 | 4/5 |
+| B5_z2_bud600md0.3 | 0.115 | 4/5 |
+| B2 (E021) | 0.110 (LB 0.106) | 2/5 |
+
+### 9.2 Problems found in this review
+
+1. **The one retrodiction pair is not like-for-like (new, P1).**
+   - The E021 LB entry used **11 summaries, no Orion** (`results/submissions.csv`).
+   - Its V\* rows (E031/E045) use Orion as a source on the three non-Orion lines.
+   - E035 measured NC as worth about +0.015 on V\*. So the retro PASS compares two configs that differ in data as well as model.
+   - *Fix (E050b):* rerun E021 (and B5) on V\* with `--exclude-licence NC`, then retro "E021 without NC vs B5 with NC", as on the LB. The same rows give the NC on/off reference numbers that R4-09 needs, a day early.
+2. **The two brackets disagree on ranking (P1).**
+   - On H1-R400, plain E021 (0.138) beats the blends (0.088), which beat B5 (0.062).
+   - H1's retro FAILs: its pds Δ has the wrong sign against the LB (−0.051 vs +0.082).
+   - A/B/C's N_conf (336) sits between V\* (14–123) and H1 (855). On fid, the LB Δ (−0.226) lies between V\* (−0.088) and H1 (−0.318).
+   - *Decision:* H1-R400 stays a **no-regression veto** (rule 2) and is **not** used to rank candidates. Its ranking can't be trusted for pds.
+   - The LB entries on 20 Oct decide between the blend and the budget lever. The first entry tests L2 and the second tests L3 (or their combination), so each lever is checked separately against its forecast.
+3. **`verify` can't detect a gain that disappears (P2).** A +0.014 forecast is within the 0.015 tolerance of "no gain".
+   - *Added rule:* an LB entry **confirms** a lever only if LB Δ vs E032 ≥ +0.005 (about 3× the local seed SD). Within ±0.005 it is **unconfirmed**; below −0.005 it is **vetoed**. Only confirmed levers may be combined into the frozen config.
+4. **My stop rule cost about 5.9 h of idle instance.** §6 rule 5 said "any retro FAIL", but the runbook expected H1-R400 retro to fail.
+   - *Clarified:* only a **V\*** retro FAIL or a **`verify`** FAIL is a stop. H1-R400 retro is reported, never a stop.
+   - Within one approved batch of stages, the agent continues from stage to stage without waiting, as long as the rules pass.
+5. **D/E/F same-line branch: the gain is now evidenced, but the weight is not chosen** (L8). CD4T conditions share donors, so the effect is likely an upper bound.
+   - *Fix (E050c):* a second, more realistic proxy. Hold out **K562_GWPS** with the **K562 essential screen** allowed: same line, different lab, library and depth. This is what a D/E/F match to one of our public sources would look like. Run weights 1 / 3 / 10 / 30, and extend CD4T to 30 / 100.
+   - Planning sets `same_line_w` from both proxies before 22 Oct.
+6. **The old E038/E039 chain was still on the GPU when round 4 began.** The agent handled it correctly (let the in-flight run finish, then killed the chain). E038's 17 H1-R400 rows exist but are unreported; they aren't needed.
+
+Closed levers: L1, L4, L5, L6, L7. Open: **L2 (blend), L3 (cheap calls), L8 (same-line)**.
+
+### 9.3 Plan for 20–21 Oct (UTC)
+
+| When | Stage | What |
+|---|---|---|
+| 20 Oct, first | **E047a** | LB: `ENS_E021B5_w55` (forecast 0.122). It already qualifies under §3. |
+| 20 Oct, after E047a is built | **E050** (GPU, ~2.5 h) | a) Blend + budget combinations, plus the E021 0.7 / B5 0.3 blend (V\* + H1). b) NC-off V\* of E021 and B5, and the like-for-like retro. c) Same-line proxies (K562_GWPS + K562; CD4T at weights 30/100). |
+| 20 Oct, after E050 and the E047a score | **E047b** | LB: see the decision rule in the runbook. In short: the best E050 combination if L2 was confirmed and the combination beats w55 on V\* by ≥ 0.005; otherwise `B5_z2_bud600md0.3`, to test L3 on its own. |
+| 21 Oct | E048 | Freeze (rule below), NC on/off, rehearsal, then the last 2 LB slots: the frozen config if not yet on the LB, and its NC-off twin. **Needs Rafid's NC decision.** |
+| 22 Oct | E049 | As written. If a D/E/F line matches a source line, `same_line_w` comes from E050c. |
+
+**Freeze rule (E048):**
+- The frozen config is the highest-V\* config built **only from confirmed levers** (§9.2 item 3).
+- If no lever is confirmed, the frozen config is the better of E032 (B5) and E021 on the LB.
+- The two are within noise there, so in that case take B5: it is the current reference, and E032 is our best LB entry.

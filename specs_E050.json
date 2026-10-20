@@ -1,0 +1,147 @@
+[
+ {
+  "name": "ENS_E021B5_w55_bud600md0.3",
+  "model": "ENS",
+  "emit": "balanced",
+  "kw": {
+   "members": [
+    {
+     "model": "B2_transfer",
+     "kw": {
+      "alpha": 1.0,
+      "raw": true,
+      "generic_from": [
+       "@genome_wide",
+       "@targeted"
+      ]
+     },
+     "w": 0.5
+    },
+    {
+     "model": "B5_sparse",
+     "kw": {
+      "z_thr": 2,
+      "agree": 0.5,
+      "cis_bp": 5000,
+      "tss": "/lambda/nfs/LambdaFilesystem/vcc-data/tss.csv"
+     },
+     "w": 0.5
+    }
+   ]
+  },
+  "post": {
+   "de_budget": {
+    "n": 600,
+    "margin": 1.25,
+    "max_delta": 0.3
+   }
+  }
+ },
+ {
+  "name": "ENS_E021B5_w37_bud600md0.3",
+  "model": "ENS",
+  "emit": "balanced",
+  "kw": {
+   "members": [
+    {
+     "model": "B2_transfer",
+     "kw": {
+      "alpha": 1.0,
+      "raw": true,
+      "generic_from": [
+       "@genome_wide",
+       "@targeted"
+      ]
+     },
+     "w": 0.3
+    },
+    {
+     "model": "B5_sparse",
+     "kw": {
+      "z_thr": 2,
+      "agree": 0.5,
+      "cis_bp": 5000,
+      "tss": "/lambda/nfs/LambdaFilesystem/vcc-data/tss.csv"
+     },
+     "w": 0.7
+    }
+   ]
+  },
+  "post": {
+   "de_budget": {
+    "n": 600,
+    "margin": 1.25,
+    "max_delta": 0.3
+   }
+  }
+ },
+ {
+  "name": "ENS_E021B5_w73",
+  "model": "ENS",
+  "emit": "balanced",
+  "kw": {
+   "members": [
+    {
+     "model": "B2_transfer",
+     "kw": {
+      "alpha": 1.0,
+      "raw": true,
+      "generic_from": [
+       "@genome_wide",
+       "@targeted"
+      ]
+     },
+     "w": 0.7
+    },
+    {
+     "model": "B5_sparse",
+     "kw": {
+      "z_thr": 2,
+      "agree": 0.5,
+      "cis_bp": 5000,
+      "tss": "/lambda/nfs/LambdaFilesystem/vcc-data/tss.csv"
+     },
+     "w": 0.3
+    }
+   ]
+  }
+ },
+ {
+  "name": "ENS_E021B5_w73_bud600md0.3",
+  "model": "ENS",
+  "emit": "balanced",
+  "kw": {
+   "members": [
+    {
+     "model": "B2_transfer",
+     "kw": {
+      "alpha": 1.0,
+      "raw": true,
+      "generic_from": [
+       "@genome_wide",
+       "@targeted"
+      ]
+     },
+     "w": 0.7
+    },
+    {
+     "model": "B5_sparse",
+     "kw": {
+      "z_thr": 2,
+      "agree": 0.5,
+      "cis_bp": 5000,
+      "tss": "/lambda/nfs/LambdaFilesystem/vcc-data/tss.csv"
+     },
+     "w": 0.3
+    }
+   ]
+  },
+  "post": {
+   "de_budget": {
+    "n": 600,
+    "margin": 1.25,
+    "max_delta": 0.3
+   }
+  }
+ }
+]

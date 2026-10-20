@@ -1,0 +1,30 @@
+[
+ {
+  "name": "B5_z2_sameCD4TW30",
+  "model": "B5_sparse",
+  "emit": "balanced",
+  "kw": {
+   "z_thr": 2,
+   "agree": 0.5,
+   "cis_bp": 5000,
+   "tss": "/lambda/nfs/LambdaFilesystem/vcc-data/tss.csv",
+   "line_weights": {
+    "CD4T": 30.0
+   }
+  }
+ },
+ {
+  "name": "B5_z2_sameCD4TW100",
+  "model": "B5_sparse",
+  "emit": "balanced",
+  "kw": {
+   "z_thr": 2,
+   "agree": 0.5,
+   "cis_bp": 5000,
+   "tss": "/lambda/nfs/LambdaFilesystem/vcc-data/tss.csv",
+   "line_weights": {
+    "CD4T": 100.0
+   }
+  }
+ }
+]
