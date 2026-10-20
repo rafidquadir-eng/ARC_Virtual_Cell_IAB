@@ -300,3 +300,165 @@ B5_z2_a0.5_cis5000 balanced  0.0273  0.0273  0.0000       0/1        1        1 
 - **The blends raise LB-span MSE on V\*** (+0.019 / +0.033 vs B5) while improving fid. On H1 the w55 blend's scaled MSE is 0.000, but w37's is 0.107.
 - E021's per-line pattern in the blends: the gain comes mostly from Orion_HCT116 (+0.03), K562_GWPS (+0.02) and CD4T (+0.01); KOLF2.1J stays the worst line (−0.12 to −0.14) for every spec.
 - No non-ORACLE LB-span scaled metric > 1.5. 5 V\* lines in every sweep.
+
+
+---
+
+## REPORT E047a / E050 / E047b — 20 Oct batch (docs/16 §9; approval logged in `docs/APPROVALS.md`, 20 Oct ~02:00 UTC)
+
+### 1. Leaderboard results
+
+**E047a: `ENS_E021B5_w55`** (`specs_E046.json`; qualifies under §3: V\* +0.0141, 4/5, P 0.974, H1 +0.025).
+- Day count before submitting: **0 of 2 for 20 Oct UTC, so this was 1 of 2.**
+- Forecast pre-registered and pushed before `vcc submit`: `results/forecasts/E047a.json` (commit 3f4001e), **overall 0.1218**.
+- `.vcc` md5 `1303ac58ee444a02483a53d3efe7e4f9`; submitted 02:28 UTC; entry `JMIobPjEqBX1GVuokmrb`; **LB overall 0.1076, rank 730**.
+- `lb_check verify`:
+```
+forecast  actual     err  d_forecast  d_actual
+metric                                                 
+pds        0.5545  0.6204  0.0658     -0.0280    0.0378
+mse        0.1630  0.0000 -0.1630      0.0192   -0.1438
+fid       -0.2894 -0.2643  0.0251      0.0037    0.0288
+reach      0.1643  0.1388 -0.0254      0.0620    0.0366
+jac       -0.0018  0.0071  0.0088     -0.0019    0.0070
+nmae       0.1402  0.1434  0.0032      0.0293    0.0325
+overall    0.1218  0.1076 -0.0143      0.0141   -0.0002
+VERIFY PASS: overall error 0.0143 (need <= 0.015), delta sign ok
+```
+- **verify PASS** (|err| 0.0143 ≤ 0.015, Δ sign ok). **Outcome: unconfirmed** (LB Δ vs E032 = −0.0002, inside ±0.005). L2 (blend) is **not confirmed** by the LB.
+- The miss is almost entirely **MSE**: forecast scaled 0.163, actual **0** (raw 1.139, above the 0.99 baseline span, so clamped). pds (+0.066), fid (+0.025) and jac (+0.009) came in *above* forecast; reach came in below (−0.025).
+  The scaled MSE is not strictly between 0 and 1, so the MSE-span report clause doesn't apply; raw and scaled are given here anyway.
+- Ledger: `results/submissions.csv`. I added `verify` and `outcome` columns (n/a for the four pre-protocol entries).
+
+**E047b: NOT SUBMITTED. STOP on the like-for-like retro FAIL (§3 below).**
+- Its candidate under the runbook rule would have been **`B5_z2_bud600md0.3`** (rule 3: E047a unconfirmed).
+- Its prediction was built before the retro result was known (`$DATA/preds/E047b.*`, started 04:34 UTC). No forecast was committed and nothing was submitted. 1 of 2 entries used on 20 Oct UTC.
+
+### 2. E050 rank tables and bootstraps vs `ENS_E021B5_w55`
+`scripts/run_E050.sh`, **02:28–04:33 UTC = 2.10 instance-h** (GPU). No FAILED lines, no OOM.
+
+V\* (ref = B5@balanced):
+```
+mean   worst   d_ref lines_pos  n_lines  n_seeds  seed_sd  CD4T_Stim8hr  K562_GWPS  KOLF2.1J  Orion_HCT116  Orion_HEK293T  lb_pds  lb_mse  lb_fid  lb_reach  lb_jac  lb_nmae
+variant                    emit                                                                                                                                                                                    
+ENS_E021B5_w55_bud600md0.3 balanced  0.1333 -0.0346  0.0212       3/5        5        1      NaN        0.0413     0.2214   -0.0346        0.2571         0.1814  0.3523  0.0996 -0.1009    0.3354 -0.0258   0.1393
+ENS_E021B5_w37_bud600md0.3 balanced  0.1283 -0.0365  0.0162       2/5        5        1      NaN        0.0384     0.2127   -0.0365        0.2479         0.1790  0.3607  0.0849 -0.1074    0.3263 -0.0241   0.1292
+ENS_E021B5_w73             balanced  0.1271 -0.0943  0.0150       5/5        5        1      NaN        0.0379     0.2426   -0.0943        0.2646         0.1850  0.3669  0.1058 -0.1496    0.3452 -0.0421   0.1365
+ENS_E021B5_w55             balanced  0.1262 -0.1238  0.0141       4/5        5        1      NaN        0.0399     0.2431   -0.1238        0.2881         0.1837  0.3820  0.1312 -0.1855    0.3396 -0.0391   0.1291
+ENS_E021B5_w37             balanced  0.1256 -0.1389  0.0135       4/5        5        1      NaN        0.0371     0.2386   -0.1389        0.2828         0.2086  0.3990  0.1446 -0.2011    0.3292 -0.0363   0.1184
+ENS_E021B5_w73_bud600md0.3 balanced  0.1249 -0.0283  0.0128       3/5        5        1      NaN        0.0388     0.2220   -0.0283        0.2076         0.1845  0.3447  0.0410 -0.0909    0.3388 -0.0286   0.1444
+B5_z2_bud600md0.3          balanced  0.1195 -0.1026  0.0074       4/5        5        1      NaN        0.0283     0.2310   -0.1026        0.2586         0.1823  0.4057  0.1152 -0.1403    0.2735 -0.0388   0.1017
+B2_raw_gPL(E021)           balanced  0.1147 -0.0560  0.0026       2/5        5        1      NaN        0.0376     0.1944   -0.0560        0.2144         0.1833  0.3463  0.0000 -0.1015    0.3530 -0.0459   0.1367
+B5_z2_ALL                  balanced  0.1131 -0.1088  0.0010       3/5        5        1      NaN        0.0292     0.2121   -0.1088        0.2252         0.2078  0.4516  0.0724 -0.1821    0.2627 -0.0180   0.0919
+B5_z2_bud1500md0.15        balanced  0.1125 -0.1257  0.0004       2/5        5        1      NaN        0.0268     0.2224   -0.1257        0.2574         0.1816  0.4076  0.1131 -0.1832    0.2763 -0.0383   0.0995
+B5_z2_a0.5_cis5000         balanced  0.1121 -0.1307  0.0000       0/5        5        1      NaN        0.0273     0.2232   -0.1307        0.2565         0.1843  0.4100  0.1120 -0.1893    0.2776 -0.0373   0.0998
+B5_z2_p53w0.3              balanced  0.1074 -0.1303 -0.0047       2/5        5        1      NaN        0.0262     0.2109   -0.1303        0.2309         0.1995  0.4305  0.0879 -0.2010    0.2672 -0.0330   0.0929
+B5_z2_vfloor               balanced  0.1048 -0.1533 -0.0073       0/5        5        1      NaN        0.0262     0.2165   -0.1533        0.2524         0.1823  0.4298  0.0972 -0.2298    0.2687 -0.0327   0.0957
+wrote results/E050/rank_vstar.csv
+```
+H1-R400:
+```
+mean   worst   d_ref lines_pos  n_lines  n_seeds  seed_sd  H1_R400  lb_pds  lb_mse  lb_fid  lb_reach  lb_jac  lb_nmae
+variant                    emit                                                                                                                             
+ENS_E021B5_w73_bud600md0.3 balanced  0.1485  0.1485  0.0860       1/1        1        1      NaN   0.1485  0.7453  0.0000 -0.1922    0.1415  0.0895   0.1067
+ENS_E021B5_w55_bud600md0.3 balanced  0.1403  0.1403  0.0779       1/1        1        1      NaN   0.1403  0.7425  0.0000 -0.2159    0.1353  0.0822   0.0980
+B2_raw_gPL(E021)           balanced  0.1384  0.1384  0.0760       1/1        1        1      NaN   0.1384  0.7524  0.0000 -0.2422    0.1416  0.0749   0.1039
+ENS_E021B5_w37_bud600md0.3 balanced  0.1326  0.1326  0.0702       1/1        1        1      NaN   0.1326  0.7326  0.0000 -0.2270    0.1322  0.0766   0.0812
+ENS_E021B5_w73             balanced  0.1107  0.1107  0.0482       1/1        1        1      NaN   0.1107  0.7576  0.0000 -0.3955    0.1472  0.0477   0.1069
+ENS_E021B5_w37             balanced  0.0885  0.0885  0.0261       1/1        1        1      NaN   0.0885  0.7505  0.1068 -0.5447    0.1268  0.0140   0.0776
+ENS_E021B5_w55             balanced  0.0878  0.0878  0.0253       1/1        1        1      NaN   0.0878  0.7572  0.0000 -0.4947    0.1397  0.0283   0.0962
+B5_z2_bud600md0.3          balanced  0.0833  0.0833  0.0209       1/1        1        1      NaN   0.0833  0.6942  0.0945 -0.4173    0.0680  0.0192   0.0414
+B5_z2_ALL                  balanced  0.0747  0.0747  0.0123       1/1        1        1      NaN   0.0747  0.6865  0.1464 -0.4883    0.0619  0.0072   0.0346
+B5_z2_bud1500md0.15        balanced  0.0698  0.0698  0.0073       1/1        1        1      NaN   0.0698  0.7002  0.1186 -0.5173    0.0671  0.0089   0.0410
+B5_z2_a0.5_cis5000         balanced  0.0624  0.0624  0.0000       0/1        1        1      NaN   0.0624  0.7010  0.1221 -0.5605    0.0663  0.0046   0.0412
+B5_z2_p53w0.3              balanced  0.0611  0.0611 -0.0013       0/1        1        1      NaN   0.0611  0.6736  0.0985 -0.5199    0.0678  0.0100   0.0367
+B5_z2_vfloor               balanced  0.0497  0.0497 -0.0128       0/1        1        1      NaN   0.0497  0.7079  0.1440 -0.6445    0.0587 -0.0076   0.0393
+```
+Bootstraps (`compare --tag E050 … --tag-b E046 --b ENS_E021B5_w55`, LB spans, 1,000):
+
+| spec | Δ vs w55 | 90 % CI | P(Δ > 0) |
+|---|---|---|---|
+| ENS_E021B5_w55_bud600md0.3 | +0.0071 | [-0.0202, +0.0401] | 0.638 |
+| ENS_E021B5_w37_bud600md0.3 | +0.0021 | [-0.0288, +0.0372] | 0.517 |
+| ENS_E021B5_w73 | +0.0009 | [-0.0125, +0.0148] | 0.547 |
+| ENS_E021B5_w73_bud600md0.3 | -0.0013 | [-0.0432, +0.0394] | 0.463 |
+
+- The best combination, `ENS_E021B5_w55_bud600md0.3` (V\* +0.0212 vs ref), is **+0.0071 vs w55 but P = 0.64 (< 0.8)**, so it wouldn't have qualified under E047b rule 1.
+- On H1-R400 the budget combinations are the best specs overall (w73+bud 0.149 > E021 0.138 > w55+bud 0.140), unlike the plain blends (0.088).
+
+### 3. Like-for-like retro (E021 **without** NC, as submitted, vs B5 **with** NC, as submitted): **FAIL → STOP**
+```
+scaling: raw metrics with official LB spans {'pds': (0.498, 0.954), 'fid': (0.513, 0.812), 'reach': (0.076, 0.99), 'jac': (0.031, 0.356), 'nmae': (0.992, 0.463), 'mse': (0.99, 0.05)}
+per-line local deltas (a - b):
+                 pds    mse    fid  reach    jac   nmae  context
+holdout                                                         
+CD4T_Stim8hr   0.077  0.001 -0.107 -0.015  0.005  0.034   -0.001
+K562_GWPS      0.227  0.183  0.001  0.028  0.050 -0.007    0.080
+KOLF2.1J       0.037  0.000 -0.614 -0.024 -0.025  0.019   -0.101
+Orion_HCT116   0.117  0.287  0.076 -0.082  0.040 -0.021    0.070
+Orion_HEK293T  0.147  0.089  0.052 -0.074  0.026 -0.019    0.037
+
+mean local delta: {'pds': 0.121, 'mse': 0.112, 'fid': -0.119, 'reach': -0.033, 'jac': 0.019, 'nmae': 0.001, 'context': 0.017}
+LB delta:         {'pds': 0.082, 'mse': 0.144, 'fid': -0.226, 'reach': -0.006, 'jac': -0.007, 'nmae': 0.025, 'context': np.float64(0.002)}
+per-line metric-sign agreement with LB (of 6): {'CD4T_Stim8hr': 5, 'K562_GWPS': 2, 'KOLF2.1J': 5, 'Orion_HCT116': 3, 'Orion_HEK293T': 3}
+context delta local +0.0169 vs LB +0.0018 (|err| 0.0151, need <= 0.015)
+local/LB ratio on metrics with |LB delta| >= 0.05 (need 1/3..3): {'pds': np.float64(1.48), 'mse': np.float64(0.78), 'fid': np.float64(0.52)}
+RETRODICTION FAIL: context sign ok, metric signs 6/6, magnitudes ok
+```
+- **FAIL by 0.0001**: context Δ local +0.0169 vs LB +0.0018 (|err| 0.0151 > 0.015). Metric signs 6/6 and magnitudes within 1/3–3×.
+- The like-for-like pair over-forecasts B5's advantage. Without Orion, E021 loses about 0.020 on V\* (§4), which inflates B5 − E021.
+- Per the runbook ("If the like-for-like retro FAILs, that is a stop") and Rafid's batch approval, **E047b was not run and I stopped here.**
+
+### 4. NC on/off on V\* (5 lines, E045s0 = NC on, E050nc0 = NC off)
+```
+mean   worst  n_lines  n_seeds  seed_sd  CD4T_Stim8hr  K562_GWPS  KOLF2.1J  Orion_HCT116  Orion_HEK293T  lb_pds  lb_mse  lb_fid  lb_reach  lb_jac  lb_nmae
+variant                                 emit                                                                                                                                                                  
+B2_raw_gPL(E021) [vstar_rows_E045s0]    balanced  0.1147 -0.0560        5        1      NaN        0.0376     0.1944   -0.0560        0.2144         0.1833  0.3463   0.000 -0.1015    0.3530 -0.0459   0.1367
+B5_z2_a0.5_cis5000 [vstar_rows_E045s0]  balanced  0.1121 -0.1307        5        1      NaN        0.0273     0.2232   -0.1307        0.2565         0.1843  0.4100   0.112 -0.1893    0.2776 -0.0373   0.0998
+B2_raw_gPL(E021) [vstar_rows_E050nc0]   balanced  0.0952 -0.0297        5        1      NaN        0.0283     0.1428   -0.0297        0.1870         0.1476  0.2891   0.000 -0.0707    0.3109 -0.0565   0.0985
+B5_z2_a0.5_cis5000 [vstar_rows_E050nc0] balanced  0.0907 -0.0678        5        1      NaN        0.0195     0.1758   -0.0678        0.2034         0.1224  0.3262   0.078 -0.1088    0.2302 -0.0480   0.0664
+```
+- NC sources are worth **+0.020 for E021 (0.0952 → 0.1147)** and **+0.021 for B5 (0.0907 → 0.1121)** on the 5-line V\*. The loss without NC is spread over all lines, largest on K562_GWPS (−0.05) and Orion_HEK293T (−0.06 for B5).
+  (On the 2 Orion lines, NC off means the other Orion line can't be a source.)
+
+### 5. Same-line proxies
+K562_GWPS held out with the K562 essential screen allowed:
+```
+mean   worst   d_ref lines_pos  n_lines  n_seeds  seed_sd  K562_GWPS  lb_pds  lb_mse  lb_fid  lb_reach  lb_jac  lb_nmae
+variant            emit                                                                                                                               
+B5_z2_a0.5_cis5000 balanced  0.2232  0.2232  0.0000       0/1        1        1      NaN     0.2232  0.6456  0.1834  0.0274    0.3501  0.0010   0.1317
+B5_z2_sameK562W1   balanced  0.2232  0.2232  0.0000       0/1        1        1      NaN     0.2232  0.6456  0.1834  0.0274    0.3501  0.0010   0.1317
+B5_z2_sameK562W3   balanced  0.2232  0.2232  0.0000       0/1        1        1      NaN     0.2232  0.6456  0.1834  0.0274    0.3501  0.0010   0.1317
+B5_z2_sameK562W10  balanced  0.2232  0.2232  0.0000       0/1        1        1      NaN     0.2232  0.6456  0.1834  0.0274    0.3501  0.0010   0.1317
+B5_z2_sameK562W30  balanced  0.2232  0.2232  0.0000       0/1        1        1      NaN     0.2232  0.6456  0.1834  0.0274    0.3501  0.0010   0.1317
+B2_raw_gPL(E021)   balanced  0.1944  0.1944 -0.0288       0/1        1        1      NaN     0.1944  0.5573  0.0000  0.0415    0.4231 -0.0251   0.1698
+```
+**Target overlap: the K562 essential summary measures 0 of the 213 K562_GWPS held-out targets.** So same-line weighting has nothing to act on: all 4 weights equal B5 exactly. This proxy is **uninformative** (not evidence against L8).
+
+CD4T_Stim8hr with CD4T_Stim48hr/Rest allowed (weights 1/3/10 from E046, 30/100 new):
+```
+mean   worst   d_ref lines_pos  n_lines  n_seeds  seed_sd  CD4T_Stim8hr  lb_pds  lb_mse  lb_fid  lb_reach  lb_jac  lb_nmae
+variant            emit                                                                                                                                  
+B5_z2_sameW10      balanced  0.2523  0.2523  0.2249       1/1        1        1      NaN        0.2523  0.7811  0.3127  0.0018    0.2712 -0.0010   0.1478
+B5_z2_sameCD4TW30  balanced  0.2491  0.2491  0.2218       1/1        1        1      NaN        0.2491  0.7948  0.2372  0.0151    0.2884  0.0013   0.1577
+B5_z2_sameCD4TW100 balanced  0.2465  0.2465  0.2191       1/1        1        1      NaN        0.2465  0.8016  0.1828  0.0237    0.3030  0.0027   0.1650
+B5_z2_sameW3       balanced  0.2374  0.2374  0.2100       1/1        1        1      NaN        0.2374  0.7379  0.3473 -0.0144    0.2392 -0.0061   0.1203
+B5_z2_sameW1       balanced  0.1961  0.1961  0.1688       1/1        1        1      NaN        0.1961  0.6828  0.2577 -0.0435    0.2055 -0.0141   0.0882
+B2_raw_gPL(E021)   balanced  0.0376  0.0376  0.0103       1/1        1        1      NaN        0.0376  0.2923  0.0000 -0.1108    0.1368 -0.0458  -0.0467
+B5_z2_a0.5_cis5000 balanced  0.0273  0.0273  0.0000       0/1        1        1      NaN        0.0273  0.3215  0.0007 -0.1801    0.1011 -0.0525  -0.0267
+```
+- **Plateau at weight 10** (0.252); 30 → 0.249, 100 → 0.247. Higher weight trades MSE (0.31 → 0.18) for pds/reach.
+
+### 6. Instance hours
+E047a build 02:01–02:27 (0.43 h) · E050 02:28–04:33 (2.10 h, overlapping the E047a upload/scoring) · E047b build from 04:34 (CPU, not used).
+**Batch total ≈ 2.7 instance-h.** Round-4 cumulative ≈ 9.6 instance-h plus ≈ 5.9 h idle on 19 Oct.
+
+### Anomalies
+- **The forecast overshot by 0.0143, nearly the whole tolerance, and all of it is MSE.** On V\* the blend raises scaled MSE (+0.019 vs B5). On A/B/C its raw MSE is 1.14, above baseline, while E032 scored 0.144 scaled.
+  V\*'s MSE seems to under-penalise blending a dense (E021) with a sparse (B5) prediction. That fits the unconfirmed result, and suggests MSE is where the validator is weakest (R4-01).
+- **The like-for-like retro misses by 0.0001.** The old pair (E021 with NC on V\*) passes with err 0.0044. The NC mismatch planning identified (§9.2 item 1) moves the forecast by +0.019.
+- The K562 same-line proxy is degenerate (0 overlapping targets). A useful realistic proxy needs a same-line source that measures the held-out targets: e.g. Orion_HEK293T held out with a HEK293 screen, which we don't have.
+- The E050 combinations raise H1-R400 well above the plain blends, which makes H1's ranking flip between E046 and E050. That's consistent with planning's decision to use H1 only as a veto.
+- `vcc submit` printed rank 729; the status JSON says 730 (others submitting in between).
+
+**STOPPED.** E047b not submitted; E048 not started (it also needs Rafid's NC decision).

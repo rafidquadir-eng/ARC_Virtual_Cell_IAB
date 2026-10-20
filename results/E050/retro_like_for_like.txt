@@ -1,0 +1,16 @@
+scaling: raw metrics with official LB spans {'pds': (0.498, 0.954), 'fid': (0.513, 0.812), 'reach': (0.076, 0.99), 'jac': (0.031, 0.356), 'nmae': (0.992, 0.463), 'mse': (0.99, 0.05)}
+per-line local deltas (a - b):
+                 pds    mse    fid  reach    jac   nmae  context
+holdout                                                         
+CD4T_Stim8hr   0.077  0.001 -0.107 -0.015  0.005  0.034   -0.001
+K562_GWPS      0.227  0.183  0.001  0.028  0.050 -0.007    0.080
+KOLF2.1J       0.037  0.000 -0.614 -0.024 -0.025  0.019   -0.101
+Orion_HCT116   0.117  0.287  0.076 -0.082  0.040 -0.021    0.070
+Orion_HEK293T  0.147  0.089  0.052 -0.074  0.026 -0.019    0.037
+
+mean local delta: {'pds': 0.121, 'mse': 0.112, 'fid': -0.119, 'reach': -0.033, 'jac': 0.019, 'nmae': 0.001, 'context': 0.017}
+LB delta:         {'pds': 0.082, 'mse': 0.144, 'fid': -0.226, 'reach': -0.006, 'jac': -0.007, 'nmae': 0.025, 'context': np.float64(0.002)}
+per-line metric-sign agreement with LB (of 6): {'CD4T_Stim8hr': 5, 'K562_GWPS': 2, 'KOLF2.1J': 5, 'Orion_HCT116': 3, 'Orion_HEK293T': 3}
+context delta local +0.0169 vs LB +0.0018 (|err| 0.0151, need <= 0.015)
+local/LB ratio on metrics with |LB delta| >= 0.05 (need 1/3..3): {'pds': np.float64(1.48), 'mse': np.float64(0.78), 'fid': np.float64(0.52)}
+RETRODICTION FAIL: context sign ok, metric signs 6/6, magnitudes ok
