@@ -1,0 +1,126 @@
+[
+ {
+  "name": "ENS_E021B5_w10",
+  "model": "ENS",
+  "emit": "balanced",
+  "kw": {
+   "members": [
+    {
+     "model": "B2_transfer",
+     "kw": {
+      "alpha": 1.0,
+      "raw": true,
+      "generic_from": [
+       "@genome_wide",
+       "@targeted"
+      ]
+     },
+     "w": 0.1
+    },
+    {
+     "model": "B5_sparse",
+     "kw": {
+      "z_thr": 2,
+      "agree": 0.5,
+      "cis_bp": 5000,
+      "tss": "/lambda/nfs/LambdaFilesystem/vcc-data/tss.csv"
+     },
+     "w": 0.9
+    }
+   ]
+  }
+ },
+ {
+  "name": "ENS_E021B5_w15",
+  "model": "ENS",
+  "emit": "balanced",
+  "kw": {
+   "members": [
+    {
+     "model": "B2_transfer",
+     "kw": {
+      "alpha": 1.0,
+      "raw": true,
+      "generic_from": [
+       "@genome_wide",
+       "@targeted"
+      ]
+     },
+     "w": 0.15
+    },
+    {
+     "model": "B5_sparse",
+     "kw": {
+      "z_thr": 2,
+      "agree": 0.5,
+      "cis_bp": 5000,
+      "tss": "/lambda/nfs/LambdaFilesystem/vcc-data/tss.csv"
+     },
+     "w": 0.85
+    }
+   ]
+  }
+ },
+ {
+  "name": "ENS_E021B5_w20",
+  "model": "ENS",
+  "emit": "balanced",
+  "kw": {
+   "members": [
+    {
+     "model": "B2_transfer",
+     "kw": {
+      "alpha": 1.0,
+      "raw": true,
+      "generic_from": [
+       "@genome_wide",
+       "@targeted"
+      ]
+     },
+     "w": 0.2
+    },
+    {
+     "model": "B5_sparse",
+     "kw": {
+      "z_thr": 2,
+      "agree": 0.5,
+      "cis_bp": 5000,
+      "tss": "/lambda/nfs/LambdaFilesystem/vcc-data/tss.csv"
+     },
+     "w": 0.8
+    }
+   ]
+  }
+ },
+ {
+  "name": "ENS_E021B5_w25",
+  "model": "ENS",
+  "emit": "balanced",
+  "kw": {
+   "members": [
+    {
+     "model": "B2_transfer",
+     "kw": {
+      "alpha": 1.0,
+      "raw": true,
+      "generic_from": [
+       "@genome_wide",
+       "@targeted"
+      ]
+     },
+     "w": 0.25
+    },
+    {
+     "model": "B5_sparse",
+     "kw": {
+      "z_thr": 2,
+      "agree": 0.5,
+      "cis_bp": 5000,
+      "tss": "/lambda/nfs/LambdaFilesystem/vcc-data/tss.csv"
+     },
+     "w": 0.75
+    }
+   ]
+  }
+ }
+]

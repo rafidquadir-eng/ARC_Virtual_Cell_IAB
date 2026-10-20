@@ -253,3 +253,46 @@ Closed levers: L1, L4, L5, L6, L7. Open: **L2 (blend), L3 (cheap calls), L8 (sam
 - The frozen config is the highest-V\* config built **only from confirmed levers** (§9.2 item 3).
 - If no lever is confirmed, the frozen config is the better of E032 (B5) and E021 on the LB.
 - The two are within noise there, so in that case take B5: it is the current reference, and E032 is our best LB entry.
+
+---
+
+## 10. Update 20 Oct, 04:30 UTC: why E047a didn't move the score, and the fix
+
+**E047a (`ENS_E021B5_w55`) scored 0.1076. E032 is 0.1077; the forecast was 0.122 (verify PASS at err 0.014, unconfirmed).**
+
+LB scaled scores (raw value in brackets):
+
+| | pds | mse | fid | reach | jac | nmae | overall |
+|---|---|---|---|---|---|---|---|
+| E032 (B5) | 0.583 (0.764) | **0.144 (0.851)** | −0.293 | 0.102 | 0.000 | 0.111 | 0.1077 |
+| E047a (blend 0.5/0.5) | **0.620** (0.781) | **0 (1.139)** | −0.264 | **0.139** | 0.007 | **0.143** | 0.1076 |
+| E021 (dense) | 0.501 (0.727) | 0 (**4.663**) | −0.067 | 0.108 | 0.008 | 0.086 | 0.1060 |
+
+**Diagnosis.**
+- The blend improved **five of six** metrics: pds +0.038, fid +0.029, reach +0.037, jac +0.007, nmae +0.033. That is worth +0.024 overall.
+- **MSE gave back exactly that amount.** Raw MSE went from 0.85 to 1.14. That crosses the no-skill point (~0.99), and the score clamps at 0, a loss of −0.144 scaled.
+- The dense E021 component is the cause. On A/B/C, E021 alone has raw MSE **4.66**: its transferred effects are mostly noise in magnitude, even where their directions help the DE metrics.
+- Our validator under-forecast the damage: V\* E021 raw MSE averages about 2.5, against 4.66 on A/B/C, and the MSE span is still *assumed*.
+
+**This is a magnitude-calibration problem, not a data limit.**
+- Mean-squared error of a blend w·E021 + (1−w)·B5 is close to quadratic in w.
+- From the three LB points (w = 0, 0.5, 1): MSE(w) ≈ 6.47w² − 2.66w + 0.85.
+  - The negative linear term means the two models' errors partly cancel.
+  - Minimum ≈ **0.58 at w ≈ 0.2**, i.e. scaled MSE ≈ 0.44 instead of 0.144.
+- **Independent local check** (planning, committed V\* rows): fitting the same quadratic per line gives optimal w of 0.24 / 0.30 / 0.21 / 0.25 / 0.15 (CD4T, K562, KOLF, HCT116, HEK293T). So the local data, without the LB, also points to w ≈ 0.2.
+- The LB fit is used only as a sanity check. Selection still goes through V\* (§3).
+
+**Expected effect of w ≈ 0.2** (estimate, not a forecast):
+- MSE +0.2 to +0.3 scaled, i.e. +0.03 to +0.05 overall;
+- the other metrics keep part of the blend's +0.024;
+- so **LB ≈ 0.13–0.16**.
+
+The uncertainty is the quadratic assumption: the metric is "unbiased" and "capped", so it isn't exactly quadratic. That is why we run a weight sweep rather than one guess.
+
+**Plan.**
+- **E051** (GPU, ~1.2 h): `specs_E051.json` = blends with E021 weight 0.10 / 0.15 / 0.20 / 0.25, on V\* and H1-R400.
+- **E047b** (LB): the best E051 weight that passes §3 against B5, replacing the previous E047b rule.
+- E050's (a) arm (more-E021 blends, w73) is moot; E050 (b) and (c) are still wanted.
+- **21 Oct:** if E047b is confirmed (Δ ≥ +0.005), the frozen config is that blend.
+  - Optionally add `de_budget` if E050 shows the combination helps without losing MSE.
+  - The second 21 Oct slot is the NC-off twin.

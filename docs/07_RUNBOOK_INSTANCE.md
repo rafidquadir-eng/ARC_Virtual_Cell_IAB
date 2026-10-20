@@ -326,6 +326,39 @@ python -m vcc26.compare --dir $DATA/loco/E020 --tag E046r --a "B5_z2_a0.5_cis500
 2. Run them exactly like E046, with tag `E046c` (V\*) and `E046ch` (H1).
 3. Report in the same format.
 
+### ▶ 20 Oct, revised after E047a (docs/16 §10): finish E050 → E051 → E047b (new rule) → stop
+E047a lost all of its MSE: raw 1.14, above the ~0.99 no-skill point, so scaled MSE clamps to 0. That cancelled gains on the other five metrics. Both the LB points and our V\* rows put the MSE-optimal E021 weight near **0.2**.
+- **E050:** let it finish if it is running. Its (a) arm (w73) is moot; report it briefly. The like-for-like retro (b) and the same-line proxies (c) are still wanted.
+- **E051** (GPU, ~1.2 h): `tmux new -d -s E051 "bash scripts/run_E051.sh 2>&1 | tee logs/E051.log"`. The spec names give the E021 weight in percent: `ENS_E021B5_w10` means 0.10 E021 and 0.90 B5.
+  ```bash
+  S="--status results/E033_E021_status.json results/E033_E032_status.json"; REF="B5_z2_a0.5_cis5000@@balanced"
+  python scripts/lb_check.py rank $S --rows results/E045/vstar_rows_E045s0.csv results/E046/vstar_rows_E046.csv results/E051/vstar_rows_E051.csv \
+    --ref "$REF" --out results/E051/rank_vstar.csv | tee results/E051/rank_vstar.txt
+  python scripts/lb_check.py rank $S --rows results/E045/scores_H1_R400_seen_E045refh.csv results/E046/scores_H1_R400_seen_E046h.csv \
+    results/E051/scores_H1_R400_seen_E051h.csv --ref "$REF" | tee results/E051/rank_H1.txt
+  for x in ENS_E021B5_w10 ENS_E021B5_w15 ENS_E021B5_w20 ENS_E021B5_w25; do
+    python -m vcc26.compare --dir $DATA/loco/E020 --tag E051 --a "$x" --tag-b E045s0 --b "B5_z2_a0.5_cis5000" --n 1000 \
+      --anchors-override results/lb_spans.json > results/E051/boot_$x.json
+  done
+  python -c "
+  import pandas as pd; r=pd.concat([pd.read_csv(f) for f in ['results/E045/vstar_rows_E045s0.csv','results/E046/vstar_rows_E046.csv','results/E051/vstar_rows_E051.csv']])
+  print(r.pivot_table(index='model',columns='holdout',values='raw_mse').round(3).to_string())" | tee results/E051/raw_mse_by_line.txt
+  ```
+- **E047b (replaces the earlier E047b rule).** Submit the E051 weight with the highest V\* mean that passes docs/16 §3 rules 1–3 against B5. If none passes, submit nothing; report and stop.
+  - Pre-register as usual, with `--rows results/E045/vstar_rows_E045s0.csv results/E051/vstar_rows_E051.csv`.
+  - Put the LB-fit MSE expectation in the forecast note: raw MSE ≈ 6.47w² − 2.66w + 0.85.
+  - Only one slot is left for 20 Oct UTC. If the UTC day has rolled over to 21 Oct, say so; it is still allowed.
+- **REPORT** (E050 / E051 / E047b):
+  1. The rank tables.
+  2. Raw MSE by line and weight.
+  3. The bootstraps.
+  4. The LB result: forecast, actual, verify, confirmed / unconfirmed / vetoed.
+  5. E050's like-for-like retro, NC on/off, and the same-line tables.
+  6. Instance hours.
+  7. Anomalies.
+
+  Then **stop**.
+
 ### ▶ 20 Oct batch: E047a → E050 → E047b (docs/16 §9). Run these in order without waiting between them; stop after E047b.
 **Clarified stop rule:** stop only on a **V\*** retro FAIL or a `verify` FAIL. An H1-R400 retro FAIL is reported, never a stop.
 
@@ -378,7 +411,7 @@ python scripts/lb_check.py rank $S --rows results/E045/vstar_rows_E045s0.csv res
 - If the like-for-like retro FAILs, that **is** a stop: report it and don't run E047b.
 - For the K562 proxy, also report how many K562_GWPS panel targets the K562 essential screen measures. The gain only applies to those, so give the per-target means for that subset if you can (`pertarget_K562_GWPS_seen_E050sameK562.parquet`).
 
-**E047b (LB, second slot of 20 Oct UTC, after E047a is scored and E050 is done).** Pick by this rule:
+**E047b: superseded by the revised section above (docs/16 §10).** The old rule is kept for the record:
 1. **E047a confirmed**, and the best `specs_E050.json` combination has V\* Δ vs `ENS_E021B5_w55` ≥ +0.005, bootstrap P ≥ 0.8 and H1 Δ vs w55 ≥ −0.005: submit **that combination**.
 2. **E047a confirmed**, otherwise: submit **`B5_z2_bud600md0.3`**. This tests L3 on its own; if L3 is confirmed, the frozen config is the blend plus the budget.
 3. **E047a unconfirmed or vetoed:** submit **`B5_z2_bud600md0.3`**.
